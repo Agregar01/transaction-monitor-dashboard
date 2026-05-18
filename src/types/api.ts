@@ -1,603 +1,505 @@
-// ─── Entity & Enum Types ────────────────────────────────────────────────────
+/**
+ * Shared TypeScript types for the Autheo Transaction Monitor backend.
+ *
+ * Hand-mirrored from `transaction-monitor/app/schemas/*.py`. Keep these in
+ * sync as the backend evolves — the RTK Query slices consume them.
+ */
 
-export type EntityType = "INDIVIDUAL" | "BUSINESS";
-export type EventType = "TRANSACTION" | "ACTION" | "LOGIN" | "SCHEDULED" | "EXTERNAL";
-export type VerificationResult = "passed" | "failed";
+// ─── Pagination & generic envelopes ─────────────────────────────────────────
 
-// ─── Customer Types ─────────────────────────────────────────────────────────
-
-export interface CustomerRegisterRequest {
-  external_id: string;
-  client_id: string;
-  entity_type: EntityType;
-  name?: string;
-  email?: string;
-  phone?: string;
-  metadata?: Record<string, unknown>;
+export interface Paginated<T> {
+  items: T[];
+  total: number;
+  page: number;
+  page_size: number;
 }
 
-export interface CustomerRegisterResponse {
-  id: string;
-  external_id: string;
-  client_id: string;
-  entity_type: EntityType;
-  current_tier: string;
-  status: string;
-  daily_limit: number;
-  monthly_limit: number;
-  per_transaction_limit: number;
-  allowed_activities: string[];
-  next_steps: string;
+export interface MutationResponse {
+  success: boolean;
+  message?: string;
+  detail?: string;
+}
+
+// ─── Auth ───────────────────────────────────────────────────────────────────
+
+export interface User {
+  user_id: string;
+  email: string;
+  full_name: string | null;
+  active?: boolean;
+  roles: string[];
+}
+
+export interface Role {
+  role_id: string;
+  name: string;
+  description: string | null;
+  permissions: string[];
+}
+
+// ─── Tenant ─────────────────────────────────────────────────────────────────
+
+export type JurisdictionCode = "GHA" | "NGA" | "KEN";
+
+export interface TenantInfo {
+  jurisdiction_code: JurisdictionCode;
+  display_name: string;
+  features: {
+    ctr: boolean;
+    str: boolean;
+    sanctions: boolean;
+    ml: boolean;
+  };
+  config_loaded: boolean;
+  supported_jurisdictions: JurisdictionCode[];
+}
+
+export interface Jurisdiction {
+  code: JurisdictionCode;
+  name: string;
+  ctr_threshold: number;
+  str_deadline_hours: number;
+  currency: string;
+  regulator_name: string;
+  goaml_version: string;
+  active: boolean;
+}
+
+// ─── Transactions ───────────────────────────────────────────────────────────
+
+export type TransactionType = "DEPOSIT" | "WITHDRAWAL" | "TRANSFER" | "PAYMENT" | "REVERSAL" | string;
+export type Channel = "USSD" | "MOBILE" | "WEB" | "AGENT" | "API" | string;
+export type FlowType = "P2P" | "P2M" | "B2P" | "CASH_IN" | "CASH_OUT" | string;
+
+export interface Transaction {
+  transaction_id: string;
+  customer_id: string;
+  timestamp: string;
+  amount: number;
+  currency: string;
+  type: TransactionType;
+  channel: Channel;
+  flow_type: FlowType | null;
+  receiver_id: string | null;
+  receiver_country: string | null;
+  device_id: string | null;
+  customer_risk_score: number;
+  transaction_risk_score: number;
+  behavioral_risk_score: number;
+  combined_risk_score: number;
+  flagged: boolean;
   created_at: string;
 }
 
-export interface CustomerTierInfo {
-  entity_type: EntityType;
-  current_tier: string;
-  risk_level: string;
-  risk_score: number;
-  daily_limit: number;
-  monthly_limit: number;
-  per_transaction_limit: number;
-  daily_usage: number;
-  monthly_usage: number;
-  daily_remaining: number;
-  monthly_remaining: number;
+export interface TransactionTimelineEvent {
+  event_type: string;
+  description: string;
+  metadata: Record<string, unknown> | null;
+  actor: string | null;
+  timestamp: string;
 }
 
-export interface CustomerDetail {
-  id: string;
-  external_id: string;
-  client_id: string;
-  entity_type: EntityType;
-  current_tier: string;
-  risk_level: string;
+export interface RelatedTransaction {
+  transaction: Transaction;
+  relationship_type: string;
+  similarity_score: number;
+}
+
+// ─── Customers ──────────────────────────────────────────────────────────────
+
+export type RiskLevel = "LOW" | "MEDIUM" | "HIGH" | "VERY_HIGH" | "CRITICAL";
+
+export interface Customer {
+  customer_id: string;
+  customer_type: "INDIVIDUAL" | "MERCHANT" | "COMPANY" | string;
+  risk_level: RiskLevel;
   risk_score: number;
-  daily_limit: number;
-  monthly_limit: number;
-  per_transaction_limit: number;
-  daily_usage: number;
-  monthly_usage: number;
-  metadata: Record<string, unknown>;
+  country_code: string | null;
+  is_pep: boolean;
+  kyc_quality_score: number | null;
+  occupation: string | null;
+  created_at: string;
+}
+
+export interface CustomerBaseline {
+  customer_id: string;
+  period_days: number;
+  avg_amount: number;
+  median_amount: number;
+  std_amount: number;
+  daily_count: number;
+  channels: string[];
+  countries: string[];
+  counterparty_count: number;
+}
+
+export interface CustomerRiskProfile {
+  customer_id: string;
+  risk_score: number;
+  risk_level: RiskLevel;
+  is_pep: boolean;
+  kyc_quality: number | null;
+}
+
+// ─── Alerts ─────────────────────────────────────────────────────────────────
+
+export type AlertPriority = "IMMEDIATE" | "BATCH" | "REVIEW";
+export type AlertStatus = "OPEN" | "INVESTIGATING" | "CLOSED";
+export type AlertResolution = "False_positive" | "Legitimate" | "SAR_filed" | "Restricted";
+
+export interface AlertNote {
+  id: string;
+  note: string;
+  note_type: "investigation" | "follow_up" | "documentation" | "escalation";
+  author: string;
+  timestamp: string;
+}
+
+export interface Alert {
+  alert_id: string;
+  customer_id: string;
+  transaction_id: string;
+  alert_timestamp: string;
+  priority: AlertPriority;
+  status: AlertStatus;
+  risk_score: number;
+  triggered_rules: string[];
+  resolution: AlertResolution | null;
+  resolution_notes: string | null;
+  assigned_to: string | null;
+  notes: AlertNote[];
   created_at: string;
   updated_at: string;
 }
 
-export interface CustomerListItem {
+// ─── Cases ──────────────────────────────────────────────────────────────────
+
+export type CaseType = "AML" | "FRAUD" | "SANCTIONS";
+export type CaseStatus =
+  | "OPEN"
+  | "INVESTIGATING"
+  | "ESCALATED"
+  | "SAR_DRAFTED"
+  | "SAR_FILED"
+  | "CLOSED";
+export type CasePriority = "HIGH" | "MEDIUM" | "LOW";
+
+export interface Case {
   id: string;
-  external_id: string;
-  client_id?: string;
-  entity_type: EntityType;
-  current_tier: string;
-  risk_level: string;
-  risk_score: number;
-  name?: string;
-  email?: string;
-  phone?: string;
+  case_type: CaseType;
+  status: CaseStatus;
+  priority: CasePriority;
+  title: string;
+  narrative: string | null;
+  assigned_to: string | null;
+  jurisdiction_id: string;
+  due_date: string | null;
+  resolution: string | null;
+  created_by: string;
   created_at: string;
+  updated_at: string;
 }
 
-export interface CustomerListResponse {
-  items: CustomerListItem[];
-  total: number;
-  page: number;
-  page_size: number;
-  pages: number;
+export interface CaseStatusHistoryEntry {
+  id: string;
+  case_id: string;
+  from_status: CaseStatus | null;
+  to_status: CaseStatus;
+  changed_by: string;
+  changed_at: string;
+  notes: string | null;
 }
 
-export interface TierHistoryItem {
-  from_tier: string | null;
-  to_tier: string;
-  reason: string;
-  triggered_by: string | null;
-  created_at: string;
+// ─── Rules ──────────────────────────────────────────────────────────────────
+
+export type RuleCategory =
+  | "AMOUNT"
+  | "VELOCITY"
+  | "BEHAVIORAL"
+  | "NETWORK"
+  | "AFRICA"
+  | "DEVICE"
+  | "COMPLIANCE";
+
+export type RuleSeverity = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+export type RuleStatus = "DRAFT" | "SHADOW" | "PRODUCTION" | "ARCHIVED";
+
+export interface RuleCondition {
+  field: string;
+  op: ">" | ">=" | "<" | "<=" | "==" | "!=" | "in" | "not_in";
+  value: unknown;
 }
 
-export interface CustomerTierHistory {
-  customer_id: string;
-  current_tier: string;
-  history: TierHistoryItem[];
-}
-
-export interface VerificationCompleteRequest {
-  verification_type: string;
-  result: VerificationResult;
-  new_tier?: string;
-  decision_id?: string;
-  evidence?: Record<string, unknown>;
-  client_id: string;
-}
-
-export interface VerificationCompleteResponse {
-  customer_external_id: string;
-  previous_tier: string;
-  new_tier: string;
-  tier_changed: boolean;
-  daily_limit: number;
-  monthly_limit: number;
-  message: string;
-}
-
-// ─── Decision Types ─────────────────────────────────────────────────────────
-
-export interface EvaluationRequest {
-  event_id: string;
-  event_type: EventType;
-  client_id: string;
-  customer_external_id: string;
-  entity_type?: EntityType;
-  amount?: number;
-  currency?: string;
-  channel?: string;
-  source_ip?: string;
-  device_id?: string;
-  payload?: Record<string, unknown>;
-}
-
-export interface TriggeredRule {
+export interface Rule {
   rule_id: string;
   rule_name: string;
-  trigger_code: string;
-  condition_matched: string;
-  contribution_to_decision: string;
-}
-
-export interface EvaluationResponse {
-  decision_id: string;
-  event_id: string;
-  entity_type: string;
-  action: string;
-  workflow: string | null;
-  risk_level: string;
-  risk_score: number;
-  customer_current_tier: string;
-  target_tier: string | null;
-  reason: string;
-  triggered_rules: TriggeredRule[];
-  details: Record<string, unknown>;
-  processing_time_ms: number;
-}
-
-export interface DecisionDetail {
-  decision_id: string;
-  event_id: string;
-  customer_id: string;
-  customer_external_id: string | null;
-  client_id: string;
-  action: string;
-  workflow: string | null;
-  risk_level: string;
-  risk_score: number;
-  customer_tier_at_decision: string;
-  target_tier: string | null;
-  triggered_rules: TriggeredRule[];
-  reason: string;
-  details: Record<string, unknown>;
-  processing_time_ms: number;
-  created_at: string;
-}
-
-export interface DecisionHistoryItem {
-  decision_id: string;
-  event_id: string;
-  customer_external_id: string;
-  event_type: string;
-  action: string;
-  workflow: string | null;
-  target_tier: string | null;
-  reason: string;
-  risk_level: string;
-  risk_score: number;
-  processing_time_ms: number;
-  created_at: string;
-}
-
-export interface DecisionStatistics {
-  total_decisions: number;
-  decisions_by_action: Record<string, number>;
-  decisions_by_risk_level: Record<string, number>;
-  avg_processing_time_ms: number;
-  period: string;
-}
-
-// ─── Usage Types ────────────────────────────────────────────────────────────
-
-export interface UsageDayItem {
-  date: string;
-  evaluate_calls: number;
-  customer_calls: number;
-  total_calls: number;
-  decisions_allow: number;
-  decisions_block: number;
-  decisions_review: number;
-  decisions_upgrade: number;
-}
-
-export interface UsageResponse {
-  client_id: string;
-  start_date: string;
-  end_date: string;
-  total_evaluate_calls: number;
-  total_customer_calls: number;
-  total_calls: number;
-  total_allow: number;
-  total_block: number;
-  total_review: number;
-  total_upgrade: number;
-  daily_breakdown: UsageDayItem[];
-}
-
-// ─── Health ─────────────────────────────────────────────────────────────────
-
-export interface HealthResponse {
-  status: string;
-  service: string;
-  version: string;
-  environment: string;
-}
-
-// ─── Query Parameter Types ──────────────────────────────────────────────────
-
-export interface ListCustomersParams {
-  client_id?: string;
-  page?: number;
-  page_size?: number;
-  entity_type?: EntityType;
-  tier?: string;
-  search?: string;
-}
-
-export interface GetCustomerParams {
-  external_id: string;
-  client_id: string;
-}
-
-export interface GetDecisionHistoryParams {
-  client_id?: string;
-  customer_external_id?: string;
-  event_type?: string;
-  action?: string;
-  limit?: number;
-  offset?: number;
-}
-
-export interface GetDecisionStatisticsParams {
-  client_id?: string;
-  period?: string;
-}
-
-export interface GetDecisionParams {
-  decision_id: string;
-  client_id: string;
-}
-
-export interface ReportVerificationParams {
-  external_id: string;
-  body: VerificationCompleteRequest;
-}
-
-export interface GetUsageParams {
-  client_id?: string;
-  start_date?: string;
-  end_date?: string;
-}
-
-// ─── Transaction Check Types ────────────────────────────────────────────────
-
-export interface CheckTransactionRequest {
-  client_id: string;
-  amount: number;
-  currency?: string;
-  update_usage?: boolean;
-}
-
-export interface CheckTransactionResponse {
-  allowed: boolean;
-  reason: string | null;
-  current_tier: string;
-  daily_limit: number;
-  monthly_limit: number;
-  per_transaction_limit: number;
-  daily_usage: number;
-  monthly_usage: number;
-  daily_remaining: number;
-  monthly_remaining: number;
-}
-
-// ─── Audit Log Types ───────────────────────────────────────────────────────
-
-export interface AuditLogEntry {
-  id: string;
-  actor_client_id: string | null;
-  actor_email: string | null;
-  action: string;
-  resource_type: string;
-  resource_id: string | null;
-  details: Record<string, unknown>;
-  ip_address: string | null;
-  created_at: string;
-}
-
-export interface AuditLogListResponse {
-  items: AuditLogEntry[];
-  total: number;
-  page: number;
-  page_size: number;
-}
-
-export interface GetAuditLogsParams {
-  action?: string;
-  resource_type?: string;
-  page?: number;
-  page_size?: number;
-}
-
-// ─── Decision Override Types ─────────────────────────────────────────────
-
-export interface DecisionOverrideRequest {
-  new_action: string;
-  reason: string;
-}
-
-export interface DecisionOverrideResponse {
-  status: string;
-  decision_id: string;
-  old_action: string;
-  new_action: string;
-  reason: string;
-}
-
-// ─── Customer Manual Action Types ────────────────────────────────────────
-
-export interface UpdateCustomerRequest {
-  risk_score?: number;
-  risk_level?: string;
-  metadata?: Record<string, unknown>;
-  notes?: string;
-}
-
-export interface FreezeCustomerRequest {
-  reason: string;
-}
-
-// ─── Bulk Import Types ───────────────────────────────────────────────────
-
-export interface BulkImportResult {
-  created: number;
-  skipped: number;
-  errors: Array<{ row: number; error: string }>;
-}
-
-// ─── Team Member Types ───────────────────────────────────────────────────
-
-export interface TeamMember {
-  id: string;
-  client_id: string;
-  email: string;
-  name: string;
-  role: string;
-  is_active: boolean;
-  mfa_enabled: boolean;
-  invite_accepted: boolean;
-  created_at: string;
-}
-
-export interface InviteUserRequest {
-  email: string;
-  name: string;
-  role: string;
-}
-
-// ─── MFA Types ───────────────────────────────────────────────────────────
-
-export interface MfaSetupResponse {
-  secret: string;
-  provisioning_uri: string;
-  qr_code_base64?: string;
-  message: string;
-}
-
-export interface MfaStatusResponse {
-  mfa_enabled: boolean;
-  mfa_required: boolean;
-}
-
-// ─── Case Management Types ────────────────────────────────────────────────
-
-export interface CaseListItem {
-  decision_id: string;
-  customer_id: string;
-  customer_external_id: string | null;
-  customer_tier: string | null;
-  entity_type: string | null;
-  client_id: string;
-  action: string;
-  workflow: string | null;
-  risk_level: string;
-  risk_score: number;
-  reason: string;
-  resolution_status: string;
-  resolved_by: string | null;
-  resolved_at: string | null;
-  resolution_note: string | null;
-  note_count: number;
-  created_at: string;
-}
-
-export interface CaseListResponse {
-  items: CaseListItem[];
-  total: number;
-  page: number;
-  page_size: number;
-  pages: number;
-}
-
-export interface CaseDetail {
-  decision_id: string;
-  event_id: string;
-  customer_id: string;
-  customer_external_id: string | null;
-  customer_tier: string | null;
-  customer_risk_level: string | null;
-  customer_risk_score: number | null;
-  customer_entity_type: string | null;
-  customer_created_at: string | null;
-  client_id: string;
-  action: string;
-  workflow: string | null;
-  risk_level: string;
-  risk_score: number;
-  customer_tier_at_decision: string;
-  target_tier: string | null;
-  triggered_rules: TriggeredRule[];
-  reason: string;
-  details: Record<string, unknown>;
-  processing_time_ms: number;
-  resolution_status: string;
-  resolved_by: string | null;
-  resolved_at: string | null;
-  resolution_note: string | null;
-  created_at: string;
-  notes: CaseNoteItem[];
-}
-
-export interface CaseNoteItem {
-  id: string;
-  author_email: string;
-  author_role: string | null;
-  note_type: string;
-  content: string;
-  created_at: string;
-}
-
-export interface CaseSummary {
-  total_open: number;
-  total_resolved: number;
-  total_escalated: number;
-  open_by_action: Record<string, number>;
-}
-
-export interface ListCasesParams {
-  resolution_status?: string;
-  action?: string;
-  risk_level?: string;
-  from_date?: string;
-  to_date?: string;
-  search?: string;
-  page?: number;
-  page_size?: number;
-}
-
-export interface ResolveCaseRequest {
-  resolution_status: string;
-  resolution_note: string;
-  new_action?: string;
-}
-
-export interface ResolveCaseResponse {
-  status: string;
-  decision_id: string;
-  resolution_status: string;
-  resolved_by: string;
-  resolved_at: string;
-  action: string;
-}
-
-// ─── Workflow Builder Types ───────────────────────────────────────────────
-
-export interface WorkflowStepItem {
-  id: string;
-  step_order: number;
-  name: string;
-  step_type: string;
-  description: string | null;
-  is_required: boolean;
-  timeout_hours: number | null;
-  config: Record<string, unknown> | null;
-}
-
-export interface WorkflowListItem {
-  id: string;
-  code: string;
-  name: string;
-  entity_type: string;
-  target_tier: string | null;
-  estimated_time: string | null;
-  status: string;
-  is_system: boolean;
-  step_count: number;
-  created_at: string;
-}
-
-export interface WorkflowListResponse {
-  items: WorkflowListItem[];
-  total: number;
-  page: number;
-  page_size: number;
-}
-
-export interface WorkflowDetail {
-  id: string;
-  client_id: string;
-  code: string;
-  name: string;
-  description: string | null;
-  entity_type: string;
-  target_tier: string | null;
-  estimated_time: string | null;
-  status: string;
-  is_system: boolean;
+  rule_category: RuleCategory;
+  severity: RuleSeverity;
+  enabled: boolean;
+  status: RuleStatus;
+  logic_type: "python" | "dsl";
+  rule_logic: { conditions?: RuleCondition[]; operator?: "AND" | "OR"; [k: string]: unknown };
+  risk_contribution: number;
+  shadow_by: string | null;
+  approved_by: string | null;
+  approved_at: string | null;
   version: number;
-  step_count: number;
-  steps: WorkflowStepItem[];
+  description: string | null;
+  explain_template: string | null;
   created_at: string;
   updated_at: string;
 }
 
-export interface WorkflowCreateRequest {
-  code: string;
+// ─── STR / CTR reports ──────────────────────────────────────────────────────
+
+export type STRStatus = "DRAFT" | "FILED" | "WITHDRAWN";
+
+export interface STRReport {
+  id: string;
+  case_id: string;
+  jurisdiction_id: string;
+  status: STRStatus;
+  subject_customer_id: string;
+  subject_name: string;
+  suspicious_activity_type: string;
+  reporting_entity: string | null;
+  total_amount: number;
+  currency: string;
+  transaction_count: number;
+  date_range_start: string | null;
+  date_range_end: string | null;
+  narrative: string;
+  filing_reference: string | null;
+  filed_at: string | null;
+  created_by: string;
+  reviewed_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type CTRStatus = "DRAFT" | "FILED" | "EXEMPT";
+
+export interface CTRReport {
+  id: string;
+  transaction_id: string;
+  customer_id: string;
+  jurisdiction_id: string;
+  status: CTRStatus;
+  amount: number;
+  currency: string;
+  transaction_type: string;
+  is_cash: boolean;
+  filing_reference: string | null;
+  filed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// ─── Four-eyes approvals ────────────────────────────────────────────────────
+
+export type ApprovalAction =
+  | "SANCTIONS_UPDATE"
+  | "THRESHOLD_CHANGE"
+  | "RULE_PROMOTION"
+  | "STR_FILING"
+  | "CTR_EXEMPTION";
+
+export type ApprovalStatus = "PENDING" | "APPROVED" | "REJECTED" | "EXPIRED";
+
+export interface PendingApproval {
+  id: string;
+  action_type: ApprovalAction;
+  status: ApprovalStatus;
+  requested_by: string;
+  reviewed_by: string | null;
+  payload: Record<string, unknown>;
+  review_notes: string | null;
+  expires_at: string;
+  reviewed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// ─── Watchlists & sanctions ─────────────────────────────────────────────────
+
+export interface Watchlist {
   name: string;
-  description?: string;
-  entity_type: EntityType;
-  target_tier?: string;
-  estimated_time?: string;
-  steps?: Array<{
-    name: string;
-    step_type: string;
-    description?: string;
-    is_required?: boolean;
-    timeout_hours?: number;
-    config?: Record<string, unknown>;
-  }>;
+  list_type: string;
+  description: string | null;
+  source_url: string | null;
+  is_active: boolean;
+  entry_count: number;
 }
 
-export interface WorkflowUpdateRequest {
-  name?: string;
-  description?: string;
-  target_tier?: string;
-  estimated_time?: string;
+export interface WatchlistEntry {
+  id: string;
+  list_name: string;
+  value: string;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
 }
 
-export interface ListWorkflowsParams {
-  entity_type?: string;
-  status?: string;
-  search?: string;
-  page?: number;
-  page_size?: number;
+export type SanctionsRecommendation = "CLEAR" | "REVIEW" | "MATCH";
+
+export interface SanctionsMatch {
+  list_name: string;
+  matched_name: string;
+  match_score: number;
+  reasons: string[];
+  metadata?: Record<string, unknown>;
 }
 
-// ─── Compliance Types ──────────────────────────────────────────────────────
+export interface ScreenNameResult {
+  query_name: string;
+  recommendation: SanctionsRecommendation;
+  matches: SanctionsMatch[];
+  confidence: number;
+}
 
-export interface ComplianceSummary {
-  period_start: string;
-  period_end: string;
-  client_id: string;
-  total_decisions: number;
-  decisions_by_action: Record<string, number>;
-  decisions_by_risk: Record<string, number>;
-  high_risk_customers: number;
-  tier_distribution: Record<string, number>;
-  flagged_decisions: number;
-  average_risk_score: number;
-  generated_at: string;
+export interface SanctionsStatus {
+  ready: boolean;
+  loaded_lists: string[];
+  entry_count: number;
+}
+
+// ─── Audit trail ────────────────────────────────────────────────────────────
+
+export type AuditAction =
+  | "CREATE"
+  | "UPDATE"
+  | "DELETE"
+  | "APPROVE"
+  | "REJECT"
+  | "LOGIN"
+  | "LOGOUT";
+
+export interface AuditEntry {
+  id: string;
+  resource_type: string;
+  resource_id: string;
+  action: AuditAction;
+  changed_by: string;
+  previous_value: unknown;
+  new_value: unknown;
+  notes: string | null;
+  created_at: string;
+}
+
+// ─── Shadow rule comparison ─────────────────────────────────────────────────
+
+export interface ShadowRuleDelta {
+  rule_id: string;
+  legacy_fires: number;
+  ez_fires: number;
+  delta_pct: number;
+}
+
+export interface ShadowStats {
+  window_days: number;
+  total_transactions: number;
+  agreement_rate: number;
+  equivalence_rate: number;
+  per_rule_deltas: ShadowRuleDelta[];
+  promotion_ready: boolean;
+}
+
+export interface ShadowComparisonRecord {
+  id: string;
+  transaction_id: string;
+  legacy_outcome: string;
+  ez_outcome: string;
+  agreement: boolean;
+  legacy_rules: string[];
+  ez_rules: string[];
+  created_at: string;
+}
+
+// ─── ML registry & drift ────────────────────────────────────────────────────
+
+export type ModelType = "xgboost" | "catboost" | "river" | "isolation_forest" | "lightgbm";
+export type ModelStatus = "TRAINING" | "CHAMPION" | "RETIRED";
+
+export interface ModelRegistryEntry {
+  id: string;
+  model_type: ModelType;
+  version: number;
+  status: ModelStatus;
+  accuracy: number | null;
+  precision: number | null;
+  recall: number | null;
+  f1_score: number | null;
+  training_samples: number;
+  created_at: string;
+  promoted_at: string | null;
+}
+
+export interface DriftCheck {
+  id: string;
+  model_id: string;
+  check_timestamp: string;
+  feature_name: string;
+  p_value: number;
+  psi: number;
+  is_drifting: boolean;
+}
+
+export interface LabeledTransaction {
+  id: string;
+  transaction_id: string;
+  customer_id: string;
+  label: "FRAUD" | "LEGIT";
+  label_source: "ALERT_RESOLUTION" | "SAR_FILING" | "MANUAL";
+  labeled_by: string;
+  labeled_at: string;
+}
+
+// ─── Health & metrics ───────────────────────────────────────────────────────
+
+export interface HealthSummary {
+  status: "healthy" | "degraded" | "down";
+  service: string;
+  version?: string;
+}
+
+export interface SubsystemStatus {
+  status: "healthy" | "degraded" | "down";
+  detail?: string;
+  latency_ms?: number;
+  [key: string]: unknown;
+}
+
+export interface DetailedHealth {
+  status: "healthy" | "degraded" | "down";
+  service: string;
+  version?: string;
+  dependencies: Record<string, SubsystemStatus>;
+  ml_models?: SubsystemStatus;
+  [key: string]: unknown;
+}
+
+export interface SystemMetrics {
+  transactions_total: number;
+  alerts_total: number;
+  scoring_coverage: number;
+  error_rate: number;
+  [key: string]: unknown;
+}
+
+// ─── Ingestion ──────────────────────────────────────────────────────────────
+
+export interface IngestResponse {
+  success: boolean;
+  message: string;
+  transaction_id: string | null;
+  errors: string[];
+  is_duplicate: boolean;
+}
+
+export interface BatchIngestResponse {
+  batch_id: string;
+  total: number;
+  succeeded: number;
+  failed: number;
+  duplicate: number;
+  errors: { index: number; error: string }[];
 }

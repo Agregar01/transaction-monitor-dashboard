@@ -16,24 +16,21 @@ import authReducer from "./slices/authSlice";
 import notificationsReducer from "./slices/notificationsSlice";
 import { baseApi } from "./slices/api/baseApi";
 
-// Import endpoint injections so they register with baseApi
-import "./slices/api/customersApi";
-import "./slices/api/decisionsApi";
-import "./slices/api/usageApi";
-import "./slices/api/clientsApi";
-import "./slices/api/policiesApi";
-import "./slices/api/webhooksApi";
-import "./slices/api/documentsApi";
-import "./slices/api/notificationsApi";
-import "./slices/api/auditLogsApi";
-import "./slices/api/usersApi";
-import "./slices/api/workflowsApi";
-import "./slices/api/complianceApi";
+// Endpoint-injection imports get added in Phase 2 as each slice is created.
 
 const authPersistConfig = {
   key: "auth",
   storage,
-  whitelist: ["clientId", "clientName", "isAdmin", "isRegulator", "isAuthenticated", "isTeamMember", "userRole", "csrfToken"],
+  whitelist: [
+    "userId",
+    "email",
+    "fullName",
+    "roles",
+    "isAuthenticated",
+    "csrfToken",
+    "jurisdictionCode",
+    "jurisdictionDisplayName",
+  ],
 };
 
 const rootReducer = combineReducers({

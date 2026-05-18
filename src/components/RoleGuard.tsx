@@ -6,35 +6,35 @@ import { useEffect } from "react";
 
 interface RoleGuardProps {
   children: React.ReactNode;
-  /** Roles that are allowed to access the page. Empty array = all roles allowed. */
+  /** Roles allowed to view the page. Empty array = all authenticated users. */
   allowedRoles: string[];
 }
 
+/**
+ * Convenience client-side guard for routes that aren't yet protected by the
+ * sidebar filter (e.g. deep links). Backend still enforces 403 — this is UX,
+ * not security.
+ */
 export default function RoleGuard({ children, allowedRoles }: RoleGuardProps) {
-  const { isAdmin, isAuthenticated, userRole } = useAppSelector((s) => s.auth);
-  // Wait for redux-persist to finish rehydrating before making access decisions
-  const isRehydrated = useAppSelector((s) => (s.auth as unknown as { _persist?: { rehydrated: boolean } })._persist?.rehydrated ?? false);
+  const { isAuthenticated, roles } = useAppSelector((s) => s.auth);
+  const isRehydrated = useAppSelector(
+    (s) => (s.auth as unknown as { _persist?: { rehydrated: boolean } })._persist?.rehydrated ?? false,
+  );
   const router = useRouter();
-
-  // Platform admins always have access to client pages (they bypass RBAC)
-  // Client owners (non-team-member) default to OWNER
-  const effectiveRole = isAdmin ? null : (userRole || "OWNER");
 
   const hasAccess =
     !isAuthenticated ||
-    isAdmin ||
     allowedRoles.length === 0 ||
-    (effectiveRole && allowedRoles.includes(effectiveRole));
+    roles.some((r) => allowedRoles.includes(r));
 
   useEffect(() => {
     if (!isRehydrated) return;
-    if (isAuthenticated && !isAdmin && !hasAccess) {
+    if (isAuthenticated && !hasAccess) {
       router.replace("/dashboard");
     }
-  }, [isRehydrated, isAuthenticated, isAdmin, hasAccess, router]);
+  }, [isRehydrated, isAuthenticated, hasAccess, router]);
 
-  // Don't render or redirect until rehydration is complete
-  if (!isRehydrated || !isAuthenticated || (!isAdmin && !hasAccess)) {
+  if (!isRehydrated || !isAuthenticated || !hasAccess) {
     return null;
   }
 

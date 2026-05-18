@@ -1,61 +1,64 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
 export interface AuthState {
-  clientId: string | null;
-  clientName: string | null;
-  isAdmin: boolean;
-  isRegulator: boolean;
+  userId: string | null;
+  email: string | null;
+  fullName: string | null;
+  /** RBAC role names from /auth/me, e.g. ["COMPLIANCE_OFFICER", "ML_ENGINEER"]. */
+  roles: string[];
   isAuthenticated: boolean;
-  isTeamMember: boolean;
-  userRole: string | null; // OWNER | ADMIN | VIEWER (for team members)
+  /** Double-submit CSRF token. Read from a non-httpOnly cookie at login, mirrored
+   *  in Redux for RTK Query to attach to mutation headers. */
   csrfToken: string | null;
+  /** Active jurisdiction for this deployment (GHA / NGA / KEN). */
+  jurisdictionCode: string | null;
+  jurisdictionDisplayName: string | null;
 }
 
 const initialState: AuthState = {
-  clientId: null,
-  clientName: null,
-  isAdmin: false,
-  isRegulator: false,
+  userId: null,
+  email: null,
+  fullName: null,
+  roles: [],
   isAuthenticated: false,
-  isTeamMember: false,
-  userRole: null,
   csrfToken: null,
+  jurisdictionCode: null,
+  jurisdictionDisplayName: null,
 };
+
+interface SetCredentialsPayload {
+  userId: string;
+  email: string;
+  fullName?: string | null;
+  roles: string[];
+  csrfToken?: string | null;
+  jurisdictionCode?: string | null;
+  jurisdictionDisplayName?: string | null;
+}
 
 const authSlice = createSlice({
   name: "auth",
   initialState,
   reducers: {
-    setCredentials(
-      state,
-      action: PayloadAction<{
-        clientId: string;
-        clientName: string;
-        isAdmin: boolean;
-        isRegulator?: boolean;
-        isTeamMember?: boolean;
-        userRole?: string | null;
-        csrfToken?: string | null;
-      }>
-    ) {
-      state.clientId = action.payload.clientId;
-      state.clientName = action.payload.clientName;
-      state.isAdmin = action.payload.isAdmin;
-      state.isRegulator = action.payload.isRegulator || false;
+    setCredentials(state, action: PayloadAction<SetCredentialsPayload>) {
+      state.userId = action.payload.userId;
+      state.email = action.payload.email;
+      state.fullName = action.payload.fullName ?? null;
+      state.roles = action.payload.roles ?? [];
       state.isAuthenticated = true;
-      state.isTeamMember = action.payload.isTeamMember || false;
-      state.userRole = action.payload.userRole || null;
-      state.csrfToken = action.payload.csrfToken || null;
+      state.csrfToken = action.payload.csrfToken ?? null;
+      state.jurisdictionCode = action.payload.jurisdictionCode ?? null;
+      state.jurisdictionDisplayName = action.payload.jurisdictionDisplayName ?? null;
     },
     logout(state) {
-      state.clientId = null;
-      state.clientName = null;
-      state.isAdmin = false;
-      state.isRegulator = false;
+      state.userId = null;
+      state.email = null;
+      state.fullName = null;
+      state.roles = [];
       state.isAuthenticated = false;
-      state.isTeamMember = false;
-      state.userRole = null;
       state.csrfToken = null;
+      state.jurisdictionCode = null;
+      state.jurisdictionDisplayName = null;
     },
   },
 });

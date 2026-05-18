@@ -16,7 +16,7 @@ export function middleware(request: NextRequest) {
   }
 
   // Redirect authenticated users away from public auth pages
-  if (pathname === "/login" || pathname === "/signup" || pathname === "/forgot-password" || pathname === "/reset-password") {
+  if (pathname === "/login" || pathname === "/forgot-password") {
     const session = request.cookies.get("__sid");
     if (session?.value) {
       return NextResponse.redirect(new URL("/dashboard", request.url));
@@ -37,5 +37,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/login", "/signup"],
+  matcher: ["/dashboard/:path*", "/login", "/forgot-password"],
 };

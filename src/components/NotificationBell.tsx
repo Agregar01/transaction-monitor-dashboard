@@ -9,7 +9,7 @@ export default function NotificationBell() {
 
   return (
     <Link
-      href="/dashboard/notifications"
+      href="/dashboard/alerts"
       className="relative flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-navy-200 hover:bg-navy-600 hover:text-white transition-colors"
     >
       <BellIcon className="h-5 w-5" aria-hidden="true" />

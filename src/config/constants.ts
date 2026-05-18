@@ -1,24 +1,81 @@
-/** Hex colors for chart libraries (ApexCharts). */
-export const chartColors = {
-  action: {
-    ALLOW: "#22c55e",
-    BLOCK: "#ef4444",
-    REVIEW: "#f59e0b",
-    UPGRADE_REQUIRED: "#1A1A4E",
-    STEP_UP: "#8b5cf6",
-    FREEZE: "#64748b",
-  } as Record<string, string>,
+/**
+ * AML-specific color tokens and helpers used across the dashboard.
+ *
+ * The TMS risk score is 0-300 (Customer + Transaction + Behavioral, summed).
+ * Bands:
+ *   ALLOW  0   - 89
+ *   FLAG   90  - 149
+ *   HOLD   150 - 199
+ *   BLOCK  200 - 300
+ */
 
-  risk: {
-    LOW: "#22c55e",
-    MEDIUM: "#f59e0b",
-    HIGH: "#ef4444",
-    VERY_HIGH: "#dc2626",
-    CRITICAL: "#991b1b",
-  } as Record<string, string>,
+export type RiskBand = "ALLOW" | "FLAG" | "HOLD" | "BLOCK";
 
-  tier: {
-    T0: "#94a3b8", T1: "#3b82f6", T2: "#8b5cf6", T3: "#22c55e",
-    B0: "#94a3b8", B1: "#3b82f6", B2: "#8b5cf6", B3: "#22c55e",
-  } as Record<string, string>,
+export const riskBandColors: Record<RiskBand, string> = {
+  ALLOW: "#22c55e",
+  FLAG: "#f59e0b",
+  HOLD: "#fb923c",
+  BLOCK: "#ef4444",
 };
+
+export function riskBand(score: number): RiskBand {
+  if (score >= 200) return "BLOCK";
+  if (score >= 150) return "HOLD";
+  if (score >= 90) return "FLAG";
+  return "ALLOW";
+}
+
+export const alertPriorityColors: Record<string, string> = {
+  IMMEDIATE: "#ef4444",
+  BATCH: "#f59e0b",
+  REVIEW: "#3b82f6",
+};
+
+export const alertStatusColors: Record<string, string> = {
+  OPEN: "#3b82f6",
+  INVESTIGATING: "#f59e0b",
+  CLOSED: "#64748b",
+};
+
+export const caseStatusColors: Record<string, string> = {
+  OPEN: "#3b82f6",
+  INVESTIGATING: "#f59e0b",
+  ESCALATED: "#fb923c",
+  SAR_DRAFTED: "#a855f7",
+  SAR_FILED: "#22c55e",
+  CLOSED: "#64748b",
+};
+
+export const ruleStatusColors: Record<string, string> = {
+  DRAFT: "#64748b",
+  SHADOW: "#3b82f6",
+  PRODUCTION: "#22c55e",
+  ARCHIVED: "#94a3b8",
+};
+
+export const reportStatusColors: Record<string, string> = {
+  DRAFT: "#64748b",
+  FILED: "#22c55e",
+  WITHDRAWN: "#94a3b8",
+  EXEMPT: "#a855f7",
+};
+
+export const approvalStatusColors: Record<string, string> = {
+  PENDING: "#f59e0b",
+  APPROVED: "#22c55e",
+  REJECTED: "#ef4444",
+  EXPIRED: "#94a3b8",
+};
+
+/** Subset of the 8 RBAC role names used by the role-gated sidebar. */
+export const TMS_ROLES = [
+  "SYSTEM_ADMIN",
+  "COMPLIANCE_OFFICER",
+  "SENIOR_ANALYST",
+  "ANALYST",
+  "AUDITOR",
+  "ML_ENGINEER",
+  "OPERATIONS",
+  "READONLY",
+] as const;
+export type TMSRole = (typeof TMS_ROLES)[number];

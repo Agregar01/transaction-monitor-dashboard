@@ -3,24 +3,27 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
-import Link from "next/link";
 import { useAppDispatch } from "@/redux/store";
 import { setCredentials } from "@/redux/slices/authSlice";
 import { API_V1 } from "@/config/api";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 
-function getCookie(name: string): string | null {
-  const match = document.cookie.match(new RegExp("(^| )" + name + "=([^;]+)"));
-  return match ? decodeURIComponent(match[2]) : null;
-}
-
 function getSafeRedirect(params: URLSearchParams): string {
-  const redirect = params.get("redirect") || "/dashboard";
-  // Validate redirect is a safe relative path (prevent open redirect)
+  const redirect = params.get("redirect") ?? "/dashboard";
   if (redirect.startsWith("/") && !redirect.startsWith("//") && !redirect.includes("://")) {
     return redirect;
   }
   return "/dashboard";
+}
+
+interface LoginResponse {
+  user_id: string;
+  email: string;
+  full_name: string | null;
+  roles: string[];
+  csrf_token: string;
+  jurisdiction_code: string | null;
+  jurisdiction_display_name: string | null;
 }
 
 export default function LoginPage() {
@@ -29,21 +32,9 @@ export default function LoginPage() {
   const searchParams = useSearchParams();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [mfaRequired, setMfaRequired] = useState(false);
-  const [mfaCode, setMfaCode] = useState("");
-  const [pendingLogin, setPendingLogin] = useState<{
-    client_id: string;
-    name: string;
-    is_admin: boolean;
-    is_regulator?: boolean;
-    is_team_member?: boolean;
-    user_role?: string | null;
-    mfa_pending_token?: string;
-  } | null>(null);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,246 +48,137 @@ export default function LoginPage() {
         body: JSON.stringify({ email, password }),
       });
 
-      if (res.status === 401) {
-        setError("Invalid email or password.");
-        setLoading(false);
-        return;
-      }
-
-      if (res.status === 423) {
-        setError("Account temporarily locked due to too many failed attempts. Try again in 30 minutes.");
-        setLoading(false);
-        return;
-      }
-
       if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        setError(data?.detail || "Login failed. Please try again.");
-        setLoading(false);
+        if (res.status === 401) {
+          setError("Invalid email or password");
+        } else if (res.status === 502) {
+          setError("Cannot reach the transaction monitor backend");
+        } else {
+          let detail = `Login failed (${res.status})`;
+          try {
+            const body = await res.json();
+            if (body.detail) detail = body.detail;
+          } catch {
+            // keep default
+          }
+          setError(detail);
+        }
         return;
       }
 
-      const data = await res.json();
-
-      // Check if MFA is required
-      if (data.mfa_required) {
-        setPendingLogin({
-          client_id: data.client_id,
-          name: data.name || "",
-          is_admin: data.is_admin || false,
-          is_regulator: data.is_regulator || false,
-          is_team_member: data.is_team_member,
-          user_role: data.user_role,
-          mfa_pending_token: data.mfa_pending_token,
-        });
-        setMfaRequired(true);
-        setLoading(false);
-        return;
-      }
-
-      // Read CSRF token from cookie (double-submit cookie pattern)
-      const csrfToken = getCookie("__csrf");
-
+      const data: LoginResponse = await res.json();
       dispatch(
         setCredentials({
-          clientId: data.client_id,
-          clientName: data.name || "",
-          isAdmin: data.is_admin || false,
-          isRegulator: data.is_regulator || false,
-          isTeamMember: data.is_team_member || false,
-          userRole: data.user_role || null,
-          csrfToken: csrfToken || null,
-        })
+          userId: data.user_id,
+          email: data.email,
+          fullName: data.full_name,
+          roles: data.roles,
+          csrfToken: data.csrf_token,
+          jurisdictionCode: data.jurisdiction_code,
+          jurisdictionDisplayName: data.jurisdiction_display_name,
+        }),
       );
 
-      // Route regulators to their dashboard
-      if (data.is_regulator) {
-        router.push("/dashboard/regulator");
-      } else {
-        router.push(getSafeRedirect(searchParams));
-      }
+      router.replace(getSafeRedirect(searchParams));
     } catch {
-      setError("Connection failed. Is the KYC Engine running?");
+      setError("Network error. Please try again.");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-  };
-
-  const handleMfaVerify = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-    try {
-      const res = await fetch(`${API_V1}/auth/verify-mfa`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: pendingLogin?.mfa_pending_token, code: mfaCode }),
-      });
-      if (res.status === 401) {
-        setError("Invalid MFA code. Please try again.");
-        setLoading(false);
-        return;
-      }
-      if (res.status === 400) {
-        setError("MFA session expired. Please log in again.");
-        setMfaRequired(false);
-        setMfaCode("");
-        setPendingLogin(null);
-        setLoading(false);
-        return;
-      }
-      if (!res.ok) {
-        const d = await res.json().catch(() => null);
-        setError(d?.detail || "MFA verification failed.");
-        setLoading(false);
-        return;
-      }
-      const data = await res.json();
-      // Proxy sets httpOnly cookies; read CSRF from cookie
-      const csrfToken = getCookie("__csrf");
-      dispatch(
-        setCredentials({
-          clientId: data.client_id,
-          clientName: data.name || "",
-          isAdmin: data.is_admin || false,
-          isRegulator: data.is_regulator || false,
-          isTeamMember: data.is_team_member || false,
-          userRole: data.user_role || null,
-          csrfToken: csrfToken || null,
-        })
-      );
-      if (data.is_regulator) {
-        router.push("/dashboard/regulator");
-      } else {
-        router.push(getSafeRedirect(searchParams));
-      }
-    } catch {
-      setError("Connection failed.");
-    }
-    setLoading(false);
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-navy-900 flex items-center justify-center px-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-navy-700 px-4 py-12">
+      <div className="w-full max-w-md bg-white dark:bg-navy-600 rounded-2xl shadow-xl p-8 space-y-6">
+        <div className="text-center space-y-2">
           <Image
-            src="/images/agregar-brand-logo.png"
-            alt="Agregar"
-            width={200}
-            height={50}
+            src="/images/Autheo_this.png"
+            alt="Autheo"
+            width={160}
+            height={42}
             className="mx-auto"
           />
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mt-4">Deferred KYC Engine</h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-2">Sign in to your dashboard</p>
+          <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
+            Transaction Monitor
+          </h1>
+          <p className="text-sm text-gray-500 dark:text-navy-200">
+            AML/CFT analyst console — sign in to continue
+          </p>
         </div>
 
-        <div className="bg-white dark:bg-navy-700 rounded-xl shadow-sm border dark:border-navy-600 overflow-hidden">
-          {mfaRequired ? (
-            <form onSubmit={handleMfaVerify} className="p-6 space-y-4">
-              <div className="text-center">
-                <p className="text-sm text-gray-600 dark:text-gray-300">Enter the 6-digit code from your authenticator app</p>
-              </div>
-              <div>
-                <label htmlFor="mfa-code" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">MFA Code</label>
-                <input
-                  id="mfa-code"
-                  required
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]{6}"
-                  maxLength={6}
-                  value={mfaCode}
-                  onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, ""))}
-                  className="w-full border dark:border-navy-500 dark:bg-navy-600 dark:text-white rounded-lg px-3 py-2.5 text-sm text-center tracking-widest text-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                  placeholder="000000"
-                  autoFocus
-                />
-              </div>
-              {error && <p role="alert" className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded">{error}</p>}
-              <button
-                type="submit"
-                disabled={loading || mfaCode.length !== 6}
-                className="w-full bg-primary text-white py-2.5 rounded-lg text-sm font-medium hover:bg-primary-600 disabled:opacity-50 transition-colors"
-              >
-                {loading ? "Verifying..." : "Verify"}
-              </button>
+        <form onSubmit={handleLogin} className="space-y-4">
+          <div>
+            <label
+              htmlFor="email"
+              className="block text-sm font-medium text-gray-700 dark:text-navy-100 mb-1"
+            >
+              Email
+            </label>
+            <input
+              id="email"
+              type="email"
+              autoComplete="username"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+              placeholder="analyst@autheo.test"
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="password"
+              className="block text-sm font-medium text-gray-700 dark:text-navy-100 mb-1"
+            >
+              Password
+            </label>
+            <div className="relative">
+              <input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+              />
               <button
                 type="button"
-                onClick={() => { setMfaRequired(false); setMfaCode(""); setError(""); setPendingLogin(null); }}
-                className="w-full text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                className="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500 hover:text-gray-700 dark:hover:text-white"
               >
-                Back to login
+                {showPassword ? (
+                  <EyeSlashIcon className="h-5 w-5" aria-hidden="true" />
+                ) : (
+                  <EyeIcon className="h-5 w-5" aria-hidden="true" />
+                )}
               </button>
-            </form>
-          ) : (
-          <form onSubmit={handleLogin} className="p-6 space-y-4">
-            <div>
-              <label htmlFor="login-email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
-              <input
-                id="login-email"
-                required
-                type="email"
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full border dark:border-navy-500 dark:bg-navy-600 dark:text-white rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                placeholder="you@company.com"
-              />
             </div>
-            <div>
-              <label htmlFor="login-password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Password</label>
-              <div className="relative">
-                <input
-                  id="login-password"
-                  required
-                  type={showPassword ? "text" : "password"}
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full border dark:border-navy-500 dark:bg-navy-600 dark:text-white rounded-lg px-3 py-2.5 pr-10 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                  placeholder="Enter your password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                >
-                  {showPassword ? <EyeSlashIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
-                </button>
-              </div>
-            </div>
+          </div>
 
-            <div className="flex justify-end">
-              <Link href="/forgot-password" className="text-xs text-primary hover:text-primary-600">
-                Forgot password?
-              </Link>
-            </div>
-
-            {error && <p role="alert" className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded">{error}</p>}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-primary text-white py-2.5 rounded-lg text-sm font-medium hover:bg-primary-600 disabled:opacity-50 transition-colors"
+          {error && (
+            <div
+              role="alert"
+              className="px-3 py-2 rounded-lg text-sm bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-200"
             >
-              {loading ? "Signing in..." : "Sign In"}
-            </button>
-          </form>
+              {error}
+            </div>
           )}
-        </div>
 
-        <div className="text-center mt-6 space-y-2">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Don&apos;t have an account?{" "}
-            <Link href="/signup" className="text-primary hover:text-primary-600 font-medium">
-              Sign up &rarr;
-            </Link>
-          </p>
-          <p className="text-xs text-gray-400 dark:text-gray-500">
-            Powered by Agregar Technologies
-          </p>
-        </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-2.5 px-4 rounded-lg bg-primary text-white font-medium hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {loading ? "Signing in…" : "Sign in"}
+          </button>
+        </form>
+
+        <p className="text-center text-xs text-gray-500 dark:text-navy-300">
+          Autheo Transaction Monitoring System
+        </p>
       </div>
     </div>
   );
