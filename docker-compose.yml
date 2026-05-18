@@ -1,0 +1,38 @@
+name: transaction-monitor-dashboard
+
+# Standalone Compose file for running the dashboard alongside an already-running
+# TMS stack. Assumes the TMS containers are on the host network and reachable
+# at http://host.docker.internal:8088 from within this container.
+#
+# To run it inside the TMS docker network (recommended), use the `networks:`
+# block below — set the TMS network's name via TM_NETWORK in your shell env.
+
+services:
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: transaction-monitor-dashboard:latest
+    container_name: tm-dashboard
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      # When running outside the TMS network, hit the nginx through the host.
+      # If you're attaching to the TMS network instead, set this to
+      # http://tm-nginx:80 and uncomment the `networks` block below.
+      BACKEND_URL: ${BACKEND_URL:-http://host.docker.internal:8088}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    # networks:
+    #   - transaction-monitor_tm-network
+
+# networks:
+#   transaction-monitor_tm-network:
+#     external: true
