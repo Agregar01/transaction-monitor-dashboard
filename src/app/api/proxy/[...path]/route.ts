@@ -1,49 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomBytes } from "crypto";
+import {
+  ACCESS_COOKIE,
+  REFRESH_COOKIE,
+  USER_COOKIE,
+  CSRF_COOKIE,
+  SESSION_MARKER,
+  ACCESS_MAX_AGE,
+  REFRESH_MAX_AGE,
+  isAllowedPath,
+  isCsrfExempt,
+  normalizeProxyPath,
+  requiresCsrf,
+} from "@/lib/proxy-policy";
 
 const BACKEND_URL = process.env.BACKEND_URL;
 if (!BACKEND_URL) {
   console.error("FATAL: BACKEND_URL environment variable is not set");
 }
-
-// httpOnly cookies hold the secrets. Browser JS never sees access/refresh tokens.
-const ACCESS_COOKIE = "__access";
-const REFRESH_COOKIE = "__refresh";
-const USER_COOKIE = "__user";
-// CSRF cookie is intentionally NOT httpOnly — the client reads it and echoes it back
-// in the X-CSRF-Token header on mutations (double-submit cookie pattern).
-const CSRF_COOKIE = "__csrf";
-// __sid is a session marker the middleware checks to decide whether to redirect to /login.
-const SESSION_MARKER = "__sid";
-
-// Whitelist of TMS endpoint prefixes. Anything else returns 403.
-const ALLOWED_PREFIXES = [
-  "/api/v1/auth/",
-  "/api/v1/transactions/",
-  "/api/v1/alerts/",
-  "/api/v1/cases/",
-  "/api/v1/rules/",
-  "/api/v1/customers/",
-  "/api/v1/sanctions/",
-  "/api/v1/watchlists/",
-  "/api/v1/str-reports/",
-  "/api/v1/ctr-reports/",
-  "/api/v1/approvals/",
-  "/api/v1/jurisdictions/",
-  "/api/v1/audit/",
-  "/api/v1/shadow/",
-  "/api/v1/tenant/",
-  "/api/v1/ingestion/",
-  "/api/v1/health/",
-  "/api/v1/ussd/",
-  "/api/v1/ndpa/",
-];
-
-const CSRF_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
-
-// Paths that are exempt from CSRF validation (public auth flows; the refresh
-// roundtrip is protected by possession of the refresh cookie itself).
-const CSRF_EXEMPT_SUBSTRINGS = ["/auth/login", "/auth/refresh", "/auth/logout"];
 
 const cookieOpts = (isProduction: boolean) => ({
   httpOnly: true as const,
@@ -51,18 +25,6 @@ const cookieOpts = (isProduction: boolean) => ({
   sameSite: "lax" as const,
   path: "/" as const,
 });
-
-const REFRESH_MAX_AGE = 60 * 60 * 24 * 7; // 7 days — matches TMS refresh token lifetime
-const ACCESS_MAX_AGE = 60 * 30; // 30 minutes — matches TMS access token lifetime
-
-function isAllowedPath(path: string): boolean {
-  const candidate = path.endsWith("/") ? path : path + "/";
-  return ALLOWED_PREFIXES.some((prefix) => candidate.startsWith(prefix));
-}
-
-function isCsrfExempt(path: string): boolean {
-  return CSRF_EXEMPT_SUBSTRINGS.some((s) => path.includes(s));
-}
 
 async function callBackend(path: string, init: RequestInit): Promise<Response> {
   return fetch(`${BACKEND_URL}${path}`, {
@@ -183,15 +145,10 @@ async function proxyRequest(req: NextRequest) {
   }
 
   const url = new URL(req.url);
-  let path = url.pathname.replace("/api/proxy", "").replace(/\/+/g, "/");
+  const path = normalizeProxyPath(url.pathname);
 
   if (!isAllowedPath(path)) {
     return NextResponse.json({ detail: "Not allowed" }, { status: 403 });
-  }
-
-  // Strip trailing slash to avoid FastAPI 307 redirects (which can drop headers on POST)
-  if (path.length > 1 && path.endsWith("/")) {
-    path = path.slice(0, -1);
   }
 
   const isLogin = req.method === "POST" && path === "/api/v1/auth/login";
@@ -203,7 +160,7 @@ async function proxyRequest(req: NextRequest) {
 
   // CSRF double-submit validation. Public auth flows are exempt; they are protected
   // by passwords or one-time tokens, not session cookies.
-  if (CSRF_METHODS.has(req.method) && !isCsrfExempt(path)) {
+  if (requiresCsrf(req.method, path)) {
     const csrfHeader = req.headers.get("X-CSRF-Token") ?? "";
     if (!csrfCookie || !csrfHeader || csrfCookie !== csrfHeader) {
       return NextResponse.json({ detail: "CSRF validation failed" }, { status: 403 });
