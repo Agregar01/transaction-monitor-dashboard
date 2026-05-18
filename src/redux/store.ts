@@ -16,7 +16,25 @@ import authReducer from "./slices/authSlice";
 import notificationsReducer from "./slices/notificationsSlice";
 import { baseApi } from "./slices/api/baseApi";
 
-// Endpoint-injection imports get added in Phase 2 as each slice is created.
+// Endpoint-injection imports — each slice registers itself with baseApi
+// at import time, so consumer hooks resolve to real endpoints.
+import "./slices/api/authApi";
+import "./slices/api/tenantApi";
+import "./slices/api/transactionsApi";
+import "./slices/api/customersApi";
+import "./slices/api/alertsApi";
+import "./slices/api/casesApi";
+import "./slices/api/rulesApi";
+import "./slices/api/sanctionsApi";
+import "./slices/api/watchlistsApi";
+import "./slices/api/strApi";
+import "./slices/api/ctrApi";
+import "./slices/api/approvalsApi";
+import "./slices/api/jurisdictionsApi";
+import "./slices/api/auditApi";
+import "./slices/api/shadowApi";
+import "./slices/api/healthApi";
+import "./slices/api/mlApi";
 
 const authPersistConfig = {
   key: "auth",
