@@ -1,0 +1,47 @@
+{
+  "name": "transaction-monitor-dashboard",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
+  },
+  "dependencies": {
+    "@heroicons/react": "^2.2.0",
+    "@reduxjs/toolkit": "^2.11.2",
+    "apexcharts": "^5.10.3",
+    "lucide-react": "^0.577.0",
+    "next": "14.2.35",
+    "next-intl": "^4.8.3",
+    "react": "^18",
+    "react-apexcharts": "^2.1.0",
+    "react-dom": "^18",
+    "react-redux": "^9.2.0",
+    "redux-persist": "^6.0.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0",
+    "@testing-library/jest-dom": "^6.5.0",
+    "@testing-library/react": "^16.0.0",
+    "@testing-library/user-event": "^14.5.0",
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "@vitejs/plugin-react": "^4.3.0",
+    "@vitest/coverage-v8": "^2.1.0",
+    "eslint": "^8",
+    "eslint-config-next": "14.2.35",
+    "jsdom": "^25.0.0",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5",
+    "vitest": "^2.1.0"
+  }
+}
