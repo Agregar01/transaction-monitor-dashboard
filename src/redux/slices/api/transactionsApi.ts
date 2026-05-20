@@ -11,7 +11,7 @@ export interface ListTransactionsParams {
   page_size?: number;
   customer_id?: string;
   flagged?: boolean;
-  type?: string;
+  transaction_type?: string;
   channel?: string;
   start_date?: string;
   end_date?: string;

@@ -101,12 +101,14 @@ export default function STRListPage() {
                       href={`/dashboard/str/${r.id}`}
                       className="font-medium text-primary hover:underline"
                     >
-                      {r.subject_name}
+                      {r.subject_name ?? "—"}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-xs">{r.suspicious_activity_type}</td>
+                  <td className="px-4 py-3 text-xs">{r.suspicious_activity_type ?? "—"}</td>
                   <td className="px-4 py-3 font-mono text-xs">
-                    {r.total_amount.toLocaleString()} {r.currency}
+                    {r.total_amount == null
+                      ? "—"
+                      : `${Number(r.total_amount).toLocaleString()} ${r.currency ?? ""}`}
                   </td>
                   <td className="px-4 py-3">
                     <ActionBadge action={r.status} />

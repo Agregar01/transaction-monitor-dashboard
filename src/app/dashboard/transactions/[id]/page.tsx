@@ -41,8 +41,7 @@ export default function TransactionDetailPage() {
         <div className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-6">
           <p className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">Amount</p>
           <p className="mt-1 text-2xl font-mono text-gray-900 dark:text-white">
-            {tx.amount.toLocaleString()}{" "}
-            <span className="text-base text-gray-500 dark:text-gray-400">{tx.currency}</span>
+            {tx.amount == null ? "—" : Number(tx.amount).toLocaleString()}
           </p>
         </div>
         <div className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-6">
@@ -54,7 +53,7 @@ export default function TransactionDetailPage() {
         <div className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-6">
           <p className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">Type / Channel</p>
           <p className="mt-1 text-gray-900 dark:text-white">
-            {tx.type} · <span className="text-gray-500">{tx.channel}</span>
+            {tx.transaction_type} · <span className="text-gray-500">{tx.channel}</span>
           </p>
           {tx.flow_type && <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{tx.flow_type}</p>}
         </div>
@@ -72,11 +71,11 @@ export default function TransactionDetailPage() {
             </Link>
           </dd>
           <dt className="text-gray-500 dark:text-gray-400">Customer risk</dt>
-          <dd className="md:col-span-2">{tx.customer_risk_score}</dd>
+          <dd className="md:col-span-2">{tx.customer_risk_score ?? "—"}</dd>
           <dt className="text-gray-500 dark:text-gray-400">Transaction risk</dt>
-          <dd className="md:col-span-2">{tx.transaction_risk_score}</dd>
+          <dd className="md:col-span-2">{tx.transaction_risk_score ?? "—"}</dd>
           <dt className="text-gray-500 dark:text-gray-400">Behavioral risk</dt>
-          <dd className="md:col-span-2">{tx.behavioral_risk_score}</dd>
+          <dd className="md:col-span-2">{tx.behavioral_risk_score ?? "—"}</dd>
           <dt className="text-gray-500 dark:text-gray-400">Flagged</dt>
           <dd className="md:col-span-2">{tx.flagged ? "Yes" : "No"}</dd>
         </dl>
@@ -113,17 +112,20 @@ export default function TransactionDetailPage() {
         ) : (
           <ul className="divide-y divide-gray-100 dark:divide-navy-600">
             {related.related.map((r, i) => (
-              <li key={`${r.transaction.transaction_id}-${i}`} className="py-2 flex items-center justify-between">
+              <li
+                key={`${r.transaction_id}-${i}`}
+                className="py-2 flex items-center justify-between"
+              >
                 <Link
-                  href={`/dashboard/transactions/${r.transaction.transaction_id}`}
+                  href={`/dashboard/transactions/${r.transaction_id}`}
                   className="font-mono text-xs text-primary hover:underline"
                 >
-                  {r.transaction.transaction_id.slice(0, 10)}…
+                  {r.transaction_id.slice(0, 10)}…
                 </Link>
                 <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
                   <span>{r.relationship_type}</span>
                   <span>similarity {r.similarity_score.toFixed(2)}</span>
-                  <RiskBadge score={r.transaction.combined_risk_score} bandOnly />
+                  <span className="font-mono">{Number(r.amount).toLocaleString()}</span>
                 </div>
               </li>
             ))}

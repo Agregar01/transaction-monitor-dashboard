@@ -74,7 +74,9 @@ export default function STRDetailPage() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">STR</p>
-          <h1 className="text-xl font-semibold text-gray-900 dark:text-white">{str.subject_name}</h1>
+          <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
+            {str.subject_name ?? "(no subject)"}
+          </h1>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
             <Link
               href={`/dashboard/cases/${str.case_id}`}
@@ -93,13 +95,19 @@ export default function STRDetailPage() {
         <div className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-6">
           <p className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">Amount</p>
           <p className="mt-1 text-2xl font-mono text-gray-900 dark:text-white">
-            {str.total_amount.toLocaleString()}{" "}
-            <span className="text-base text-gray-500 dark:text-gray-400">{str.currency}</span>
+            {str.total_amount == null
+              ? "—"
+              : Number(str.total_amount).toLocaleString()}{" "}
+            <span className="text-base text-gray-500 dark:text-gray-400">
+              {str.currency ?? ""}
+            </span>
           </p>
         </div>
         <div className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-6">
           <p className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">Activity</p>
-          <p className="mt-1 text-gray-900 dark:text-white">{str.suspicious_activity_type}</p>
+          <p className="mt-1 text-gray-900 dark:text-white">
+            {str.suspicious_activity_type ?? "—"}
+          </p>
         </div>
         <div className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-6">
           <p className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">Filing</p>
@@ -127,7 +135,7 @@ export default function STRDetailPage() {
           <>
             <textarea
               rows={10}
-              value={narrative ?? str.narrative}
+              value={narrative ?? str.narrative ?? ""}
               onChange={(e) => setNarrative(e.target.value)}
               className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-800 text-gray-900 dark:text-white"
             />
@@ -140,7 +148,9 @@ export default function STRDetailPage() {
             </button>
           </>
         ) : (
-          <p className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">{str.narrative}</p>
+          <p className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">
+            {str.narrative ?? "—"}
+          </p>
         )}
       </section>
 

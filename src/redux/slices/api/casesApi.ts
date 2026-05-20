@@ -6,7 +6,7 @@ import type {
   CaseType,
   CasePriority,
   CaseStatusHistoryEntry,
-  Alert,
+  CaseAlertLink,
   MutationResponse,
 } from "@/types/api";
 
@@ -38,14 +38,24 @@ export const casesApi = baseApi.injectEndpoints({
       invalidatesTags: [{ type: "Case", id: "LIST" }],
     }),
     updateCase: b.mutation<
-      MutationResponse,
-      { id: string; to_status?: CaseStatus; assigned_to?: string; narrative?: string; resolution?: string; notes?: string }
+      Case,
+      { id: string; to_status: CaseStatus; assigned_to?: string; narrative?: string; resolution?: string; notes?: string }
     >({
-      query: ({ id, ...body }) => ({ url: `/cases/${id}`, method: "PATCH", body }),
+      // Backend exposes status transitions at /cases/{id}/status — there is no
+      // generic `PATCH /cases/{id}`. SAR_FILED transitions must use the
+      // /sar-filing endpoint (handled separately below).
+      query: ({ id, ...body }) => ({ url: `/cases/${id}/status`, method: "PATCH", body }),
       invalidatesTags: (_r, _e, { id }) => [
         { type: "Case", id },
         { type: "CaseHistory", id },
         { type: "Case", id: "LIST" },
+      ],
+    }),
+    requestSarFiling: b.mutation<MutationResponse, { case_id: string }>({
+      query: ({ case_id }) => ({ url: `/cases/${case_id}/sar-filing`, method: "POST" }),
+      invalidatesTags: (_r, _e, { case_id }) => [
+        { type: "Case", id: case_id },
+        { type: "Approval", id: "LIST" },
       ],
     }),
     linkAlertToCase: b.mutation<MutationResponse, { case_id: string; alert_id: string }>({
@@ -59,7 +69,7 @@ export const casesApi = baseApi.injectEndpoints({
         { type: "CaseHistory", id: case_id },
       ],
     }),
-    getCaseAlerts: b.query<Paginated<Alert>, string>({
+    getCaseAlerts: b.query<CaseAlertLink[], string>({
       query: (case_id) => `/cases/${case_id}/alerts`,
     }),
     getCaseHistory: b.query<CaseStatusHistoryEntry[], string>({
@@ -74,6 +84,7 @@ export const {
   useGetCaseQuery,
   useCreateCaseMutation,
   useUpdateCaseMutation,
+  useRequestSarFilingMutation,
   useLinkAlertToCaseMutation,
   useGetCaseAlertsQuery,
   useGetCaseHistoryQuery,

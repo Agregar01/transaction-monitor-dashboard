@@ -10,7 +10,7 @@ export default function TransactionsListPage() {
   const [page, setPage] = useState(1);
   const [customerId, setCustomerId] = useState("");
   const [flagged, setFlagged] = useState<"true" | "false" | "">("");
-  const [type, setType] = useState("");
+  const [transactionType, setTransactionType] = useState("");
   const [channel, setChannel] = useState("");
 
   const { data, isLoading, error } = useListTransactionsQuery({
@@ -18,7 +18,7 @@ export default function TransactionsListPage() {
     page_size: 20,
     customer_id: customerId || undefined,
     flagged: flagged === "" ? undefined : flagged === "true",
-    type: type || undefined,
+    transaction_type: transactionType || undefined,
     channel: channel || undefined,
   });
 
@@ -57,10 +57,10 @@ export default function TransactionsListPage() {
         </select>
         <input
           placeholder="Type (TRANSFER, DEPOSIT…)"
-          value={type}
+          value={transactionType}
           onChange={(e) => {
             setPage(1);
-            setType(e.target.value.toUpperCase());
+            setTransactionType(e.target.value.toUpperCase());
           }}
           className="px-3 py-2 text-sm border border-gray-200 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-800 text-gray-900 dark:text-white"
         />
@@ -123,9 +123,9 @@ export default function TransactionsListPage() {
                     </Link>
                   </td>
                   <td className="px-4 py-3 font-mono">
-                    {t.amount.toLocaleString()} {t.currency}
+                    {t.amount == null ? "—" : Number(t.amount).toLocaleString()}
                   </td>
-                  <td className="px-4 py-3 text-xs">{t.type}</td>
+                  <td className="px-4 py-3 text-xs">{t.transaction_type}</td>
                   <td className="px-4 py-3 text-xs">{t.channel}</td>
                   <td className="px-4 py-3">
                     <RiskBadge score={t.combined_risk_score} />

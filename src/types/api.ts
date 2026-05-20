@@ -81,36 +81,46 @@ export type TransactionType = "DEPOSIT" | "WITHDRAWAL" | "TRANSFER" | "PAYMENT" 
 export type Channel = "USSD" | "MOBILE" | "WEB" | "AGENT" | "API" | string;
 export type FlowType = "P2P" | "P2M" | "B2P" | "CASH_IN" | "CASH_OUT" | string;
 
+/**
+ * Combined shape covering both `GET /transactions` rows (list view) and
+ * `GET /transactions/{id}` (detail view). Backend uses `transaction_type` —
+ * not `type` — on both paths and does not return a `currency` field. Risk
+ * sub-scores (`customer_risk_score`, etc.) only exist on the detail response.
+ */
 export interface Transaction {
   transaction_id: string;
   customer_id: string;
   timestamp: string;
   amount: number;
-  currency: string;
-  type: TransactionType;
+  transaction_type: TransactionType;
   channel: Channel;
   flow_type: FlowType | null;
   receiver_id: string | null;
   receiver_country: string | null;
-  device_id: string | null;
-  customer_risk_score: number;
-  transaction_risk_score: number;
-  behavioral_risk_score: number;
+  device_id?: string | null;
+  geo_location?: string | null;
+  customer_risk_score?: number;
+  transaction_risk_score?: number;
+  behavioral_risk_score?: number;
   combined_risk_score: number;
   flagged: boolean;
-  created_at: string;
+  alert_id?: string | null;
+  created_at?: string;
 }
 
 export interface TransactionTimelineEvent {
   event_type: string;
   description: string;
-  metadata: Record<string, unknown> | null;
-  actor: string | null;
+  metadata: Record<string, unknown>;
+  actor: string;
   timestamp: string;
 }
 
 export interface RelatedTransaction {
-  transaction: Transaction;
+  transaction_id: string;
+  timestamp: string;
+  amount: number;
+  transaction_type: string;
   relationship_type: string;
   similarity_score: number;
 }
@@ -321,12 +331,20 @@ export interface Case {
 
 export interface CaseStatusHistoryEntry {
   id: string;
-  case_id: string;
   from_status: CaseStatus | null;
   to_status: CaseStatus;
-  changed_by: string;
+  changed_by: string | null;
   changed_at: string;
   notes: string | null;
+}
+
+/** Row from `GET /cases/{id}/alerts` — a link, not the full Alert. */
+export interface CaseAlertLink {
+  id: string;
+  case_id: string;
+  alert_id: string;
+  added_by: string | null;
+  added_at: string;
 }
 
 // ─── Rules ──────────────────────────────────────────────────────────────────
@@ -376,21 +394,21 @@ export type STRStatus = "DRAFT" | "FILED" | "WITHDRAWN";
 export interface STRReport {
   id: string;
   case_id: string;
-  jurisdiction_id: string;
+  jurisdiction_id: string | null;
   status: STRStatus;
-  subject_customer_id: string;
-  subject_name: string;
-  suspicious_activity_type: string;
+  subject_customer_id: string | null;
+  subject_name: string | null;
+  suspicious_activity_type: string | null;
   reporting_entity: string | null;
-  total_amount: number;
-  currency: string;
-  transaction_count: number;
+  total_amount: number | null;
+  currency: string | null;
+  transaction_count: number | null;
   date_range_start: string | null;
   date_range_end: string | null;
-  narrative: string;
+  narrative: string | null;
   filing_reference: string | null;
   filed_at: string | null;
-  created_by: string;
+  created_by: string | null;
   reviewed_by: string | null;
   created_at: string;
   updated_at: string;
@@ -427,16 +445,15 @@ export type ApprovalStatus = "PENDING" | "APPROVED" | "REJECTED" | "EXPIRED";
 
 export interface PendingApproval {
   id: string;
-  action_type: ApprovalAction;
-  status: ApprovalStatus;
-  requested_by: string;
+  action_type: ApprovalAction | string;
+  status: ApprovalStatus | string;
+  requested_by: string | null;
   reviewed_by: string | null;
   payload: Record<string, unknown>;
   review_notes: string | null;
   expires_at: string;
   reviewed_at: string | null;
   created_at: string;
-  updated_at: string;
 }
 
 // ─── Watchlists & sanctions ─────────────────────────────────────────────────
@@ -504,10 +521,10 @@ export interface AuditEntry {
   id: string;
   resource_type: string;
   resource_id: string;
-  action: AuditAction;
-  changed_by: string;
-  previous_value: unknown;
-  new_value: unknown;
+  action: AuditAction | string;
+  changed_by: string | null;
+  previous_value: Record<string, unknown> | null;
+  new_value: Record<string, unknown> | null;
   notes: string | null;
   created_at: string;
 }

@@ -7,9 +7,9 @@ import ActionBadge from "@/components/ActionBadge";
 import type { AuditAction, AuditEntry } from "@/types/api";
 
 const ACTIONS: AuditAction[] = ["CREATE", "UPDATE", "DELETE", "APPROVE", "REJECT", "LOGIN", "LOGOUT"];
+const PAGE_SIZE = 50;
 
 function DiffPanel({ before, after }: { before: unknown; after: unknown }) {
-  // Surface a one-line per-key diff so reviewers can scan quickly.
   const left = before && typeof before === "object" ? (before as Record<string, unknown>) : {};
   const right = after && typeof after === "object" ? (after as Record<string, unknown>) : {};
   const keys = Array.from(new Set([...Object.keys(left), ...Object.keys(right)])).sort();
@@ -48,8 +48,12 @@ function Row({ entry }: { entry: AuditEntry }) {
           <ActionBadge action={entry.action} />
         </td>
         <td className="px-4 py-3 text-xs">{entry.resource_type}</td>
-        <td className="px-4 py-3 font-mono text-xs">{entry.resource_id.slice(0, 8)}…</td>
-        <td className="px-4 py-3 text-xs">{entry.changed_by}</td>
+        <td className="px-4 py-3 font-mono text-xs">
+          {entry.resource_id ? `${entry.resource_id.slice(0, 8)}…` : "—"}
+        </td>
+        <td className="px-4 py-3 text-xs font-mono">
+          {entry.changed_by ? `${entry.changed_by.slice(0, 8)}…` : "—"}
+        </td>
         <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">{entry.notes ?? "—"}</td>
       </tr>
       {open && (
@@ -70,14 +74,18 @@ export default function AuditPage() {
   const [changedBy, setChangedBy] = useState("");
 
   const { data, isLoading, error } = useListAuditChangesQuery({
-    page,
-    page_size: 50,
+    limit: PAGE_SIZE,
+    offset: (page - 1) * PAGE_SIZE,
     action: action || undefined,
     resource_type: resourceType || undefined,
     changed_by: changedBy || undefined,
   });
 
-  const totalPages = data ? Math.max(1, Math.ceil(data.total / data.page_size)) : 1;
+  // Backend doesn't return a total. We can only tell "more exists" by whether
+  // this page came back full. First page also resets when filters change.
+  const hasMore = (data?.length ?? 0) >= PAGE_SIZE;
+
+  const resetPage = () => setPage(1);
 
   return (
     <div className="space-y-6">
@@ -92,7 +100,7 @@ export default function AuditPage() {
         <select
           value={action}
           onChange={(e) => {
-            setPage(1);
+            resetPage();
             setAction(e.target.value as AuditAction | "");
           }}
           className="px-3 py-2 text-sm border border-gray-200 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-800 text-gray-900 dark:text-white"
@@ -107,7 +115,7 @@ export default function AuditPage() {
         <input
           value={resourceType}
           onChange={(e) => {
-            setPage(1);
+            resetPage();
             setResourceType(e.target.value);
           }}
           placeholder="Resource type (e.g. CASE, RULE, STR)"
@@ -116,21 +124,21 @@ export default function AuditPage() {
         <input
           value={changedBy}
           onChange={(e) => {
-            setPage(1);
+            resetPage();
             setChangedBy(e.target.value);
           }}
-          placeholder="Changed by (user id or email)"
+          placeholder="Changed by (user UUID)"
           className="px-3 py-2 text-sm border border-gray-200 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-800 text-gray-900 dark:text-white"
         />
       </div>
 
       {isLoading ? (
-        <SkeletonTable rows={10} cols={5} />
+        <SkeletonTable rows={10} cols={6} />
       ) : error ? (
         <div className="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 p-4 rounded-xl text-sm">
           Failed to load audit trail.
         </div>
-      ) : !data || data.items.length === 0 ? (
+      ) : !data || data.length === 0 ? (
         <div className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-12 text-center text-sm text-gray-500 dark:text-gray-400">
           No audit entries match the filters.
         </div>
@@ -148,7 +156,7 @@ export default function AuditPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-navy-600">
-              {data.items.map((entry) => (
+              {data.map((entry) => (
                 <Row key={entry.id} entry={entry} />
               ))}
             </tbody>
@@ -156,7 +164,7 @@ export default function AuditPage() {
 
           <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 dark:border-navy-600 text-xs text-gray-500 dark:text-gray-400">
             <span>
-              {data.total} total · page {page} of {totalPages}
+              page {page} · {data.length} {data.length === 1 ? "entry" : "entries"}
             </span>
             <div className="flex gap-2">
               <button
@@ -167,8 +175,8 @@ export default function AuditPage() {
                 Prev
               </button>
               <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page >= totalPages}
+                onClick={() => setPage((p) => p + 1)}
+                disabled={!hasMore}
                 className="px-3 py-1 rounded border border-gray-200 dark:border-navy-500 disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-navy-600"
               >
                 Next

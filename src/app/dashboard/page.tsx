@@ -80,8 +80,10 @@ export default function DashboardOverviewPage() {
   );
 
   const { data: draftSTR } = useListSTRQuery({ status: "DRAFT", page_size: 1 });
+  // Approvals endpoint returns a bare list, not paginated — derive the count
+  // client-side. Safe because the queue is bounded (active four-eyes work).
   const { data: pendingApprovals } = useListApprovalsQuery(
-    { status: "PENDING", page_size: 1 },
+    { approval_status: "PENDING" },
     { pollingInterval: mediumPoll },
   );
 
@@ -150,7 +152,7 @@ export default function DashboardOverviewPage() {
           />
           <StatCard
             title="STR drafts / approvals"
-            value={`${draftSTR?.total ?? 0} / ${pendingApprovals?.total ?? 0}`}
+            value={`${draftSTR?.total ?? 0} / ${pendingApprovals?.length ?? 0}`}
             subtitle="STR drafts · approvals pending"
             icon={<CheckBadgeIcon className="h-8 w-8" />}
             color="text-purple-600"

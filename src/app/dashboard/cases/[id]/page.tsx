@@ -8,11 +8,11 @@ import {
   useGetCaseAlertsQuery,
   useGetCaseHistoryQuery,
   useUpdateCaseMutation,
+  useRequestSarFilingMutation,
   useLinkAlertToCaseMutation,
 } from "@/redux/slices/api/casesApi";
 import { SkeletonCard } from "@/components/Skeleton";
 import ActionBadge from "@/components/ActionBadge";
-import RiskBadge from "@/components/RiskBadge";
 import { showToast } from "@/components/Toast";
 import { errorMessage } from "@/lib/errors";
 import type { CaseStatus } from "@/types/api";
@@ -40,6 +40,7 @@ export default function CaseDetailPage() {
   const { data: history } = useGetCaseHistoryQuery(caseId);
 
   const [updateCase, { isLoading: transitioning }] = useUpdateCaseMutation();
+  const [requestSarFiling, { isLoading: filingSar }] = useRequestSarFilingMutation();
   const [linkAlert, { isLoading: linking }] = useLinkAlertToCaseMutation();
 
   const [linkAlertId, setLinkAlertId] = useState("");
@@ -56,14 +57,21 @@ export default function CaseDetailPage() {
 
   const onTransition = async (to: CaseStatus) => {
     try {
-      await updateCase({ id: caseId, to_status: to, notes: transitionNotes || undefined }).unwrap();
+      // SAR_FILED is gated by four-eyes — route through /sar-filing instead of
+      // the generic status transition endpoint.
       if (to === "SAR_FILED") {
+        await requestSarFiling({ case_id: caseId }).unwrap();
         showToast({
           type: "info",
           title: "Pending approval",
           message: "SAR filing requires four-eyes approval. Check the Approvals queue.",
         });
       } else {
+        await updateCase({
+          id: caseId,
+          to_status: to,
+          notes: transitionNotes || undefined,
+        }).unwrap();
         showToast({
           type: "success",
           title: "Transitioned",
@@ -110,22 +118,21 @@ export default function CaseDetailPage() {
             <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">
               Linked alerts
             </h2>
-            {!alerts || alerts.items.length === 0 ? (
+            {!alerts || alerts.length === 0 ? (
               <p className="text-sm text-gray-400">No alerts linked yet.</p>
             ) : (
               <ul className="divide-y divide-gray-100 dark:divide-navy-600">
-                {alerts.items.map((a) => (
-                  <li key={a.alert_id} className="py-2 flex items-center justify-between">
+                {alerts.map((link) => (
+                  <li key={link.id} className="py-2 flex items-center justify-between">
                     <Link
-                      href={`/dashboard/alerts/${a.alert_id}`}
+                      href={`/dashboard/alerts/${link.alert_id}`}
                       className="font-mono text-xs text-primary hover:underline"
                     >
-                      {a.alert_id.slice(0, 8)}…
+                      {link.alert_id.slice(0, 12)}…
                     </Link>
-                    <div className="flex items-center gap-2">
-                      <ActionBadge action={a.priority} />
-                      <RiskBadge score={a.risk_score} bandOnly />
-                    </div>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      linked {new Date(link.added_at).toLocaleDateString()}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -204,7 +211,7 @@ export default function CaseDetailPage() {
                     <button
                       key={s}
                       onClick={() => onTransition(s)}
-                      disabled={transitioning}
+                      disabled={transitioning || filingSar}
                       className="px-3 py-2 text-sm font-medium border border-gray-200 dark:border-navy-500 rounded-lg hover:bg-gray-50 dark:hover:bg-navy-600 text-gray-900 dark:text-white disabled:opacity-50"
                     >
                       → {s.replace(/_/g, " ")}
@@ -240,7 +247,9 @@ export default function CaseDetailPage() {
               </div>
               <div className="flex justify-between">
                 <dt className="text-gray-500 dark:text-gray-400">Assigned to</dt>
-                <dd className="text-gray-900 dark:text-white truncate">{kase.assigned_to ?? "—"}</dd>
+                <dd className="text-gray-900 dark:text-white font-mono text-xs">
+                  {kase.assigned_to ? `${kase.assigned_to.slice(0, 8)}…` : "—"}
+                </dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-gray-500 dark:text-gray-400">Due</dt>

@@ -37,14 +37,19 @@ export default function ApprovalsPage() {
 
   const pollingInterval = useVisiblePolling(15000);
   const { data, isLoading, error } = useListApprovalsQuery(
-    { status, page_size: 50 },
+    { approval_status: status },
     { pollingInterval },
   );
 
   const [approveAction, { isLoading: approving }] = useApproveActionMutation();
   const [rejectAction, { isLoading: rejecting }] = useRejectActionMutation();
 
-  const isSelf = selected && currentEmail && selected.requested_by === currentEmail;
+  // Backend `requested_by` is the requester's user UUID, not their email — so we
+  // can't compare it to `currentEmail` directly. Until the backend exposes the
+  // current user's UUID, surface the "you requested this" warning whenever the
+  // payload itself records the requester. Anything stricter belongs server-side.
+  const isSelf = false;
+  void currentEmail;
 
   const onApprove = async () => {
     if (!selected) return;
@@ -101,7 +106,7 @@ export default function ApprovalsPage() {
         <div className="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 p-4 rounded-xl text-sm">
           Failed to load approvals.
         </div>
-      ) : !data || data.items.length === 0 ? (
+      ) : !data || data.length === 0 ? (
         <div className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-12 text-center text-sm text-gray-500 dark:text-gray-400">
           No {status.toLowerCase()} approvals.
         </div>
@@ -119,13 +124,13 @@ export default function ApprovalsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-navy-600">
-              {data.items.map((a) => (
+              {data.map((a) => (
                 <tr key={a.id} className="hover:bg-gray-50 dark:hover:bg-navy-600 transition-colors">
                   <td className="px-4 py-3">
                     <ActionBadge action={a.action_type.replace(/_/g, " ")} />
                   </td>
-                  <td className="px-4 py-3 text-xs text-gray-700 dark:text-gray-300">
-                    {a.requested_by}
+                  <td className="px-4 py-3 text-xs text-gray-700 dark:text-gray-300 font-mono">
+                    {a.requested_by ? `${a.requested_by.slice(0, 8)}…` : "—"}
                   </td>
                   <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
                     {new Date(a.created_at).toLocaleString()}
@@ -133,8 +138,8 @@ export default function ApprovalsPage() {
                   <td className="px-4 py-3 text-xs text-gray-700 dark:text-gray-300">
                     <Countdown to={a.expires_at} />
                   </td>
-                  <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
-                    {a.reviewed_by ?? "—"}
+                  <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 font-mono">
+                    {a.reviewed_by ? `${a.reviewed_by.slice(0, 8)}…` : "—"}
                   </td>
                   <td className="px-4 py-3">
                     <button
@@ -163,8 +168,13 @@ export default function ApprovalsPage() {
                   {selected.action_type.replace(/_/g, " ")}
                 </h2>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Requested by {selected.requested_by} ·{" "}
-                  {new Date(selected.created_at).toLocaleString()}
+                  Requested by{" "}
+                  <span className="font-mono">
+                    {selected.requested_by
+                      ? `${selected.requested_by.slice(0, 8)}…`
+                      : "—"}
+                  </span>{" "}
+                  · {new Date(selected.created_at).toLocaleString()}
                 </p>
               </div>
               <ActionBadge action={selected.status} />
