@@ -26,12 +26,49 @@ const cookieOpts = (isProduction: boolean) => ({
   path: "/" as const,
 });
 
+/**
+ * Forward a request to the TMS backend.
+ *
+ * Why this isn't just `fetch(..., { redirect: "follow" })`: FastAPI's default
+ * `redirect_slashes=True` 307-redirects routes registered with a trailing
+ * slash (e.g. `/api/v1/alerts/`) when the client omits it. Node's fetch
+ * (undici) follows the 307 but strips the `Authorization` header on the
+ * second hop, even though both URLs are same-origin. The backend then sees
+ * no Bearer and returns 401, kicking the user back to /login.
+ *
+ * We handle redirects manually here: detect 3xx, replay the original request
+ * (same method, headers, body) at the Location URL. Limited to 3 hops and to
+ * same-origin redirects as a safety belt. Tracked in TMS
+ * `docs/OPEN_ISSUES.md` #25 — once the backend turns redirect_slashes off (or
+ * registers routes consistently), this loop becomes a single fetch again.
+ */
 async function callBackend(path: string, init: RequestInit): Promise<Response> {
-  return fetch(`${BACKEND_URL}${path}`, {
+  const manualInit: RequestInit = {
     ...init,
-    redirect: "follow",
+    redirect: "manual",
     signal: AbortSignal.timeout(30000),
-  });
+  };
+
+  let currentUrl = `${BACKEND_URL}${path}`;
+  for (let hop = 0; hop < 3; hop++) {
+    const res = await fetch(currentUrl, manualInit);
+    if (![301, 302, 307, 308].includes(res.status)) {
+      return res;
+    }
+    const location = res.headers.get("location");
+    if (!location) return res;
+    const nextUrl = new URL(location, currentUrl).toString();
+    // Only follow same-origin redirects so we never replay Authorization
+    // to a different host.
+    const currentOrigin = new URL(currentUrl).origin;
+    const nextOrigin = new URL(nextUrl).origin;
+    if (currentOrigin !== nextOrigin) return res;
+    // Drain the response body so the socket can be reused.
+    await res.arrayBuffer().catch(() => undefined);
+    currentUrl = nextUrl;
+  }
+  // Hop limit reached — return the last redirect response unchanged.
+  return fetch(currentUrl, manualInit);
 }
 
 // Exchange the refresh token for a new pair. Returns null on failure so the caller
@@ -157,28 +194,6 @@ async function proxyRequest(req: NextRequest) {
   const accessCookie = req.cookies.get(ACCESS_COOKIE)?.value ?? null;
   const refreshCookie = req.cookies.get(REFRESH_COOKIE)?.value ?? null;
   const csrfCookie = req.cookies.get(CSRF_COOKIE)?.value ?? null;
-
-  // [DIAG] Temporary cookie diagnostic — remove once 401-loop is resolved.
-  const rawCookieHeader = req.headers.get("cookie") ?? "";
-  const cookieNamesInHeader = rawCookieHeader
-    .split(";")
-    .map((s) => s.trim().split("=")[0])
-    .filter(Boolean);
-  const cookieNamesViaApi: string[] = [];
-  for (const c of req.cookies.getAll()) {
-    cookieNamesViaApi.push(c.name);
-  }
-  console.log("[proxy-diag]", JSON.stringify({
-    method: req.method,
-    path,
-    cookieHeaderPresent: rawCookieHeader.length > 0,
-    cookieNamesInHeader,
-    cookieNamesViaApi,
-    accessCookieReadable: accessCookie !== null,
-    accessCookieLength: accessCookie?.length ?? 0,
-    refreshCookieReadable: refreshCookie !== null,
-    csrfCookieReadable: csrfCookie !== null,
-  }));
 
   // CSRF double-submit validation. Public auth flows are exempt; they are protected
   // by passwords or one-time tokens, not session cookies.
@@ -318,43 +333,14 @@ async function proxyRequest(req: NextRequest) {
   // ── Standard proxied request ──
   let accessToken = accessCookie;
 
-  const backendInit = buildBackendInit(req, bodyBuffer, bodyText, accessToken, contentType);
-  // [DIAG] Confirm whether the Authorization header actually made it onto the outbound init.
-  const outboundHeaders = backendInit.headers as Record<string, string> | undefined;
-  console.log("[proxy-diag-outbound]", JSON.stringify({
-    path,
-    hasAccessToken: accessToken !== null,
-    accessTokenLen: accessToken?.length ?? 0,
-    outboundHasAuthorization: Boolean(outboundHeaders?.["Authorization"]),
-    outboundAuthorizationPrefix: outboundHeaders?.["Authorization"]?.slice(0, 14) ?? null,
-    outboundHeaderKeys: outboundHeaders ? Object.keys(outboundHeaders) : [],
-  }));
-
-  const upstreamUrl = `${path}${url.search}`;
-  const firstAttempt = await callBackend(upstreamUrl, backendInit).catch(() => null);
+  const firstAttempt = await callBackend(
+    `${path}${url.search}`,
+    buildBackendInit(req, bodyBuffer, bodyText, accessToken, contentType),
+  ).catch(() => null);
 
   if (!firstAttempt) {
-    console.log("[proxy-diag-upstream]", JSON.stringify({
-      upstreamUrl,
-      backendUrl: BACKEND_URL,
-      result: "fetch-threw-or-timed-out",
-    }));
     return NextResponse.json({ detail: "Backend unreachable" }, { status: 502 });
   }
-
-  // [DIAG] Log backend response so we can tell if redirect followed / header stripped.
-  // Peek at the body without consuming — clone the response first.
-  const peekResp = firstAttempt.clone();
-  const peekBody = await peekResp.text().catch(() => "");
-  console.log("[proxy-diag-upstream]", JSON.stringify({
-    upstreamUrl,
-    backendUrl: BACKEND_URL,
-    status: firstAttempt.status,
-    finalUrl: firstAttempt.url,                       // post-redirect URL if any
-    redirected: firstAttempt.redirected,
-    bodyHead: peekBody.slice(0, 200),
-    wwwAuthenticate: firstAttempt.headers.get("www-authenticate"),
-  }));
 
   // Transparent refresh-and-retry on 401
   if (firstAttempt.status === 401 && refreshCookie && !isCsrfExempt(path)) {
