@@ -18,8 +18,8 @@ export default function CustomerDetailPage() {
 
   const { data: profile, isLoading, error } = useGetCustomerRiskProfileQuery(customerId);
   const { data: baseline } = useGetCustomerBaselineQuery(customerId);
-  const { data: recentTx } = useGetCustomerTransactionsQuery({ customer_id: customerId, page_size: 10 });
-  const { data: recentAlerts } = useGetCustomerAlertsQuery({ customer_id: customerId, page_size: 10 });
+  const { data: recentTx } = useGetCustomerTransactionsQuery({ customer_id: customerId, limit: 10 });
+  const { data: recentAlerts } = useGetCustomerAlertsQuery({ customer_id: customerId, limit: 10 });
 
   if (isLoading) return <SkeletonCard />;
   if (error || !profile) {
@@ -57,7 +57,7 @@ export default function CustomerDetailPage() {
         <div className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-6">
           <p className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">KYC quality</p>
           <p className="mt-1 text-3xl font-mono text-gray-900 dark:text-white">
-            {profile.kyc_quality ?? "—"}
+            {profile.kyc_quality_score ?? "—"}
           </p>
         </div>
         <div className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-6">
@@ -103,11 +103,11 @@ export default function CustomerDetailPage() {
             All →
           </Link>
         </div>
-        {!recentTx || recentTx.items.length === 0 ? (
+        {!recentTx || recentTx.transactions.length === 0 ? (
           <p className="text-sm text-gray-400">No transactions on record.</p>
         ) : (
           <ul className="divide-y divide-gray-100 dark:divide-navy-600">
-            {recentTx.items.map((t) => (
+            {recentTx.transactions.map((t) => (
               <li key={t.transaction_id} className="py-2 flex items-center justify-between">
                 <Link
                   href={`/dashboard/transactions/${t.transaction_id}`}
@@ -116,9 +116,9 @@ export default function CustomerDetailPage() {
                   {t.transaction_id.slice(0, 10)}…
                 </Link>
                 <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
-                  <span className="font-mono">{t.amount.toLocaleString()} {t.currency}</span>
-                  <span>{t.type}</span>
-                  <RiskBadge score={t.combined_risk_score} bandOnly />
+                  <span className="font-mono">{Number(t.amount).toLocaleString()}</span>
+                  <span>{t.transaction_type}</span>
+                  <RiskBadge score={t.risk_score} bandOnly />
                 </div>
               </li>
             ))}
@@ -130,11 +130,11 @@ export default function CustomerDetailPage() {
         <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">
           Recent alerts
         </h2>
-        {!recentAlerts || recentAlerts.items.length === 0 ? (
+        {!recentAlerts || recentAlerts.alerts.length === 0 ? (
           <p className="text-sm text-gray-400">No alerts on record.</p>
         ) : (
           <ul className="divide-y divide-gray-100 dark:divide-navy-600">
-            {recentAlerts.items.map((a) => (
+            {recentAlerts.alerts.map((a) => (
               <li key={a.alert_id} className="py-2 flex items-center justify-between">
                 <Link
                   href={`/dashboard/alerts/${a.alert_id}`}

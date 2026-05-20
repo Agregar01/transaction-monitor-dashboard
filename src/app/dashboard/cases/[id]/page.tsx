@@ -14,6 +14,7 @@ import { SkeletonCard } from "@/components/Skeleton";
 import ActionBadge from "@/components/ActionBadge";
 import RiskBadge from "@/components/RiskBadge";
 import { showToast } from "@/components/Toast";
+import { errorMessage } from "@/lib/errors";
 import type { CaseStatus } from "@/types/api";
 
 /**
@@ -71,7 +72,7 @@ export default function CaseDetailPage() {
       }
       setTransitionNotes("");
     } catch (e) {
-      showToast({ type: "error", title: "Transition failed", message: String(e) });
+      showToast({ type: "error", title: "Transition failed", message: errorMessage(e) });
     }
   };
 
@@ -82,7 +83,7 @@ export default function CaseDetailPage() {
       showToast({ type: "success", title: "Alert linked", message: linkAlertId });
       setLinkAlertId("");
     } catch (e) {
-      showToast({ type: "error", title: "Link failed", message: String(e) });
+      showToast({ type: "error", title: "Link failed", message: errorMessage(e) });
     }
   };
 

@@ -10,6 +10,7 @@ import {
 } from "@/redux/slices/api/watchlistsApi";
 import { SkeletonCard } from "@/components/Skeleton";
 import { showToast } from "@/components/Toast";
+import { errorMessage } from "@/lib/errors";
 import { TrashIcon, ArrowPathIcon, PlusIcon } from "@heroicons/react/24/outline";
 
 export default function WatchlistsPage() {
@@ -41,7 +42,7 @@ export default function WatchlistsPage() {
       });
       setNewEntry("");
     } catch (e) {
-      showToast({ type: "error", title: "Add failed", message: String(e) });
+      showToast({ type: "error", title: "Add failed", message: errorMessage(e) });
     }
   };
 
@@ -52,7 +53,7 @@ export default function WatchlistsPage() {
       await removeEntry({ name: selectedName, value }).unwrap();
       showToast({ type: "info", title: "Removal queued", message: "Awaiting approval." });
     } catch (e) {
-      showToast({ type: "error", title: "Remove failed", message: String(e) });
+      showToast({ type: "error", title: "Remove failed", message: errorMessage(e) });
     }
   };
 
@@ -62,7 +63,7 @@ export default function WatchlistsPage() {
       await reload({ name: selectedName }).unwrap();
       showToast({ type: "success", title: "Reloaded", message: selectedName });
     } catch (e) {
-      showToast({ type: "error", title: "Reload failed", message: String(e) });
+      showToast({ type: "error", title: "Reload failed", message: errorMessage(e) });
     }
   };
 

@@ -9,6 +9,15 @@ export const USER_COOKIE = "__user";
 export const CSRF_COOKIE = "__csrf";
 export const SESSION_MARKER = "__sid";
 
+/**
+ * SSRF allowlist. Only paths starting with one of these prefixes may be
+ * proxied through `/api/proxy/[...path]`. Keep this list aligned with the RTK
+ * Query slices in `src/redux/slices/api/`.
+ *
+ * The three ML prefixes (`/models/`, `/drift/`, `/labeled/`) are listed so the
+ * sidebar links work the day the backend lands those routers; the dashboard
+ * gates the entry points behind `NEXT_PUBLIC_ENABLE_ML_OPS`.
+ */
 export const ALLOWED_PREFIXES = [
   "/api/v1/auth/",
   "/api/v1/transactions/",
@@ -25,10 +34,10 @@ export const ALLOWED_PREFIXES = [
   "/api/v1/audit/",
   "/api/v1/shadow/",
   "/api/v1/tenant/",
-  "/api/v1/ingestion/",
   "/api/v1/health/",
-  "/api/v1/ussd/",
-  "/api/v1/ndpa/",
+  "/api/v1/models/",
+  "/api/v1/drift/",
+  "/api/v1/labeled/",
 ] as const;
 
 export const CSRF_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
@@ -54,11 +63,30 @@ export function requiresCsrf(method: string, path: string): boolean {
   return CSRF_METHODS.has(method) && !isCsrfExempt(path);
 }
 
-/** Strip trailing slashes for FastAPI (which would otherwise 307 and drop headers). */
+/**
+ * Backend routes that FastAPI registered *with* a trailing slash and would
+ * 307-redirect from the bare path. The proxy follows redirects manually but
+ * if a load balancer mangles the Location header the 307 can leak to the
+ * browser. Force the slash on the way out so the round-trip is direct.
+ *
+ * Once the backend changes `@router.get("/")` to `@router.get("")` for these
+ * collections (so they match the rest of the API surface), this list can shrink
+ * to empty and the path normalizer falls back to bare collapse.
+ */
+const FORCE_TRAILING_SLASH = new Set<string>(["/api/v1/alerts"]);
+
+/**
+ * Normalize the inbound `/api/proxy/<...>` path to the upstream path. Strips
+ * the `/api/proxy` mount, collapses duplicate slashes, and re-applies a
+ * trailing slash for the few collections that require it (see
+ * `FORCE_TRAILING_SLASH`).
+ */
 export function normalizeProxyPath(rawPath: string): string {
   const collapsed = rawPath.replace("/api/proxy", "").replace(/\/+/g, "/");
-  if (collapsed.length > 1 && collapsed.endsWith("/")) {
-    return collapsed.slice(0, -1);
+  const trimmed =
+    collapsed.length > 1 && collapsed.endsWith("/") ? collapsed.slice(0, -1) : collapsed;
+  if (FORCE_TRAILING_SLASH.has(trimmed)) {
+    return `${trimmed}/`;
   }
-  return collapsed;
+  return trimmed;
 }

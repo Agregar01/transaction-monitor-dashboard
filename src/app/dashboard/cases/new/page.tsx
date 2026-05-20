@@ -6,6 +6,7 @@ import { useAppSelector } from "@/redux/store";
 import { useCreateCaseMutation } from "@/redux/slices/api/casesApi";
 import { useGetTenantInfoQuery } from "@/redux/slices/api/tenantApi";
 import { showToast } from "@/components/Toast";
+import { errorMessage } from "@/lib/errors";
 import type { CaseType, CasePriority } from "@/types/api";
 
 export default function NewCasePage() {
@@ -32,7 +33,7 @@ export default function NewCasePage() {
       showToast({ type: "success", title: "Case created", message: title });
       router.push(`/dashboard/cases/${newCase.id}`);
     } catch (err) {
-      showToast({ type: "error", title: "Create failed", message: String(err) });
+      showToast({ type: "error", title: "Create failed", message: errorMessage(err) });
     }
   };
 

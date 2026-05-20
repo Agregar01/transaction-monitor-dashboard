@@ -64,15 +64,23 @@ describe("requiresCsrf", () => {
 
 describe("normalizeProxyPath", () => {
   it("strips the /api/proxy prefix", () => {
-    expect(normalizeProxyPath("/api/proxy/api/v1/alerts")).toBe("/api/v1/alerts");
+    expect(normalizeProxyPath("/api/proxy/api/v1/cases")).toBe("/api/v1/cases");
   });
 
   it("collapses double slashes", () => {
-    expect(normalizeProxyPath("/api/proxy//api/v1//alerts")).toBe("/api/v1/alerts");
+    expect(normalizeProxyPath("/api/proxy//api/v1//cases")).toBe("/api/v1/cases");
   });
 
-  it("strips a trailing slash (FastAPI 307 protection)", () => {
-    expect(normalizeProxyPath("/api/proxy/api/v1/alerts/")).toBe("/api/v1/alerts");
+  it("strips a trailing slash by default (FastAPI 307 protection)", () => {
+    expect(normalizeProxyPath("/api/proxy/api/v1/cases/")).toBe("/api/v1/cases");
+  });
+
+  it("re-applies the trailing slash for FORCE_TRAILING_SLASH paths", () => {
+    // Backend registered `/api/v1/alerts` with a trailing slash via
+    // `@router.get("/")`, so FastAPI 307s the bare path. The proxy must hit
+    // it with the slash to avoid the redirect.
+    expect(normalizeProxyPath("/api/proxy/api/v1/alerts")).toBe("/api/v1/alerts/");
+    expect(normalizeProxyPath("/api/proxy/api/v1/alerts/")).toBe("/api/v1/alerts/");
   });
 
   it("preserves a root '/'", () => {

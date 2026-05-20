@@ -43,3 +43,6 @@ plan.md
 # Internal design docs
 /docs/
 plan.md
+
+# playwright-mcp exploratory traces (interactive browser sessions)
+.playwright-mcp/

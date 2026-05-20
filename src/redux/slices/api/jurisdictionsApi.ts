@@ -15,8 +15,18 @@ export const jurisdictionsApi = baseApi.injectEndpoints({
       providesTags: (_r, _e, code) => [{ type: "Jurisdiction", id: code }],
     }),
     updateJurisdiction: b.mutation<
-      MutationResponse | { approval_id: string },
-      { code: string; ctr_threshold?: number; str_deadline_hours?: number; regulator_name?: string; active?: boolean }
+      MutationResponse,
+      {
+        code: string;
+        ctr_threshold_cash?: number;
+        ctr_threshold_non_cash?: number;
+        str_min_amount?: number;
+        str_deadline_hours?: number;
+        str_internal_review_hours?: number;
+        goaml_version?: string;
+        is_active?: boolean;
+        notes?: string;
+      }
     >({
       query: ({ code, ...body }) => ({ url: `/jurisdictions/${code}`, method: "PATCH", body }),
       invalidatesTags: (_r, _e, { code }) => [

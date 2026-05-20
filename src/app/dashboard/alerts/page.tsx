@@ -6,6 +6,7 @@ import { useListAlertsQuery } from "@/redux/slices/api/alertsApi";
 import { SkeletonTable } from "@/components/Skeleton";
 import RiskBadge from "@/components/RiskBadge";
 import ActionBadge from "@/components/ActionBadge";
+import { useVisiblePolling } from "@/hooks/useVisiblePolling";
 import type { AlertPriority, AlertStatus } from "@/types/api";
 
 const PRIORITIES: AlertPriority[] = ["IMMEDIATE", "BATCH", "REVIEW"];
@@ -17,6 +18,7 @@ export default function AlertsListPage() {
   const [status, setStatus] = useState<AlertStatus | "">("OPEN");
   const [assignedTo, setAssignedTo] = useState("");
 
+  const pollingInterval = useVisiblePolling(10000);
   const { data, isLoading, isFetching, error } = useListAlertsQuery(
     {
       page,
@@ -25,10 +27,12 @@ export default function AlertsListPage() {
       status: status || undefined,
       assigned_to: assignedTo || undefined,
     },
-    { pollingInterval: 10000 },
+    { pollingInterval },
   );
 
-  const totalPages = data ? Math.max(1, Math.ceil(data.total / data.page_size)) : 1;
+  const totalPages = data
+    ? Math.max(1, data.total_pages ?? Math.ceil(data.total / data.page_size))
+    : 1;
 
   return (
     <div className="space-y-6">
@@ -120,7 +124,7 @@ export default function AlertsListPage() {
                 <th className="px-4 py-3 text-left">Alert ID</th>
                 <th className="px-4 py-3 text-left">Customer</th>
                 <th className="px-4 py-3 text-left">Risk</th>
-                <th className="px-4 py-3 text-left">Rules</th>
+                <th className="px-4 py-3 text-right">Rules</th>
                 <th className="px-4 py-3 text-left">Status</th>
                 <th className="px-4 py-3 text-left">Assigned</th>
                 <th className="px-4 py-3 text-left">Time</th>
@@ -151,9 +155,8 @@ export default function AlertsListPage() {
                   <td className="px-4 py-3">
                     <RiskBadge score={a.risk_score} />
                   </td>
-                  <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-300">
-                    {a.triggered_rules.slice(0, 2).join(", ")}
-                    {a.triggered_rules.length > 2 && ` +${a.triggered_rules.length - 2}`}
+                  <td className="px-4 py-3 text-right text-xs font-mono text-gray-600 dark:text-gray-300">
+                    {a.triggered_rules_count}
                   </td>
                   <td className="px-4 py-3">
                     <ActionBadge action={a.status} />

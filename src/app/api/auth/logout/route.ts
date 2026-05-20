@@ -1,15 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  ACCESS_COOKIE,
+  REFRESH_COOKIE,
+  USER_COOKIE,
+  CSRF_COOKIE,
+  SESSION_MARKER,
+} from "@/lib/proxy-policy";
 
 const BACKEND_URL = process.env.BACKEND_URL;
+const AUTH_COOKIE_NAMES = [
+  ACCESS_COOKIE,
+  REFRESH_COOKIE,
+  USER_COOKIE,
+  CSRF_COOKIE,
+  SESSION_MARKER,
+] as const;
 
-const ACCESS_COOKIE = "__access";
-const REFRESH_COOKIE = "__refresh";
-const USER_COOKIE = "__user";
-const CSRF_COOKIE = "__csrf";
-const SESSION_MARKER = "__sid";
-
+/**
+ * Canonical logout endpoint. Lives here (not behind the `/api/proxy/[...path]`
+ * BFF) so it can clear cookies even if the backend is unreachable. Single
+ * source of truth — the proxy intentionally does not handle `/auth/logout`.
+ */
 export async function POST(req: NextRequest) {
-  // Best-effort: revoke the refresh token server-side before clearing cookies.
   const refreshToken = req.cookies.get(REFRESH_COOKIE)?.value;
   if (BACKEND_URL && refreshToken) {
     try {
@@ -20,14 +32,13 @@ export async function POST(req: NextRequest) {
         signal: AbortSignal.timeout(3000),
       });
     } catch {
-      // Logout proceeds even if the backend is unreachable.
+      // best-effort: cookies get cleared regardless.
     }
   }
 
-  const clearOpts = { path: "/", maxAge: 0 };
   const response = NextResponse.json({ status: "logged_out" });
-  for (const name of [ACCESS_COOKIE, REFRESH_COOKIE, USER_COOKIE, CSRF_COOKIE, SESSION_MARKER]) {
-    response.cookies.set(name, "", clearOpts);
+  for (const name of AUTH_COOKIE_NAMES) {
+    response.cookies.set(name, "", { path: "/", maxAge: 0 });
   }
   return response;
 }

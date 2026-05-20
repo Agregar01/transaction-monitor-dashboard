@@ -12,6 +12,7 @@ import {
 import { SkeletonCard } from "@/components/Skeleton";
 import ActionBadge from "@/components/ActionBadge";
 import { showToast } from "@/components/Toast";
+import { errorMessage } from "@/lib/errors";
 
 export default function STRDetailPage() {
   const params = useParams<{ id: string }>();
@@ -40,7 +41,7 @@ export default function STRDetailPage() {
       showToast({ type: "success", title: "Saved", message: "STR narrative updated." });
       setNarrative(null);
     } catch (e) {
-      showToast({ type: "error", title: "Save failed", message: String(e) });
+      showToast({ type: "error", title: "Save failed", message: errorMessage(e) });
     }
   };
 
@@ -61,7 +62,7 @@ export default function STRDetailPage() {
         showToast({ type: "success", title: "Filed", message: "STR filed without approval queue." });
       }
     } catch (e) {
-      showToast({ type: "error", title: "Filing failed", message: String(e) });
+      showToast({ type: "error", title: "Filing failed", message: errorMessage(e) });
     }
   };
 

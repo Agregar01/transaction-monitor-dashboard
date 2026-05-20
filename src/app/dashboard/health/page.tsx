@@ -5,6 +5,7 @@ import {
   useGetSystemMetricsQuery,
 } from "@/redux/slices/api/healthApi";
 import { SkeletonCard } from "@/components/Skeleton";
+import { useVisiblePolling } from "@/hooks/useVisiblePolling";
 
 function StatusPill({ status }: { status?: string }) {
   const color =
@@ -21,10 +22,14 @@ function StatusPill({ status }: { status?: string }) {
 }
 
 export default function HealthPage() {
+  const healthPoll = useVisiblePolling(15000);
+  const metricsPoll = useVisiblePolling(30000);
   const { data: detailed, isLoading } = useGetDetailedHealthQuery(undefined, {
-    pollingInterval: 15000,
+    pollingInterval: healthPoll,
   });
-  const { data: metrics } = useGetSystemMetricsQuery(undefined, { pollingInterval: 30000 });
+  const { data: metrics } = useGetSystemMetricsQuery(undefined, {
+    pollingInterval: metricsPoll,
+  });
 
   if (isLoading) return <SkeletonCard />;
 

@@ -55,11 +55,21 @@ const complianceNav: NavItem[] = [
   { name: "Sanctions Check", href: "/dashboard/sanctions", icon: NoSymbolIcon },
 ];
 
+// `NEXT_PUBLIC_ENABLE_ML_OPS=1` re-enables the ML Models / Drift links once the
+// backend exposes /api/v1/models, /api/v1/drift, /api/v1/labeled (see
+// src/redux/slices/api/mlApi.ts). Hidden by default so the sidebar doesn't
+// surface routes that 403 today.
+const ML_OPS_ENABLED = process.env.NEXT_PUBLIC_ENABLE_ML_OPS === "1";
+
 const ruleOpsNav: NavItem[] = [
   { name: "Rules", href: "/dashboard/rules", icon: AdjustmentsHorizontalIcon },
   { name: "Shadow Stats", href: "/dashboard/shadow", icon: ChartPieIcon },
-  { name: "ML Models", href: "/dashboard/models", icon: CpuChipIcon },
-  { name: "Drift Monitoring", href: "/dashboard/drift", icon: ExclamationTriangleIcon },
+  ...(ML_OPS_ENABLED
+    ? [
+        { name: "ML Models", href: "/dashboard/models", icon: CpuChipIcon },
+        { name: "Drift Monitoring", href: "/dashboard/drift", icon: ExclamationTriangleIcon },
+      ]
+    : []),
 ];
 
 const adminNav: NavItem[] = [

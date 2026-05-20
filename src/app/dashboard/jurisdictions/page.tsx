@@ -7,32 +7,36 @@ import {
 } from "@/redux/slices/api/jurisdictionsApi";
 import { SkeletonTable } from "@/components/Skeleton";
 import { showToast } from "@/components/Toast";
+import { errorMessage } from "@/lib/errors";
 import type { Jurisdiction } from "@/types/api";
 
 export default function JurisdictionsPage() {
   const { data, isLoading, error } = useListJurisdictionsQuery();
   const [editing, setEditing] = useState<Jurisdiction | null>(null);
-  const [ctrThreshold, setCtrThreshold] = useState("");
+  const [ctrCash, setCtrCash] = useState("");
+  const [ctrNonCash, setCtrNonCash] = useState("");
   const [strDeadline, setStrDeadline] = useState("");
-  const [active, setActive] = useState(true);
+  const [isActive, setIsActive] = useState(true);
   const [updateJurisdiction, { isLoading: saving }] = useUpdateJurisdictionMutation();
 
   const startEdit = (j: Jurisdiction) => {
     setEditing(j);
-    setCtrThreshold(j.ctr_threshold.toString());
+    setCtrCash(j.ctr_threshold_cash.toString());
+    setCtrNonCash(j.ctr_threshold_non_cash.toString());
     setStrDeadline(j.str_deadline_hours.toString());
-    setActive(j.active);
+    setIsActive(j.is_active);
   };
 
   const submitEdit = async () => {
     if (!editing) return;
     try {
-      const res = (await updateJurisdiction({
+      const res = await updateJurisdiction({
         code: editing.code,
-        ctr_threshold: Number(ctrThreshold),
+        ctr_threshold_cash: Number(ctrCash),
+        ctr_threshold_non_cash: Number(ctrNonCash),
         str_deadline_hours: Number(strDeadline),
-        active,
-      }).unwrap()) as { approval_id?: string };
+        is_active: isActive,
+      }).unwrap();
       showToast({
         type: "info",
         title: res.approval_id ? "Awaiting approval" : "Updated",
@@ -42,7 +46,7 @@ export default function JurisdictionsPage() {
       });
       setEditing(null);
     } catch (e) {
-      showToast({ type: "error", title: "Update failed", message: String(e) });
+      showToast({ type: "error", title: "Update failed", message: errorMessage(e) });
     }
   };
 
@@ -57,7 +61,7 @@ export default function JurisdictionsPage() {
       </div>
 
       {isLoading ? (
-        <SkeletonTable rows={4} cols={6} />
+        <SkeletonTable rows={4} cols={7} />
       ) : error ? (
         <div className="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 p-4 rounded-xl text-sm">
           Failed to load jurisdictions.
@@ -73,7 +77,8 @@ export default function JurisdictionsPage() {
               <tr>
                 <th className="px-4 py-3 text-left">Code</th>
                 <th className="px-4 py-3 text-left">Name</th>
-                <th className="px-4 py-3 text-right">CTR threshold</th>
+                <th className="px-4 py-3 text-right">CTR cash</th>
+                <th className="px-4 py-3 text-right">CTR non-cash</th>
                 <th className="px-4 py-3 text-left">Currency</th>
                 <th className="px-4 py-3 text-right">STR deadline</th>
                 <th className="px-4 py-3 text-left">Regulator</th>
@@ -87,13 +92,20 @@ export default function JurisdictionsPage() {
                   <td className="px-4 py-3 font-mono text-xs">{j.code}</td>
                   <td className="px-4 py-3">{j.name}</td>
                   <td className="px-4 py-3 text-right font-mono text-xs">
-                    {j.ctr_threshold.toLocaleString()}
+                    {Number(j.ctr_threshold_cash).toLocaleString()}
                   </td>
-                  <td className="px-4 py-3 text-xs">{j.currency}</td>
+                  <td className="px-4 py-3 text-right font-mono text-xs">
+                    {Number(j.ctr_threshold_non_cash).toLocaleString()}
+                  </td>
+                  <td className="px-4 py-3 text-xs">{j.currency_code}</td>
                   <td className="px-4 py-3 text-right text-xs">{j.str_deadline_hours}h</td>
                   <td className="px-4 py-3 text-xs">{j.regulator_name}</td>
                   <td className="px-4 py-3 text-xs">
-                    {j.active ? <span className="text-green-600">●</span> : <span className="text-gray-400">○</span>}
+                    {j.is_active ? (
+                      <span className="text-green-600">●</span>
+                    ) : (
+                      <span className="text-gray-400">○</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <button
@@ -123,12 +135,23 @@ export default function JurisdictionsPage() {
             </div>
             <div>
               <label className="block text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">
-                CTR threshold ({editing.currency})
+                CTR threshold — cash ({editing.currency_code})
               </label>
               <input
                 type="number"
-                value={ctrThreshold}
-                onChange={(e) => setCtrThreshold(e.target.value)}
+                value={ctrCash}
+                onChange={(e) => setCtrCash(e.target.value)}
+                className="w-full px-3 py-2 text-sm font-mono border border-gray-200 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-800 text-gray-900 dark:text-white"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">
+                CTR threshold — non-cash ({editing.currency_code})
+              </label>
+              <input
+                type="number"
+                value={ctrNonCash}
+                onChange={(e) => setCtrNonCash(e.target.value)}
                 className="w-full px-3 py-2 text-sm font-mono border border-gray-200 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-800 text-gray-900 dark:text-white"
               />
             </div>
@@ -146,8 +169,8 @@ export default function JurisdictionsPage() {
             <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
               <input
                 type="checkbox"
-                checked={active}
-                onChange={(e) => setActive(e.target.checked)}
+                checked={isActive}
+                onChange={(e) => setIsActive(e.target.checked)}
               />
               Active
             </label>

@@ -60,23 +60,39 @@ export default function ShadowStatsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard
               title="Transactions"
-              value={data.total_transactions.toLocaleString()}
+              value={data.total_evaluated.toLocaleString()}
               subtitle={`${windowDays}d window`}
               icon={<PresentationChartLineIcon className="h-8 w-8" />}
             />
             <StatCard
               title="Agreement"
-              value={`${(data.agreement_rate * 100).toFixed(1)}%`}
+              value={
+                data.agreement_rate == null
+                  ? "—"
+                  : `${(data.agreement_rate * 100).toFixed(1)}%`
+              }
               subtitle="legacy vs ezrules outcome"
               icon={<ArrowsRightLeftIcon className="h-8 w-8" />}
-              color={data.agreement_rate >= 0.95 ? "text-green-600" : "text-amber-600"}
+              color={
+                data.agreement_rate != null && data.agreement_rate >= 0.95
+                  ? "text-green-600"
+                  : "text-amber-600"
+              }
             />
             <StatCard
               title="Equivalence"
-              value={`${(data.equivalence_rate * 100).toFixed(1)}%`}
+              value={
+                data.equivalence_rate == null
+                  ? "—"
+                  : `${(data.equivalence_rate * 100).toFixed(1)}%`
+              }
               subtitle="rule-set equivalence"
               icon={<ChartBarIcon className="h-8 w-8" />}
-              color={data.equivalence_rate >= 0.95 ? "text-green-600" : "text-amber-600"}
+              color={
+                data.equivalence_rate != null && data.equivalence_rate >= 0.95
+                  ? "text-green-600"
+                  : "text-amber-600"
+              }
             />
             <StatCard
               title="Promotion ready"
@@ -87,7 +103,7 @@ export default function ShadowStatsPage() {
             />
           </div>
 
-          {data.per_rule_deltas.length > 0 && (
+          {data.per_rule_stats.length > 0 && (
             <section className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-6">
               <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">
                 Per-rule fire counts (legacy vs ez)
@@ -95,7 +111,7 @@ export default function ShadowStatsPage() {
               <Chart
                 options={{
                   chart: { type: "bar", stacked: false, toolbar: { show: false }, fontFamily: "var(--font-geist-sans), sans-serif" },
-                  xaxis: { categories: data.per_rule_deltas.map((d) => d.rule_id) },
+                  xaxis: { categories: data.per_rule_stats.map((d) => d.rule_id) },
                   colors: ["#64748b", "#E06030"],
                   plotOptions: { bar: { borderRadius: 3, columnWidth: "60%" } },
                   legend: { position: "top", horizontalAlign: "right" },
@@ -104,8 +120,8 @@ export default function ShadowStatsPage() {
                   tooltip: { theme: "dark" },
                 }}
                 series={[
-                  { name: "Legacy", data: data.per_rule_deltas.map((d) => d.legacy_fires) },
-                  { name: "EzRules", data: data.per_rule_deltas.map((d) => d.ez_fires) },
+                  { name: "Legacy", data: data.per_rule_stats.map((d) => d.legacy_trigger_count) },
+                  { name: "EzRules", data: data.per_rule_stats.map((d) => d.ez_trigger_count) },
                 ]}
                 type="bar"
                 height={320}
@@ -123,25 +139,26 @@ export default function ShadowStatsPage() {
                   <th className="px-4 py-3 text-left">Rule</th>
                   <th className="px-4 py-3 text-right">Legacy fires</th>
                   <th className="px-4 py-3 text-right">EzRules fires</th>
-                  <th className="px-4 py-3 text-right">Δ %</th>
+                  <th className="px-4 py-3 text-right">Δ</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-navy-600">
-                {data.per_rule_deltas.map((d) => (
+                {data.per_rule_stats.map((d) => (
                   <tr key={d.rule_id} className="hover:bg-gray-50 dark:hover:bg-navy-600">
                     <td className="px-4 py-3 font-mono text-xs">{d.rule_id}</td>
-                    <td className="px-4 py-3 text-right font-mono text-xs">{d.legacy_fires}</td>
-                    <td className="px-4 py-3 text-right font-mono text-xs">{d.ez_fires}</td>
+                    <td className="px-4 py-3 text-right font-mono text-xs">{d.legacy_trigger_count}</td>
+                    <td className="px-4 py-3 text-right font-mono text-xs">{d.ez_trigger_count}</td>
                     <td
                       className={`px-4 py-3 text-right font-mono text-xs ${
-                        Math.abs(d.delta_pct) > 5
+                        Math.abs(d.delta) > 5
                           ? "text-red-600 font-semibold"
-                          : Math.abs(d.delta_pct) > 1
+                          : Math.abs(d.delta) > 1
                           ? "text-amber-600"
                           : "text-gray-500"
                       }`}
                     >
-                      {d.delta_pct.toFixed(2)}%
+                      {d.delta > 0 ? "+" : ""}
+                      {d.delta}
                     </td>
                   </tr>
                 ))}

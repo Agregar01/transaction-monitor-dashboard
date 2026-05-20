@@ -10,6 +10,8 @@ import { useAppSelector } from "@/redux/store";
 import { SkeletonTable } from "@/components/Skeleton";
 import ActionBadge from "@/components/ActionBadge";
 import { showToast } from "@/components/Toast";
+import { errorMessage } from "@/lib/errors";
+import { useVisiblePolling } from "@/hooks/useVisiblePolling";
 import type { ApprovalStatus, PendingApproval } from "@/types/api";
 
 const STATUSES: ApprovalStatus[] = ["PENDING", "APPROVED", "REJECTED", "EXPIRED"];
@@ -33,9 +35,10 @@ export default function ApprovalsPage() {
   const [selected, setSelected] = useState<PendingApproval | null>(null);
   const [reviewNotes, setReviewNotes] = useState("");
 
+  const pollingInterval = useVisiblePolling(15000);
   const { data, isLoading, error } = useListApprovalsQuery(
     { status, page_size: 50 },
-    { pollingInterval: 15000 },
+    { pollingInterval },
   );
 
   const [approveAction, { isLoading: approving }] = useApproveActionMutation();
@@ -51,7 +54,7 @@ export default function ApprovalsPage() {
       setSelected(null);
       setReviewNotes("");
     } catch (e) {
-      showToast({ type: "error", title: "Approve failed", message: String(e) });
+      showToast({ type: "error", title: "Approve failed", message: errorMessage(e) });
     }
   };
 
@@ -63,7 +66,7 @@ export default function ApprovalsPage() {
       setSelected(null);
       setReviewNotes("");
     } catch (e) {
-      showToast({ type: "error", title: "Reject failed", message: String(e) });
+      showToast({ type: "error", title: "Reject failed", message: errorMessage(e) });
     }
   };
 

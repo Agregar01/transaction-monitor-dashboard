@@ -18,6 +18,11 @@ export interface MutationResponse {
   success: boolean;
   message?: string;
   detail?: string;
+  /** Backend AlertActionResponse uses `alert_id`/`updated_at` on alert mutations. */
+  alert_id?: string;
+  updated_at?: string;
+  /** Four-eyes flow returns this when the mutation requires a second approver. */
+  approval_id?: string;
 }
 
 // ─── Auth ───────────────────────────────────────────────────────────────────
@@ -57,12 +62,17 @@ export interface TenantInfo {
 export interface Jurisdiction {
   code: JurisdictionCode;
   name: string;
-  ctr_threshold: number;
+  currency_code: string;
+  ctr_threshold_cash: number;
+  ctr_threshold_non_cash: number;
+  str_min_amount?: number | null;
   str_deadline_hours: number;
-  currency: string;
+  str_internal_review_hours?: number;
+  regulator_code: string;
   regulator_name: string;
   goaml_version: string;
-  active: boolean;
+  is_active: boolean;
+  notes?: string | null;
 }
 
 // ─── Transactions ───────────────────────────────────────────────────────────
@@ -133,28 +143,133 @@ export interface CustomerBaseline {
   counterparty_count: number;
 }
 
+export interface RiskFactorBreakdown {
+  customer_type: number;
+  occupation: number;
+  geography: number;
+  pep_status: number;
+  kyc_quality: number;
+}
+
 export interface CustomerRiskProfile {
   customer_id: string;
-  risk_score: number;
+  customer_type: string;
   risk_level: RiskLevel;
+  risk_score: number;
+  risk_factors: RiskFactorBreakdown;
+  kyc_quality_score: number;
+  kyc_completion_date: string | null;
   is_pep: boolean;
-  kyc_quality: number | null;
+  has_open_alerts: boolean;
+  last_risk_assessment: string | null;
+  assessment_explanation: string;
+}
+
+export interface CustomerTransactionHistoryItem {
+  transaction_id: string;
+  timestamp: string;
+  amount: number;
+  transaction_type: string;
+  channel: string;
+  receiver_country: string | null;
+  flagged: boolean;
+  risk_score: number;
+}
+
+export interface CustomerTransactionsResponse {
+  customer_id: string;
+  transactions: CustomerTransactionHistoryItem[];
+  total: number;
+  period_start: string;
+  period_end: string;
+}
+
+export interface CustomerAlertHistoryItem {
+  alert_id: string;
+  alert_timestamp: string;
+  priority: AlertPriority;
+  status: AlertStatus;
+  risk_score: number;
+  resolution: AlertResolution | null;
+  triggered_rules: string[];
+}
+
+export interface CustomerAlertsResponse {
+  customer_id: string;
+  alerts: CustomerAlertHistoryItem[];
+  total: number;
+  open_count: number;
+  closed_count: number;
 }
 
 // ─── Alerts ─────────────────────────────────────────────────────────────────
 
 export type AlertPriority = "IMMEDIATE" | "BATCH" | "REVIEW";
 export type AlertStatus = "OPEN" | "INVESTIGATING" | "CLOSED";
-export type AlertResolution = "False_positive" | "Legitimate" | "SAR_filed" | "Restricted";
+export type AlertResolution = "FALSE_POSITIVE" | "LEGITIMATE" | "SAR_FILED" | "RESTRICTED";
+export type AlertNoteType = "investigation" | "follow_up" | "documentation" | "escalation";
 
-export interface AlertNote {
-  id: string;
-  note: string;
-  note_type: "investigation" | "follow_up" | "documentation" | "escalation";
-  author: string;
+export interface InvestigationNote {
+  note_id: string;
   timestamp: string;
+  analyst: string;
+  note_type: string;
+  content: string;
 }
 
+export interface TriggeredRuleDetail {
+  rule_id: string;
+  rule_name: string;
+  severity: string;
+  risk_contribution: number;
+  explanation: string;
+}
+
+export interface AlertCustomerContext {
+  customer_id: string;
+  customer_type: string;
+  risk_level: string;
+  risk_score: number;
+  is_pep: boolean;
+  account_age_days: number;
+  total_alerts: number;
+  open_alerts: number;
+}
+
+export interface AlertTransactionContext {
+  transaction_id: string;
+  timestamp: string;
+  amount: number;
+  transaction_type: string;
+  channel: string;
+  receiver_country: string | null;
+  customer_risk_score: number;
+  transaction_risk_score: number;
+  behavioral_risk_score: number;
+  combined_risk_score: number;
+}
+
+export interface AlertBaselineComparison {
+  current_value: number;
+  baseline_value: number;
+  deviation_percentage: number;
+  is_anomalous: boolean;
+}
+
+/** Row in the paginated `/alerts` response — keep aligned with backend AlertListItem. */
+export interface AlertListItem {
+  alert_id: string;
+  customer_id: string;
+  transaction_id: string;
+  alert_timestamp: string;
+  priority: AlertPriority;
+  status: AlertStatus;
+  risk_score: number;
+  triggered_rules_count: number;
+  assigned_to: string | null;
+}
+
+/** Detail returned by `/alerts/{id}` — backend AlertDetailResponse. */
 export interface Alert {
   alert_id: string;
   customer_id: string;
@@ -163,11 +278,15 @@ export interface Alert {
   priority: AlertPriority;
   status: AlertStatus;
   risk_score: number;
-  triggered_rules: string[];
   resolution: AlertResolution | null;
   resolution_notes: string | null;
   assigned_to: string | null;
-  notes: AlertNote[];
+  triggered_rules: TriggeredRuleDetail[];
+  customer_context: AlertCustomerContext;
+  transaction_context: AlertTransactionContext;
+  baseline_comparisons: Record<string, AlertBaselineComparison>;
+  recent_transactions: AlertTransactionContext[];
+  investigation_notes: InvestigationNote[];
   created_at: string;
   updated_at: string;
 }
@@ -341,25 +460,33 @@ export interface WatchlistEntry {
 
 export type SanctionsRecommendation = "CLEAR" | "REVIEW" | "MATCH";
 
-export interface SanctionsMatch {
+export interface SanctionsMatchCandidate {
   list_name: string;
+  list_type: string;
   matched_name: string;
-  match_score: number;
-  reasons: string[];
-  metadata?: Record<string, unknown>;
+  entry_value: string;
+  score: number;
+  match_type: "exact" | "alias" | "fuzzy" | string;
+  entry_metadata?: Record<string, unknown>;
 }
 
 export interface ScreenNameResult {
   query_name: string;
+  query_normalized: string;
   recommendation: SanctionsRecommendation;
-  matches: SanctionsMatch[];
-  confidence: number;
+  highest_score: number;
+  candidates: SanctionsMatchCandidate[];
+  screened_lists: string[];
+  total_names_checked: number;
+  screening_duration_ms: number;
+  screened_at: string | null;
 }
 
 export interface SanctionsStatus {
-  ready: boolean;
+  loaded: boolean;
+  total_name_entries: number;
   loaded_lists: string[];
-  entry_count: number;
+  thresholds?: { match: number; review: number };
 }
 
 // ─── Audit trail ────────────────────────────────────────────────────────────
@@ -387,20 +514,35 @@ export interface AuditEntry {
 
 // ─── Shadow rule comparison ─────────────────────────────────────────────────
 
-export interface ShadowRuleDelta {
+export interface ShadowPerRuleStat {
   rule_id: string;
-  legacy_fires: number;
-  ez_fires: number;
-  delta_pct: number;
+  legacy_trigger_count: number;
+  ez_trigger_count: number;
+  delta: number;
+  legacy_rate: number;
+  ez_rate: number;
+}
+
+export interface ShadowPromotionCriteria {
+  equivalence_threshold: number;
+  agreement_threshold: number;
+  min_days_required: number;
+  min_transactions_required: number;
+  days_of_data: number;
+  transactions_evaluated: number;
 }
 
 export interface ShadowStats {
   window_days: number;
-  total_transactions: number;
-  agreement_rate: number;
-  equivalence_rate: number;
-  per_rule_deltas: ShadowRuleDelta[];
+  total_evaluated: number;
+  equivalence_rate: number | null;
+  agreement_rate: number | null;
+  mean_risk_delta: number | null;
+  median_risk_delta: number | null;
+  p95_risk_delta: number | null;
   promotion_ready: boolean;
+  promotion_criteria: ShadowPromotionCriteria;
+  per_rule_stats: ShadowPerRuleStat[];
 }
 
 export interface ShadowComparisonRecord {

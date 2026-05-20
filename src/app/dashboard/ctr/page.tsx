@@ -5,6 +5,7 @@ import { useListCTRQuery, useExemptCTRMutation, ctrXmlUrl } from "@/redux/slices
 import { SkeletonTable } from "@/components/Skeleton";
 import ActionBadge from "@/components/ActionBadge";
 import { showToast } from "@/components/Toast";
+import { errorMessage } from "@/lib/errors";
 import type { CTRStatus } from "@/types/api";
 
 const STATUSES: CTRStatus[] = ["DRAFT", "FILED", "EXEMPT"];
@@ -39,7 +40,7 @@ export default function CTRListPage() {
       setExemptDialog(null);
       setExemptReason("");
     } catch (e) {
-      showToast({ type: "error", title: "Exemption failed", message: String(e) });
+      showToast({ type: "error", title: "Exemption failed", message: errorMessage(e) });
     }
   };
 

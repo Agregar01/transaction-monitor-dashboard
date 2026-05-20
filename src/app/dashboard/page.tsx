@@ -13,6 +13,7 @@ import { SkeletonStats } from "@/components/Skeleton";
 import RiskBadge from "@/components/RiskBadge";
 import ActionBadge from "@/components/ActionBadge";
 import { alertPriorityColors } from "@/config/constants";
+import { useVisiblePolling } from "@/hooks/useVisiblePolling";
 import {
   BellAlertIcon,
   InboxStackIcon,
@@ -53,14 +54,18 @@ export default function DashboardOverviewPage() {
 
   const todayIso = useMemo(() => startOfDay(new Date()).toISOString(), []);
 
+  const fastPoll = useVisiblePolling(10000);
+  const slowPoll = useVisiblePolling(30000);
+  const mediumPoll = useVisiblePolling(15000);
+
   const { data: openAlerts } = useListAlertsQuery(
     { status: "OPEN", page_size: 10 },
-    { pollingInterval: 10000 },
+    { pollingInterval: fastPoll },
   );
 
   const { data: alertsLast14d } = useListAlertsQuery(
     { start_date: fourteenDaysAgo, page_size: 500 },
-    { pollingInterval: 30000 },
+    { pollingInterval: slowPoll },
   );
 
   const { data: immediateToday } = useListAlertsQuery({
@@ -71,13 +76,13 @@ export default function DashboardOverviewPage() {
 
   const { data: openCases } = useListCasesQuery(
     { status: "OPEN", page_size: 1 },
-    { pollingInterval: 30000 },
+    { pollingInterval: slowPoll },
   );
 
   const { data: draftSTR } = useListSTRQuery({ status: "DRAFT", page_size: 1 });
   const { data: pendingApprovals } = useListApprovalsQuery(
     { status: "PENDING", page_size: 1 },
-    { pollingInterval: 15000 },
+    { pollingInterval: mediumPoll },
   );
 
   // Group the 14-day alerts client-side into priority buckets per day.
@@ -216,8 +221,8 @@ export default function DashboardOverviewPage() {
                     {a.alert_id}
                   </Link>
                   <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                    {a.triggered_rules.slice(0, 3).join(", ")}
-                    {a.triggered_rules.length > 3 && ` +${a.triggered_rules.length - 3}`}
+                    {a.triggered_rules_count}{" "}
+                    {a.triggered_rules_count === 1 ? "rule" : "rules"}
                   </span>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">

@@ -9,6 +9,7 @@ import {
 import { SkeletonCard } from "@/components/Skeleton";
 import ActionBadge from "@/components/ActionBadge";
 import { showToast } from "@/components/Toast";
+import { errorMessage } from "@/lib/errors";
 
 export default function RuleDetailPage() {
   const params = useParams<{ rule_id: string }>();
@@ -42,7 +43,7 @@ export default function RuleDetailPage() {
         showToast({ type: "success", title: "Promoted", message: `Rule advanced from ${rule.status}.` });
       }
     } catch (e) {
-      showToast({ type: "error", title: "Promotion failed", message: String(e) });
+      showToast({ type: "error", title: "Promotion failed", message: errorMessage(e) });
     }
   };
 
@@ -54,7 +55,7 @@ export default function RuleDetailPage() {
       await archive({ rule_id: ruleId }).unwrap();
       showToast({ type: "success", title: "Archived", message: ruleId });
     } catch (e) {
-      showToast({ type: "error", title: "Archive failed", message: String(e) });
+      showToast({ type: "error", title: "Archive failed", message: errorMessage(e) });
     }
   };
 

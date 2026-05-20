@@ -4,8 +4,8 @@ import type {
   Customer,
   CustomerBaseline,
   CustomerRiskProfile,
-  Transaction,
-  Alert,
+  CustomerTransactionsResponse,
+  CustomerAlertsResponse,
 } from "@/types/api";
 
 export interface ListCustomersParams {
@@ -31,15 +31,24 @@ export const customersApi = baseApi.injectEndpoints({
       providesTags: (_r, _e, id) => [{ type: "Baseline", id }],
     }),
     getCustomerTransactions: b.query<
-      Paginated<Transaction>,
-      { customer_id: string; page?: number; page_size?: number; start_date?: string; end_date?: string; flagged_only?: boolean }
+      CustomerTransactionsResponse,
+      {
+        customer_id: string;
+        start_date?: string;
+        end_date?: string;
+        limit?: number;
+        flagged_only?: boolean;
+      }
     >({
       query: ({ customer_id, ...params }) => ({
         url: `/customers/${customer_id}/transactions`,
         params,
       }),
     }),
-    getCustomerAlerts: b.query<Paginated<Alert>, { customer_id: string; page?: number; page_size?: number }>({
+    getCustomerAlerts: b.query<
+      CustomerAlertsResponse,
+      { customer_id: string; status_filter?: "Open" | "Investigating" | "Closed"; limit?: number }
+    >({
       query: ({ customer_id, ...params }) => ({
         url: `/customers/${customer_id}/alerts`,
         params,

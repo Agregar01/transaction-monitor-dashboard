@@ -7,6 +7,7 @@ import {
 } from "@/redux/slices/api/sanctionsApi";
 import ActionBadge from "@/components/ActionBadge";
 import { showToast } from "@/components/Toast";
+import { errorMessage } from "@/lib/errors";
 import type { ScreenNameResult } from "@/types/api";
 
 export default function SanctionsScreeningPage() {
@@ -29,7 +30,7 @@ export default function SanctionsScreeningPage() {
       }).unwrap();
       setResult(res);
     } catch (err) {
-      showToast({ type: "error", title: "Screening failed", message: String(err) });
+      showToast({ type: "error", title: "Screening failed", message: errorMessage(err) });
     }
   };
 
@@ -51,13 +52,13 @@ export default function SanctionsScreeningPage() {
       {status && (
         <div
           className={`rounded-xl border px-4 py-2 text-sm ${
-            status.ready
+            status.loaded
               ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-800 dark:text-green-300"
               : "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300"
           }`}
         >
-          {status.ready ? "✓" : "⚠"} {status.loaded_lists.length} lists loaded ·{" "}
-          {status.entry_count.toLocaleString()} entries
+          {status.loaded ? "✓" : "⚠"} {status.loaded_lists.length} lists loaded ·{" "}
+          {status.total_name_entries.toLocaleString()} entries
         </div>
       )}
 
@@ -123,31 +124,32 @@ export default function SanctionsScreeningPage() {
               </p>
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              confidence {result.confidence.toFixed(2)}
+              top score {result.highest_score.toFixed(1)} · {result.total_names_checked} names
+              checked · {result.screening_duration_ms.toFixed(0)}ms
             </p>
           </div>
 
           <div>
             <p className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
-              Matches
+              Candidates
             </p>
-            {result.matches.length === 0 ? (
+            {result.candidates.length === 0 ? (
               <p className="text-sm text-gray-400">No list hits.</p>
             ) : (
               <ul className="space-y-2">
-                {result.matches.map((m, i) => (
+                {result.candidates.map((m, i) => (
                   <li
-                    key={i}
+                    key={`${m.list_name}-${m.entry_value}-${i}`}
                     className="rounded-lg border border-gray-100 dark:border-navy-600 px-3 py-2 text-sm"
                   >
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-2">
                       <span className="font-medium text-gray-900 dark:text-white">
                         {m.matched_name}
                       </span>
                       <ActionBadge action={m.list_name} />
                     </div>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                      match score {m.match_score.toFixed(2)} · {m.reasons.join(", ")}
+                      score {m.score.toFixed(1)} · {m.match_type} · {m.list_type}
                     </p>
                   </li>
                 ))}

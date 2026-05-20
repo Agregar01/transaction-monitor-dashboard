@@ -6,6 +6,7 @@ import { useAppSelector } from "@/redux/store";
 import { useGetTenantInfoQuery } from "@/redux/slices/api/tenantApi";
 import { useCreateSTRMutation } from "@/redux/slices/api/strApi";
 import { showToast } from "@/components/Toast";
+import { errorMessage } from "@/lib/errors";
 
 export default function STRNewPage() {
   const router = useRouter();
@@ -49,7 +50,7 @@ export default function STRNewPage() {
       showToast({ type: "success", title: "STR drafted", message: subjectName });
       router.push(`/dashboard/str/${draft.id}`);
     } catch (err) {
-      showToast({ type: "error", title: "Draft failed", message: String(err) });
+      showToast({ type: "error", title: "Draft failed", message: errorMessage(err) });
     }
   };
 

@@ -2,6 +2,8 @@ import { baseApi } from "./baseApi";
 import type {
   Paginated,
   Alert,
+  AlertListItem,
+  AlertNoteType,
   AlertPriority,
   AlertStatus,
   AlertResolution,
@@ -17,12 +19,16 @@ export interface ListAlertsParams {
   customer_id?: string;
   start_date?: string;
   end_date?: string;
-  sort?: string;
+  sort_by?: "alert_timestamp" | "risk_score" | "priority";
+  sort_order?: "asc" | "desc";
 }
+
+/** Backend `/alerts` adds a `total_pages` field on top of the standard envelope. */
+export type AlertListResponse = Paginated<AlertListItem> & { total_pages?: number };
 
 export const alertsApi = baseApi.injectEndpoints({
   endpoints: (b) => ({
-    listAlerts: b.query<Paginated<Alert>, ListAlertsParams>({
+    listAlerts: b.query<AlertListResponse, ListAlertsParams>({
       query: (params) => ({ url: "/alerts", params }),
       providesTags: (result) => [
         { type: "Alert", id: "LIST" },
@@ -57,7 +63,7 @@ export const alertsApi = baseApi.injectEndpoints({
     }),
     addAlertNote: b.mutation<
       MutationResponse,
-      { alert_id: string; note: string; note_type?: "investigation" | "follow_up" | "documentation" | "escalation" }
+      { alert_id: string; note: string; note_type?: AlertNoteType }
     >({
       query: ({ alert_id, ...body }) => ({
         url: `/alerts/${alert_id}/notes`,

@@ -58,11 +58,12 @@ async function callBackend(path: string, init: RequestInit): Promise<Response> {
     const location = res.headers.get("location");
     if (!location) return res;
     const nextUrl = new URL(location, currentUrl).toString();
-    // Only follow same-origin redirects so we never replay Authorization
-    // to a different host.
-    const currentOrigin = new URL(currentUrl).origin;
-    const nextOrigin = new URL(nextUrl).origin;
-    if (currentOrigin !== nextOrigin) return res;
+    // Compare host only (not the full origin). A common production setup puts
+    // FastAPI behind an HTTPS terminator that echoes scheme=http in its Location
+    // header — a strict origin compare would refuse to follow the slash-redirect
+    // and the 307 would bubble back to the browser. Same-host is enough to
+    // ensure we never replay Authorization at a different service.
+    if (new URL(currentUrl).host !== new URL(nextUrl).host) return res;
     // Drain the response body so the socket can be reused.
     await res.arrayBuffer().catch(() => undefined);
     currentUrl = nextUrl;
@@ -132,6 +133,37 @@ function clearAuthCookies(res: NextResponse) {
   }
 }
 
+/**
+ * Pass-through allowlist for upstream → browser response headers. We forward
+ * the small set that matters for clients (content type, location for
+ * redirects, content-disposition for downloads, rate-limit hints) and drop
+ * the rest so backend cookies / hop-by-hop headers don't leak through the BFF.
+ */
+const FORWARDED_RESPONSE_HEADERS = [
+  "content-type",
+  "content-disposition",
+  "location",
+  "cache-control",
+  "etag",
+  "last-modified",
+  "x-ratelimit-limit",
+  "x-ratelimit-remaining",
+  "x-ratelimit-reset",
+  "x-request-id",
+] as const;
+
+function buildResponseHeaders(upstream: Response): Headers {
+  const headers = new Headers();
+  for (const name of FORWARDED_RESPONSE_HEADERS) {
+    const v = upstream.headers.get(name);
+    if (v) headers.set(name, v);
+  }
+  if (!headers.has("content-type")) {
+    headers.set("content-type", "application/json");
+  }
+  return headers;
+}
+
 function buildBackendInit(
   req: NextRequest,
   bodyBuffer: ArrayBuffer | null,
@@ -189,7 +221,6 @@ async function proxyRequest(req: NextRequest) {
   }
 
   const isLogin = req.method === "POST" && path === "/api/v1/auth/login";
-  const isLogout = req.method === "POST" && path === "/api/v1/auth/logout";
 
   const accessCookie = req.cookies.get(ACCESS_COOKIE)?.value ?? null;
   const refreshCookie = req.cookies.get(REFRESH_COOKIE)?.value ?? null;
@@ -312,23 +343,9 @@ async function proxyRequest(req: NextRequest) {
     return response;
   }
 
-  // ── LOGOUT: revoke refresh token + clear all auth cookies ──
-  if (isLogout) {
-    if (refreshCookie) {
-      try {
-        await callBackend("/api/v1/auth/logout", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ refresh_token: refreshCookie }),
-        });
-      } catch {
-        // best-effort; cookies still get cleared
-      }
-    }
-    const response = NextResponse.json({ ok: true });
-    clearAuthCookies(response);
-    return response;
-  }
+  // Logout has its own route at `/api/auth/logout` so it can clear cookies
+  // even when the proxy path is unreachable. We deliberately do not handle it
+  // here.
 
   // ── Standard proxied request ──
   let accessToken = accessCookie;
@@ -365,9 +382,7 @@ async function proxyRequest(req: NextRequest) {
     const retryText = await retry.text();
     const response = new NextResponse(retryText, {
       status: retry.status,
-      headers: {
-        "Content-Type": retry.headers.get("Content-Type") || "application/json",
-      },
+      headers: buildResponseHeaders(retry),
     });
     const isProduction = process.env.NODE_ENV === "production";
     const base = cookieOpts(isProduction);
@@ -379,9 +394,7 @@ async function proxyRequest(req: NextRequest) {
   const responseText = await firstAttempt.text();
   return new NextResponse(responseText, {
     status: firstAttempt.status,
-    headers: {
-      "Content-Type": firstAttempt.headers.get("Content-Type") || "application/json",
-    },
+    headers: buildResponseHeaders(firstAttempt),
   });
 }
 
