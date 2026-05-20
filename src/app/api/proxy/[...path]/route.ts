@@ -330,14 +330,31 @@ async function proxyRequest(req: NextRequest) {
     outboundHeaderKeys: outboundHeaders ? Object.keys(outboundHeaders) : [],
   }));
 
-  const firstAttempt = await callBackend(
-    `${path}${url.search}`,
-    backendInit,
-  ).catch(() => null);
+  const upstreamUrl = `${path}${url.search}`;
+  const firstAttempt = await callBackend(upstreamUrl, backendInit).catch(() => null);
 
   if (!firstAttempt) {
+    console.log("[proxy-diag-upstream]", JSON.stringify({
+      upstreamUrl,
+      backendUrl: BACKEND_URL,
+      result: "fetch-threw-or-timed-out",
+    }));
     return NextResponse.json({ detail: "Backend unreachable" }, { status: 502 });
   }
+
+  // [DIAG] Log backend response so we can tell if redirect followed / header stripped.
+  // Peek at the body without consuming — clone the response first.
+  const peekResp = firstAttempt.clone();
+  const peekBody = await peekResp.text().catch(() => "");
+  console.log("[proxy-diag-upstream]", JSON.stringify({
+    upstreamUrl,
+    backendUrl: BACKEND_URL,
+    status: firstAttempt.status,
+    finalUrl: firstAttempt.url,                       // post-redirect URL if any
+    redirected: firstAttempt.redirected,
+    bodyHead: peekBody.slice(0, 200),
+    wwwAuthenticate: firstAttempt.headers.get("www-authenticate"),
+  }));
 
   // Transparent refresh-and-retry on 401
   if (firstAttempt.status === 401 && refreshCookie && !isCsrfExempt(path)) {
