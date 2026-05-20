@@ -158,6 +158,28 @@ async function proxyRequest(req: NextRequest) {
   const refreshCookie = req.cookies.get(REFRESH_COOKIE)?.value ?? null;
   const csrfCookie = req.cookies.get(CSRF_COOKIE)?.value ?? null;
 
+  // [DIAG] Temporary cookie diagnostic — remove once 401-loop is resolved.
+  const rawCookieHeader = req.headers.get("cookie") ?? "";
+  const cookieNamesInHeader = rawCookieHeader
+    .split(";")
+    .map((s) => s.trim().split("=")[0])
+    .filter(Boolean);
+  const cookieNamesViaApi: string[] = [];
+  for (const c of req.cookies.getAll()) {
+    cookieNamesViaApi.push(c.name);
+  }
+  console.log("[proxy-diag]", JSON.stringify({
+    method: req.method,
+    path,
+    cookieHeaderPresent: rawCookieHeader.length > 0,
+    cookieNamesInHeader,
+    cookieNamesViaApi,
+    accessCookieReadable: accessCookie !== null,
+    accessCookieLength: accessCookie?.length ?? 0,
+    refreshCookieReadable: refreshCookie !== null,
+    csrfCookieReadable: csrfCookie !== null,
+  }));
+
   // CSRF double-submit validation. Public auth flows are exempt; they are protected
   // by passwords or one-time tokens, not session cookies.
   if (requiresCsrf(req.method, path)) {
@@ -296,9 +318,21 @@ async function proxyRequest(req: NextRequest) {
   // ── Standard proxied request ──
   let accessToken = accessCookie;
 
+  const backendInit = buildBackendInit(req, bodyBuffer, bodyText, accessToken, contentType);
+  // [DIAG] Confirm whether the Authorization header actually made it onto the outbound init.
+  const outboundHeaders = backendInit.headers as Record<string, string> | undefined;
+  console.log("[proxy-diag-outbound]", JSON.stringify({
+    path,
+    hasAccessToken: accessToken !== null,
+    accessTokenLen: accessToken?.length ?? 0,
+    outboundHasAuthorization: Boolean(outboundHeaders?.["Authorization"]),
+    outboundAuthorizationPrefix: outboundHeaders?.["Authorization"]?.slice(0, 14) ?? null,
+    outboundHeaderKeys: outboundHeaders ? Object.keys(outboundHeaders) : [],
+  }));
+
   const firstAttempt = await callBackend(
     `${path}${url.search}`,
-    buildBackendInit(req, bodyBuffer, bodyText, accessToken, contentType),
+    backendInit,
   ).catch(() => null);
 
   if (!firstAttempt) {
