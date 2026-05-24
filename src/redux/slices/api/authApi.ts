@@ -22,6 +22,37 @@ export const authApi = baseApi.injectEndpoints({
       query: () => "/auth/roles",
       providesTags: [{ type: "Role", id: "LIST" }],
     }),
+    createUser: b.mutation<
+      User,
+      { email: string; password: string; full_name?: string; active?: boolean; roles?: string[] }
+    >({
+      query: (body) => ({ url: "/auth/users", method: "POST", body }),
+      invalidatesTags: [{ type: "User", id: "LIST" }],
+    }),
+    updateUser: b.mutation<
+      User,
+      { user_id: string; full_name?: string; active?: boolean }
+    >({
+      query: ({ user_id, ...body }) => ({ url: `/auth/users/${user_id}`, method: "PATCH", body }),
+      invalidatesTags: (_r, _e, { user_id }) => [
+        { type: "User", id: user_id },
+        { type: "User", id: "LIST" },
+      ],
+    }),
+    updateUserRoles: b.mutation<
+      { user_id: string; email: string; roles: string[] },
+      { user_id: string; roles: string[] }
+    >({
+      query: ({ user_id, ...body }) => ({
+        url: `/auth/users/${user_id}/roles`,
+        method: "PATCH",
+        body,
+      }),
+      invalidatesTags: (_r, _e, { user_id }) => [
+        { type: "User", id: user_id },
+        { type: "User", id: "LIST" },
+      ],
+    }),
   }),
 });
 
@@ -30,4 +61,7 @@ export const {
   useListUsersQuery,
   useGetUserRolesQuery,
   useListRolesQuery,
+  useCreateUserMutation,
+  useUpdateUserMutation,
+  useUpdateUserRolesMutation,
 } = authApi;

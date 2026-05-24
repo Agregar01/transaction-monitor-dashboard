@@ -575,41 +575,42 @@ export interface ShadowComparisonRecord {
 
 // ─── ML registry & drift ────────────────────────────────────────────────────
 
-export type ModelType = "xgboost" | "catboost" | "river" | "isolation_forest" | "lightgbm";
-export type ModelStatus = "TRAINING" | "CHAMPION" | "RETIRED";
+export type ModelType = "xgboost" | "catboost" | "river" | "isolation_forest" | "lightgbm" | string;
+export type ModelStatus = "TRAINING" | "CHAMPION" | "RETIRED" | string;
 
 export interface ModelRegistryEntry {
   id: string;
-  model_type: ModelType;
+  model_type: ModelType | null;
   version: number;
-  status: ModelStatus;
-  accuracy: number | null;
-  precision: number | null;
-  recall: number | null;
-  f1_score: number | null;
-  training_samples: number;
-  created_at: string;
-  promoted_at: string | null;
+  status: ModelStatus | null;
+  artifact_path: string | null;
+  trained_at: string | null;
+  sample_count: number | null;
+  fraud_sample_count: number | null;
+  legit_sample_count: number | null;
+  metrics: Record<string, unknown> | null;
+  feature_names: string[] | null;
+  created_at: string | null;
 }
 
-export interface DriftCheck {
+export interface DriftReport {
   id: string;
-  model_id: string;
-  check_timestamp: string;
-  feature_name: string;
-  p_value: number;
-  psi: number;
-  is_drifting: boolean;
-}
-
-export interface LabeledTransaction {
-  id: string;
-  transaction_id: string;
-  customer_id: string;
-  label: "FRAUD" | "LEGIT";
-  label_source: "ALERT_RESOLUTION" | "SAR_FILING" | "MANUAL";
-  labeled_by: string;
-  labeled_at: string;
+  report_date: string | null;
+  reference_window_days: number;
+  current_window_days: number;
+  reference_sample_count: number | null;
+  current_sample_count: number | null;
+  features_tested: number | null;
+  features_drifted: number | null;
+  critical_features_drifted: number | null;
+  feature_drift_detected: boolean;
+  prediction_drift_detected: boolean;
+  drift_detected: boolean;
+  skipped_insufficient_data: boolean;
+  skip_reason: string | null;
+  per_feature_results: Record<string, unknown> | null;
+  prediction_results: Record<string, unknown> | null;
+  created_at: string | null;
 }
 
 // ─── Health & metrics ───────────────────────────────────────────────────────
