@@ -8,6 +8,29 @@ import type {
   MutationResponse,
 } from "@/types/api";
 
+export interface RuleFieldMeta {
+  type: "number" | "boolean" | "string" | "list";
+  ops: string[];
+  description: string;
+  example: unknown;
+  allowed_values?: unknown[];
+}
+
+export interface RuleSchema {
+  fields: Record<string, RuleFieldMeta>;
+  operators: { number: string[]; string: string[]; boolean: string[] };
+  categories: RuleCategory[];
+  severities: RuleSeverity[];
+  operators_top_level: ("AND" | "OR")[];
+}
+
+export interface ValidateRulePayload extends CreateRulePayload {}
+
+export interface ValidateRuleResult {
+  valid: boolean;
+  errors: string[];
+}
+
 export interface ListRulesParams {
   status?: RuleStatus;
   category?: RuleCategory;
@@ -65,7 +88,7 @@ export const rulesApi = baseApi.injectEndpoints({
       MutationResponse | { approval_id: string; expires_at: string },
       { rule_id: string }
     >({
-      query: ({ rule_id }) => ({ url: `/rules/${rule_id}/promote`, method: "PATCH" }),
+      query: ({ rule_id }) => ({ url: `/rules/${rule_id}/promote`, method: "POST" }),
       invalidatesTags: (_r, _e, { rule_id }) => [
         { type: "Rule", id: rule_id },
         { type: "Rule", id: "LIST" },
@@ -73,11 +96,17 @@ export const rulesApi = baseApi.injectEndpoints({
       ],
     }),
     archiveRule: b.mutation<MutationResponse, { rule_id: string }>({
-      query: ({ rule_id }) => ({ url: `/rules/${rule_id}/archive`, method: "PATCH" }),
+      query: ({ rule_id }) => ({ url: `/rules/${rule_id}/archive`, method: "POST" }),
       invalidatesTags: (_r, _e, { rule_id }) => [
         { type: "Rule", id: rule_id },
         { type: "Rule", id: "LIST" },
       ],
+    }),
+    getRuleSchema: b.query<RuleSchema, void>({
+      query: () => "/rules/schema",
+    }),
+    validateRule: b.mutation<ValidateRuleResult, ValidateRulePayload>({
+      query: (body) => ({ url: "/rules/validate", method: "POST", body }),
     }),
   }),
 });
@@ -89,4 +118,6 @@ export const {
   useUpdateRuleMutation,
   usePromoteRuleMutation,
   useArchiveRuleMutation,
+  useGetRuleSchemaQuery,
+  useValidateRuleMutation,
 } = rulesApi;

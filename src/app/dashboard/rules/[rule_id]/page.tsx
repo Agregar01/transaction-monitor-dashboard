@@ -1,6 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
+import { useState } from "react";
 import {
   useGetRuleQuery,
   usePromoteRuleMutation,
@@ -8,23 +9,55 @@ import {
 } from "@/redux/slices/api/rulesApi";
 import { SkeletonCard } from "@/components/Skeleton";
 import ActionBadge from "@/components/ActionBadge";
+import RuleBuilderForm from "@/components/RuleBuilderForm";
 import { showToast } from "@/components/Toast";
 import { errorMessage } from "@/lib/errors";
+import { useAppSelector } from "@/redux/store";
+import type { Rule } from "@/types/api";
 
 export default function RuleDetailPage() {
   const params = useParams<{ rule_id: string }>();
   const router = useRouter();
   const ruleId = params.rule_id;
+  const [editing, setEditing] = useState(false);
 
   const { data: rule, isLoading, error } = useGetRuleQuery(ruleId);
   const [promote, { isLoading: promoting }] = usePromoteRuleMutation();
   const [archive, { isLoading: archiving }] = useArchiveRuleMutation();
+  const { roles } = useAppSelector((s) => s.auth);
+  const canEdit = roles.some((r) => ["SYSTEM_ADMIN", "ML_ENGINEER"].includes(r));
 
   if (isLoading) return <SkeletonCard />;
   if (error || !rule) {
     return (
       <div className="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 p-6 rounded-xl">
         Failed to load rule {ruleId}.
+      </div>
+    );
+  }
+
+  if (editing) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <button
+            onClick={() => setEditing(false)}
+            className="text-xs text-gray-500 dark:text-gray-400 hover:underline"
+          >
+            ← Cancel edit
+          </button>
+          <h1 className="text-2xl font-semibold text-gray-900 dark:text-white mt-1">
+            Edit rule <span className="font-mono text-lg">{ruleId}</span>
+          </h1>
+        </div>
+        <RuleBuilderForm
+          existing={rule}
+          onSuccess={(_updated: Rule) => {
+            setEditing(false);
+            showToast({ type: "success", title: "Saved", message: `${ruleId} updated.` });
+          }}
+          onCancel={() => setEditing(false)}
+        />
       </div>
     );
   }
@@ -80,6 +113,14 @@ export default function RuleDetailPage() {
             <span className="text-xs text-green-600 font-semibold">● enabled</span>
           ) : (
             <span className="text-xs text-gray-400">○ disabled</span>
+          )}
+          {canEdit && rule.status === "DRAFT" && rule.logic_type === "dsl" && (
+            <button
+              onClick={() => setEditing(true)}
+              className="px-3 py-1.5 text-xs font-medium border border-primary text-primary rounded-lg hover:bg-primary/10 transition-colors"
+            >
+              Edit
+            </button>
           )}
         </div>
       </div>
