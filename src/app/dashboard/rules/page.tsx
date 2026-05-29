@@ -6,12 +6,17 @@ import { useListRulesQuery } from "@/redux/slices/api/rulesApi";
 import { SkeletonTable } from "@/components/Skeleton";
 import ActionBadge from "@/components/ActionBadge";
 import type { RuleStatus, RuleCategory } from "@/types/api";
+import { useAppSelector } from "@/redux/store";
+
 const STATUS_TABS: RuleStatus[] = ["DRAFT", "SHADOW", "PRODUCTION", "ARCHIVED"];
+const CAN_CREATE_ROLES = ["SYSTEM_ADMIN", "ML_ENGINEER"];
 
 export default function RulesPage() {
   const [status, setStatus] = useState<RuleStatus>("PRODUCTION");
   const [category, setCategory] = useState<RuleCategory | "">("");
   const [enabledOnly, setEnabledOnly] = useState(false);
+  const { roles } = useAppSelector((s) => s.auth);
+  const canCreate = roles.some((r) => CAN_CREATE_ROLES.includes(r));
 
   const { data, isLoading, error } = useListRulesQuery({
     status,
@@ -29,12 +34,14 @@ export default function RulesPage() {
             Travel Rule. Promotion to PRODUCTION requires four-eyes approval.
           </p>
         </div>
-        <Link
-          href="/dashboard/rules/new"
-          className="flex-shrink-0 px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-600 transition-colors"
-        >
-          + Create rule
-        </Link>
+        {canCreate && (
+          <Link
+            href="/dashboard/rules/new"
+            className="flex-shrink-0 px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-600 transition-colors"
+          >
+            + Create rule
+          </Link>
+        )}
       </div>
 
       <div className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-4 flex flex-wrap items-center gap-2">
