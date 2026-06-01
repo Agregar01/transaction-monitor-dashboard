@@ -1,16 +1,34 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useListCasesQuery } from "@/redux/slices/api/casesApi";
+import { useGetAnalyticsSummaryQuery } from "@/redux/slices/api/analyticsApi";
 import { SkeletonTable } from "@/components/Skeleton";
 import ActionBadge from "@/components/ActionBadge";
+import DonutCard from "@/components/DonutCard";
 import type { CaseStatus, CaseType, CasePriority } from "@/types/api";
 import { PlusIcon } from "@heroicons/react/24/outline";
 
 const STATUSES: CaseStatus[] = ["OPEN", "INVESTIGATING", "ESCALATED", "SAR_DRAFTED", "SAR_FILED", "CLOSED"];
 const TYPES: CaseType[] = ["AML", "FRAUD", "SANCTIONS"];
 const PRIORITIES: CasePriority[] = ["HIGH", "MEDIUM", "LOW"];
+
+const STATUS_COLORS: Record<string, string> = {
+  OPEN: "#94a3b8",
+  ASSIGNED: "#60a5fa",
+  IN_REVIEW: "#818cf8",
+  INVESTIGATING: "#f59e0b",
+  ESCALATED: "#f97316",
+  SAR_DRAFTED: "#a855f7",
+  SAR_FILED: "#10b981",
+  CLOSED: "#64748b",
+};
+const TYPE_COLORS: Record<string, string> = {
+  AML: "#2563eb",
+  FRAUD: "#ec4899",
+  SANCTIONS: "#f59e0b",
+};
 
 export default function CasesListPage() {
   const [page, setPage] = useState(1);
@@ -29,6 +47,35 @@ export default function CasesListPage() {
   });
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.page_size)) : 1;
+
+  // Breakdowns: status from the real population (analytics case_breakdown),
+  // type from a recent sample (not available in the analytics summary).
+  const { data: analytics } = useGetAnalyticsSummaryQuery({ period_days: 90 });
+  const { data: sample } = useListCasesQuery({ page_size: 200 });
+
+  const statusBreakdown = useMemo(() => {
+    const bd = analytics?.case_breakdown ?? {};
+    const keys = Object.keys(bd).filter((k) => bd[k] > 0);
+    return {
+      labels: keys.map((k) => k.replace(/_/g, " ")),
+      series: keys.map((k) => bd[k]),
+      colors: keys.map((k) => STATUS_COLORS[k] ?? "#94a3b8"),
+      total: keys.reduce((s, k) => s + bd[k], 0),
+    };
+  }, [analytics]);
+
+  const typeBreakdown = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const c of sample?.items ?? []) counts[c.case_type] = (counts[c.case_type] ?? 0) + 1;
+    const labels = Object.keys(counts);
+    return {
+      labels,
+      series: labels.map((l) => counts[l]),
+      colors: labels.map((l) => TYPE_COLORS[l] ?? "#94a3b8"),
+    };
+  }, [sample]);
+
+  const sampleSize = sample?.items.length ?? 0;
 
   return (
     <div className="space-y-6">
@@ -124,6 +171,25 @@ export default function CasesListPage() {
           />
         </div>
       </div>
+
+      {(statusBreakdown.total > 0 || sampleSize > 0) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <DonutCard
+            title="By status"
+            subtitle="All cases · last 90 days"
+            labels={statusBreakdown.labels}
+            series={statusBreakdown.series}
+            colors={statusBreakdown.colors}
+          />
+          <DonutCard
+            title="By type"
+            subtitle={`Recent ${sampleSize} cases`}
+            labels={typeBreakdown.labels}
+            series={typeBreakdown.series}
+            colors={typeBreakdown.colors}
+          />
+        </div>
+      )}
 
       {isLoading ? (
         <SkeletonTable rows={8} cols={6} />

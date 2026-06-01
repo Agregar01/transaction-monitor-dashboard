@@ -2,12 +2,47 @@
 
 import { useState } from "react";
 import { useListAuditChangesQuery } from "@/redux/slices/api/auditApi";
+import { useVerifyAuditChainQuery } from "@/redux/slices/api/analyticsApi";
 import { SkeletonTable } from "@/components/Skeleton";
 import ActionBadge from "@/components/ActionBadge";
+import { ShieldCheckIcon, ShieldExclamationIcon } from "@heroicons/react/24/outline";
 import type { AuditAction, AuditEntry } from "@/types/api";
 
 const ACTIONS: AuditAction[] = ["CREATE", "UPDATE", "DELETE", "APPROVE", "REJECT", "LOGIN", "LOGOUT"];
 const PAGE_SIZE = 50;
+
+function ChainIntegrityBanner() {
+  const { data, isLoading, error } = useVerifyAuditChainQuery({ limit: 1000 });
+  if (isLoading || error || !data) return null; // silent if endpoint unavailable
+
+  const ok = data.chain_valid;
+  return (
+    <div
+      className={`flex items-start gap-3 rounded-xl border p-4 ${
+        ok
+          ? "border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20"
+          : "border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20"
+      }`}
+    >
+      {ok ? (
+        <ShieldCheckIcon className="h-6 w-6 shrink-0 text-emerald-600" />
+      ) : (
+        <ShieldExclamationIcon className="h-6 w-6 shrink-0 text-red-600" />
+      )}
+      <div className="text-sm">
+        <p className={`font-semibold ${ok ? "text-emerald-800 dark:text-emerald-300" : "text-red-800 dark:text-red-300"}`}>
+          {ok ? "Hash chain verified" : `Chain integrity breached — ${data.breach_count} break(s)`}
+        </p>
+        <p className="text-xs text-gray-600 dark:text-gray-300 mt-0.5">
+          {data.entries_verified.toLocaleString()} entries verified
+          {!ok && data.first_breach && (
+            <> · first breach at <span className="font-mono">{data.first_breach.slice(0, 8)}…</span></>
+          )}
+        </p>
+      </div>
+    </div>
+  );
+}
 
 function DiffPanel({ before, after }: { before: unknown; after: unknown }) {
   const left = before && typeof before === "object" ? (before as Record<string, unknown>) : {};
@@ -95,6 +130,8 @@ export default function AuditPage() {
           Append-only change log. Click a row to expand the before/after diff.
         </p>
       </div>
+
+      <ChainIntegrityBanner />
 
       <div className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-4 grid grid-cols-1 md:grid-cols-3 gap-3">
         <select

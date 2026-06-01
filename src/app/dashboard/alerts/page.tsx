@@ -1,16 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useListAlertsQuery } from "@/redux/slices/api/alertsApi";
+import { useGetAnalyticsSummaryQuery } from "@/redux/slices/api/analyticsApi";
 import { SkeletonTable } from "@/components/Skeleton";
 import RiskBadge from "@/components/RiskBadge";
 import ActionBadge from "@/components/ActionBadge";
+import DonutCard from "@/components/DonutCard";
 import { useVisiblePolling } from "@/hooks/useVisiblePolling";
+import { riskBandColors, type RiskBand } from "@/config/constants";
 import type { AlertPriority, AlertStatus } from "@/types/api";
 
 const PRIORITIES: AlertPriority[] = ["IMMEDIATE", "BATCH", "REVIEW"];
 const STATUSES: AlertStatus[] = ["OPEN", "INVESTIGATING", "CLOSED"];
+
+const PRIORITY_COLORS: Record<AlertPriority, string> = {
+  IMMEDIATE: "#ef4444",
+  BATCH: "#3b82f6",
+  REVIEW: "#f59e0b",
+};
 
 export default function AlertsListPage() {
   const [page, setPage] = useState(1);
@@ -33,6 +42,37 @@ export default function AlertsListPage() {
   const totalPages = data
     ? Math.max(1, data.total_pages ?? Math.ceil(data.total / data.page_size))
     : 1;
+
+  // Breakdowns: risk band from the real population (analytics), priority from a
+  // recent sample (not available in the analytics summary).
+  const { data: analytics } = useGetAnalyticsSummaryQuery({ period_days: 90 });
+  const { data: sample } = useListAlertsQuery({ page_size: 200 });
+
+  const riskBreakdown = useMemo(() => {
+    const order: RiskBand[] = ["ALLOW", "FLAG", "HOLD", "BLOCK"];
+    const dist = analytics?.risk_distribution;
+    const series = order.map((b) => dist?.[b] ?? 0);
+    return {
+      labels: [...order],
+      series,
+      colors: order.map((b) => riskBandColors[b]),
+      total: series.reduce((a, b) => a + b, 0),
+    };
+  }, [analytics]);
+
+  const priorityBreakdown = useMemo(() => {
+    const counts = {} as Record<AlertPriority, number>;
+    for (const p of PRIORITIES) counts[p] = 0;
+    for (const a of sample?.items ?? []) if (a.priority in counts) counts[a.priority] += 1;
+    const labels = PRIORITIES.filter((p) => counts[p] > 0);
+    return {
+      labels: [...labels],
+      series: labels.map((p) => counts[p]),
+      colors: labels.map((p) => PRIORITY_COLORS[p]),
+    };
+  }, [sample]);
+
+  const sampleSize = sample?.items.length ?? 0;
 
   return (
     <div className="space-y-6">
@@ -102,6 +142,25 @@ export default function AlertsListPage() {
           />
         </div>
       </div>
+
+      {(riskBreakdown.total > 0 || sampleSize > 0) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <DonutCard
+            title="By risk band"
+            subtitle="All alerts · last 90 days"
+            labels={riskBreakdown.labels}
+            series={riskBreakdown.series}
+            colors={riskBreakdown.colors}
+          />
+          <DonutCard
+            title="By priority"
+            subtitle={`Recent ${sampleSize} alerts`}
+            labels={priorityBreakdown.labels}
+            series={priorityBreakdown.series}
+            colors={priorityBreakdown.colors}
+          />
+        </div>
+      )}
 
       {isLoading ? (
         <SkeletonTable rows={8} cols={6} />
