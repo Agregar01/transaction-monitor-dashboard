@@ -24,7 +24,7 @@ export interface RuleSchema {
   operators_top_level: ("AND" | "OR")[];
 }
 
-export interface ValidateRulePayload extends CreateRulePayload {}
+export type ValidateRulePayload = CreateRulePayload;
 
 export interface ValidateRuleResult {
   valid: boolean;

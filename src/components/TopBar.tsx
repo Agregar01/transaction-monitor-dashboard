@@ -58,10 +58,15 @@ function JurisdictionBadge() {
   if (!jurisdictionCode) return null;
   return (
     <span
-      className="hidden md:inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-primary/10 text-primary"
+      className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-primary/10 text-primary"
       title={jurisdictionDisplayName ?? jurisdictionCode}
     >
-      {jurisdictionCode}
+      <span>{jurisdictionCode}</span>
+      {jurisdictionDisplayName && (
+        <span className="hidden lg:inline normal-case font-medium opacity-80">
+          {jurisdictionDisplayName}
+        </span>
+      )}
     </span>
   );
 }

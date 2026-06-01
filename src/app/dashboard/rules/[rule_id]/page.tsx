@@ -13,7 +13,6 @@ import RuleBuilderForm from "@/components/RuleBuilderForm";
 import { showToast } from "@/components/Toast";
 import { errorMessage } from "@/lib/errors";
 import { useAppSelector } from "@/redux/store";
-import type { Rule } from "@/types/api";
 
 export default function RuleDetailPage() {
   const params = useParams<{ rule_id: string }>();
@@ -52,7 +51,7 @@ export default function RuleDetailPage() {
         </div>
         <RuleBuilderForm
           existing={rule}
-          onSuccess={(_updated: Rule) => {
+          onSuccess={() => {
             setEditing(false);
             showToast({ type: "success", title: "Saved", message: `${ruleId} updated.` });
           }}
