@@ -227,6 +227,16 @@ export interface InvestigationNote {
   content: string;
 }
 
+/** Free-text collaboration note on a case — backend CaseNote / _note_dict. */
+export interface CaseNote {
+  id: string;
+  case_id: string;
+  author_id: string | null;
+  body: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface TriggeredRuleDetail {
   rule_id: string;
   rule_name: string;

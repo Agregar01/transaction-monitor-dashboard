@@ -7,10 +7,14 @@ import {
   useGetCaseQuery,
   useGetCaseAlertsQuery,
   useGetCaseHistoryQuery,
+  useGetCaseNotesQuery,
+  useAddCaseNoteMutation,
+  useDeleteCaseNoteMutation,
   useUpdateCaseMutation,
   useRequestSarFilingMutation,
   useLinkAlertToCaseMutation,
 } from "@/redux/slices/api/casesApi";
+import { useAppSelector } from "@/redux/store";
 import { SkeletonCard } from "@/components/Skeleton";
 import ActionBadge from "@/components/ActionBadge";
 import { showToast } from "@/components/Toast";
@@ -35,16 +39,22 @@ export default function CaseDetailPage() {
   const router = useRouter();
   const caseId = params.id;
 
+  const currentUserId = useAppSelector((s) => s.auth.userId);
+
   const { data: kase, isLoading, error } = useGetCaseQuery(caseId);
   const { data: alerts } = useGetCaseAlertsQuery(caseId);
   const { data: history } = useGetCaseHistoryQuery(caseId);
+  const { data: notes } = useGetCaseNotesQuery(caseId);
 
   const [updateCase, { isLoading: transitioning }] = useUpdateCaseMutation();
   const [requestSarFiling, { isLoading: filingSar }] = useRequestSarFilingMutation();
   const [linkAlert, { isLoading: linking }] = useLinkAlertToCaseMutation();
+  const [addNote, { isLoading: addingNote }] = useAddCaseNoteMutation();
+  const [deleteNote] = useDeleteCaseNoteMutation();
 
   const [linkAlertId, setLinkAlertId] = useState("");
   const [transitionNotes, setTransitionNotes] = useState("");
+  const [newNote, setNewNote] = useState("");
 
   if (isLoading) return <SkeletonCard />;
   if (error || !kase) {
@@ -81,6 +91,24 @@ export default function CaseDetailPage() {
       setTransitionNotes("");
     } catch (e) {
       showToast({ type: "error", title: "Transition failed", message: errorMessage(e) });
+    }
+  };
+
+  const onAddNote = async () => {
+    if (!newNote.trim()) return;
+    try {
+      await addNote({ case_id: caseId, body: newNote.trim() }).unwrap();
+      setNewNote("");
+    } catch (e) {
+      showToast({ type: "error", title: "Could not add note", message: errorMessage(e) });
+    }
+  };
+
+  const onDeleteNote = async (noteId: string) => {
+    try {
+      await deleteNote({ case_id: caseId, note_id: noteId }).unwrap();
+    } catch (e) {
+      showToast({ type: "error", title: "Could not delete note", message: errorMessage(e) });
     }
   };
 
@@ -153,6 +181,62 @@ export default function CaseDetailPage() {
               >
                 Link
               </button>
+            </div>
+          </section>
+
+          <section className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-6">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">
+              Investigation notes
+            </h2>
+            {!notes || notes.length === 0 ? (
+              <p className="text-sm text-gray-400">No notes yet. Add the first one below.</p>
+            ) : (
+              <ul className="space-y-3">
+                {notes.map((n) => (
+                  <li
+                    key={n.id}
+                    className="group rounded-lg bg-gray-50 dark:bg-navy-800 px-3 py-2.5"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap flex-1">
+                        {n.body}
+                      </p>
+                      {n.author_id === currentUserId && (
+                        <button
+                          onClick={() => onDeleteNote(n.id)}
+                          className="text-xs text-red-500 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                          aria-label="Delete note"
+                        >
+                          Delete
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-gray-400 mt-1.5 font-mono">
+                      {n.author_id ? `${n.author_id.slice(0, 8)}…` : "system"} ·{" "}
+                      {new Date(n.created_at).toLocaleString()}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <div className="mt-4 space-y-2">
+              <textarea
+                rows={2}
+                value={newNote}
+                onChange={(e) => setNewNote(e.target.value)}
+                placeholder="Add an investigation note…"
+                className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-800 text-gray-900 dark:text-white"
+              />
+              <div className="flex justify-end">
+                <button
+                  onClick={onAddNote}
+                  disabled={addingNote || !newNote.trim()}
+                  className="px-3 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-600 disabled:opacity-50"
+                >
+                  Add note
+                </button>
+              </div>
             </div>
           </section>
 

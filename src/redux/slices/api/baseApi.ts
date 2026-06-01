@@ -58,6 +58,7 @@ export const baseApi = createApi({
     "Alert",
     "Case",
     "CaseHistory",
+    "CaseNote",
     "Rule",
     "ShadowStats",
     "STRReport",

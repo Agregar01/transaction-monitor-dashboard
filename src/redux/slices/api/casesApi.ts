@@ -7,6 +7,7 @@ import type {
   CasePriority,
   CaseStatusHistoryEntry,
   CaseAlertLink,
+  CaseNote,
   MutationResponse,
 } from "@/types/api";
 
@@ -76,6 +77,25 @@ export const casesApi = baseApi.injectEndpoints({
       query: (case_id) => `/cases/${case_id}/history`,
       providesTags: (_r, _e, id) => [{ type: "CaseHistory", id }],
     }),
+    getCaseNotes: b.query<CaseNote[], string>({
+      query: (case_id) => `/cases/${case_id}/notes`,
+      providesTags: (_r, _e, id) => [{ type: "CaseNote", id }],
+    }),
+    addCaseNote: b.mutation<CaseNote, { case_id: string; body: string }>({
+      query: ({ case_id, body }) => ({
+        url: `/cases/${case_id}/notes`,
+        method: "POST",
+        body: { body },
+      }),
+      invalidatesTags: (_r, _e, { case_id }) => [{ type: "CaseNote", id: case_id }],
+    }),
+    deleteCaseNote: b.mutation<void, { case_id: string; note_id: string }>({
+      query: ({ case_id, note_id }) => ({
+        url: `/cases/${case_id}/notes/${note_id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (_r, _e, { case_id }) => [{ type: "CaseNote", id: case_id }],
+    }),
   }),
 });
 
@@ -88,4 +108,7 @@ export const {
   useLinkAlertToCaseMutation,
   useGetCaseAlertsQuery,
   useGetCaseHistoryQuery,
+  useGetCaseNotesQuery,
+  useAddCaseNoteMutation,
+  useDeleteCaseNoteMutation,
 } = casesApi;
