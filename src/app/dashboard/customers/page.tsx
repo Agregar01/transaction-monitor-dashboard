@@ -1,13 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useListCustomersQuery } from "@/redux/slices/api/customersApi";
 import { SkeletonTable } from "@/components/Skeleton";
 import ActionBadge from "@/components/ActionBadge";
+import DonutCard from "@/components/DonutCard";
 import type { RiskLevel } from "@/types/api";
 
 const RISK_LEVELS: RiskLevel[] = ["LOW", "MEDIUM", "HIGH", "VERY_HIGH", "CRITICAL"];
+
+const RISK_LEVEL_COLORS: Record<RiskLevel, string> = {
+  LOW: "#22c55e",
+  MEDIUM: "#f59e0b",
+  HIGH: "#fb923c",
+  VERY_HIGH: "#ef4444",
+  CRITICAL: "#991b1b",
+};
+
+const CATEGORY_PALETTE = ["#14b8a6", "#2563eb", "#f59e0b", "#7c3aed", "#ec4899"];
 
 export default function CustomersListPage() {
   const [page, setPage] = useState(1);
@@ -24,6 +35,36 @@ export default function CustomersListPage() {
   });
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.page_size)) : 1;
+
+  // Portfolio breakdowns from a larger recent sample, independent of filters.
+  const { data: sample } = useListCustomersQuery({ page_size: 200 });
+
+  const riskLevelBreakdown = useMemo(() => {
+    const counts = {} as Record<RiskLevel, number>;
+    for (const lvl of RISK_LEVELS) counts[lvl] = 0;
+    for (const c of sample?.items ?? []) {
+      if (c.risk_level in counts) counts[c.risk_level] += 1;
+    }
+    const labels = RISK_LEVELS.filter((l) => counts[l] > 0);
+    return {
+      labels: labels.map((l) => l.replace(/_/g, " ")),
+      series: labels.map((l) => counts[l]),
+      colors: labels.map((l) => RISK_LEVEL_COLORS[l]),
+    };
+  }, [sample]);
+
+  const typeBreakdown = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const c of sample?.items ?? []) counts[c.customer_type] = (counts[c.customer_type] ?? 0) + 1;
+    const labels = Object.keys(counts);
+    return {
+      labels,
+      series: labels.map((l) => counts[l]),
+      colors: labels.map((_, i) => CATEGORY_PALETTE[i % CATEGORY_PALETTE.length]),
+    };
+  }, [sample]);
+
+  const sampleSize = sample?.items.length ?? 0;
 
   return (
     <div className="space-y-6">
@@ -83,6 +124,25 @@ export default function CustomersListPage() {
           PEP only
         </label>
       </div>
+
+      {sampleSize > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <DonutCard
+            title="By risk level"
+            subtitle={`Recent ${sampleSize} customers`}
+            labels={riskLevelBreakdown.labels}
+            series={riskLevelBreakdown.series}
+            colors={riskLevelBreakdown.colors}
+          />
+          <DonutCard
+            title="By customer type"
+            subtitle={`Recent ${sampleSize} customers`}
+            labels={typeBreakdown.labels}
+            series={typeBreakdown.series}
+            colors={typeBreakdown.colors}
+          />
+        </div>
+      )}
 
       {isLoading ? (
         <SkeletonTable rows={8} cols={5} />

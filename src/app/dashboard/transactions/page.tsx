@@ -1,10 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useListTransactionsQuery } from "@/redux/slices/api/transactionsApi";
 import { SkeletonTable } from "@/components/Skeleton";
 import RiskBadge from "@/components/RiskBadge";
+import DonutCard from "@/components/DonutCard";
+import { riskBand, riskBandColors, type RiskBand } from "@/config/constants";
+
+// Distinct, non-semantic palette for categorical breakdowns (channels).
+const CATEGORY_PALETTE = ["#14b8a6", "#2563eb", "#f59e0b", "#7c3aed", "#ec4899", "#0ea5e9", "#84cc16"];
 
 export default function TransactionsListPage() {
   const [page, setPage] = useState(1);
@@ -23,6 +28,30 @@ export default function TransactionsListPage() {
   });
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.page_size)) : 1;
+
+  // Portfolio-level breakdowns from a larger recent sample (independent of the
+  // table's page/filters) so the donuts stay meaningful as you browse.
+  const { data: sample } = useListTransactionsQuery({ page_size: 200 });
+
+  const channelBreakdown = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const t of sample?.items ?? []) counts[t.channel] = (counts[t.channel] ?? 0) + 1;
+    const labels = Object.keys(counts);
+    return {
+      labels,
+      series: labels.map((l) => counts[l]),
+      colors: labels.map((_, i) => CATEGORY_PALETTE[i % CATEGORY_PALETTE.length]),
+    };
+  }, [sample]);
+
+  const riskBreakdown = useMemo(() => {
+    const order: RiskBand[] = ["ALLOW", "FLAG", "HOLD", "BLOCK"];
+    const counts: Record<RiskBand, number> = { ALLOW: 0, FLAG: 0, HOLD: 0, BLOCK: 0 };
+    for (const t of sample?.items ?? []) counts[riskBand(t.combined_risk_score)] += 1;
+    return { labels: order, series: order.map((b) => counts[b]), colors: order.map((b) => riskBandColors[b]) };
+  }, [sample]);
+
+  const sampleSize = sample?.items.length ?? 0;
 
   return (
     <div className="space-y-6">
@@ -74,6 +103,25 @@ export default function TransactionsListPage() {
           className="px-3 py-2 text-sm border border-gray-200 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-800 text-gray-900 dark:text-white"
         />
       </div>
+
+      {sampleSize > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <DonutCard
+            title="By channel"
+            subtitle={`Recent ${sampleSize} transactions`}
+            labels={channelBreakdown.labels}
+            series={channelBreakdown.series}
+            colors={channelBreakdown.colors}
+          />
+          <DonutCard
+            title="By risk band"
+            subtitle={`Recent ${sampleSize} transactions`}
+            labels={riskBreakdown.labels}
+            series={riskBreakdown.series}
+            colors={riskBreakdown.colors}
+          />
+        </div>
+      )}
 
       {isLoading ? (
         <SkeletonTable rows={8} cols={6} />
