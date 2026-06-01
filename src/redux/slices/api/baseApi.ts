@@ -76,6 +76,8 @@ export const baseApi = createApi({
     "ModelRegistry",
     "DriftDetection",
     "LabeledTransaction",
+    "Attachment",
+    "Analytics",
   ],
   endpoints: () => ({}),
 });

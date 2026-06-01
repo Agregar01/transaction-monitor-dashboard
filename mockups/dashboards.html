@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Autheo TMS — Role Dashboards</title>
+<style>
+  :root{
+    --navy:#0E0E2D; --navy2:#16163d; --navy3:#1f1f4a;
+    --ink:#171717; --mut:#64748b; --line:#e8ecf3; --bg:#f6f8fb; --card:#fff;
+    --teal:#14b8a6; --tealdk:#0d9488; --green:#16a34a; --amber:#f59e0b;
+    --red:#e11d48; --blue:#2563eb; --purple:#7c3aed; --orange:#ea580c;
+    --r:12px; --sh:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.04);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Geist,Roboto,sans-serif;background:#dfe5ee;color:var(--ink);-webkit-font-smoothing:antialiased}
+  .screen{width:1280px;background:var(--bg);display:flex;margin:0 auto}
+  /* sidebar */
+  .side{width:228px;background:var(--navy);color:#c7cae0;flex:none;min-height:840px;padding:0 0 18px}
+  .brand{display:flex;align-items:center;gap:9px;padding:18px 18px 14px;border-bottom:1px solid #23234f}
+  .brand .logo{width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,var(--teal),#0ea5a0);display:flex;align-items:center;justify-content:center;color:#04201d;font-weight:800;font-size:14px}
+  .brand b{color:#fff;font-size:15px;letter-spacing:.2px}
+  .brand span{font-size:9px;color:#7c80a8;display:block;font-weight:600;letter-spacing:.5px}
+  .navsec{font-size:9.5px;text-transform:uppercase;letter-spacing:.8px;color:#5b5f8c;font-weight:700;padding:14px 18px 5px}
+  .nav a{display:flex;align-items:center;gap:10px;padding:7px 18px;font-size:12.5px;color:#aeb2d4;text-decoration:none;border-left:3px solid transparent}
+  .nav a .ic{width:15px;height:15px;border-radius:4px;background:#33356b;flex:none;opacity:.8}
+  .nav a.active{background:var(--navy3);color:#fff;border-left-color:var(--teal)}
+  .nav a.active .ic{background:var(--teal);opacity:1}
+  /* main */
+  .main{flex:1;min-width:0}
+  .top{display:flex;align-items:center;justify-content:space-between;padding:15px 24px;background:#fff;border-bottom:1px solid var(--line)}
+  .top h1{font-size:17px;font-weight:700}
+  .top .sub{font-size:11.5px;color:var(--mut);margin-top:1px}
+  .top .right{display:flex;align-items:center;gap:10px}
+  .pill{font-size:11px;border:1px solid var(--line);border-radius:8px;padding:6px 10px;color:#334155;background:#fff;display:flex;gap:6px;align-items:center}
+  .pill.jur{background:#ecfdf5;border-color:#a7f3d0;color:#047857;font-weight:600}
+  .ava{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700}
+  .body{padding:20px 24px 30px}
+  .grid{display:grid;gap:14px}
+  .kpis{grid-template-columns:repeat(5,1fr)}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;box-shadow:var(--sh)}
+  .kpi .lab{font-size:11px;color:var(--mut);font-weight:600}
+  .kpi .val{font-size:21px;font-weight:800;margin-top:6px;letter-spacing:-.5px}
+  .kpi .chg{font-size:10.5px;margin-top:5px;font-weight:600}
+  .up{color:var(--green)} .down{color:var(--red)} .neu{color:var(--mut)}
+  .cards{margin-top:14px;display:grid;gap:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden}
+  .card h3{font-size:13px;font-weight:700;padding:13px 15px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+  .card h3 .mini{font-size:10px;color:var(--mut);font-weight:600}
+  .pad{padding:14px 15px}
+  table{width:100%;border-collapse:collapse;font-size:11.5px}
+  th{text-align:left;color:var(--mut);font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.4px;padding:8px 15px;border-bottom:1px solid var(--line)}
+  td{padding:9px 15px;border-bottom:1px solid #f1f4f9;color:#28324a}
+  tr:last-child td{border-bottom:none}
+  .tag{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;display:inline-block}
+  .t-high{background:#fee2e2;color:#b91c1c}.t-med{background:#fef3c7;color:#b45309}.t-low{background:#dcfce7;color:#15803d}
+  .t-new{background:#e0edff;color:#1d4ed8}.t-rev{background:#ede9fe;color:#6d28d9}.t-ok{background:#dcfce7;color:#15803d}
+  .legend{display:flex;flex-direction:column;gap:8px;font-size:11.5px}
+  .legend i{width:9px;height:9px;border-radius:2px;display:inline-block;margin-right:7px}
+  .donut-wrap{display:flex;align-items:center;gap:18px}
+  .bar-row{display:flex;align-items:center;gap:10px;margin:9px 0;font-size:11px}
+  .bar-row .nm{width:120px;color:#334155}
+  .bar-row .track{flex:1;height:8px;background:#eef1f7;border-radius:6px;overflow:hidden}
+  .bar-row .fill{height:100%;border-radius:6px}
+  .bar-row .pc{width:48px;text-align:right;color:var(--mut);font-weight:600}
+  .health{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #f1f4f9;font-size:12px}
+  .health:last-child{border:none}
+  .dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:7px}
+  .gauge{font-size:34px;font-weight:800;letter-spacing:-1px}
+  .muted{color:var(--mut);font-size:11px}
+  .sectitle{font-size:11px;color:var(--mut);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin:2px 0 0}
+</style>
+</head>
+<body>
+
+<!-- ============ helper: SVG donut ============ -->
+<svg width="0" height="0"><defs></defs></svg>
+
+<!-- ====================================================== 1. SYSTEM ADMIN ====================================================== -->
+<section class="screen" id="admin">
+  <aside class="side">
+    <div class="brand"><div class="logo">A</div><div><b>Authéo</b><span>TRANSACTION MONITOR</span></div></div>
+    <div class="navsec">Overview</div>
+    <nav class="nav">
+      <a class="active"><i class="ic"></i>Dashboard</a>
+    </nav>
+    <div class="navsec">Monitor</div>
+    <nav class="nav">
+      <a><i class="ic"></i>Alerts</a><a><i class="ic"></i>Cases</a>
+      <a><i class="ic"></i>Transactions</a><a><i class="ic"></i>Customers</a>
+      <a><i class="ic"></i>Sanctions Check</a>
+    </nav>
+    <div class="navsec">Compliance</div>
+    <nav class="nav">
+      <a><i class="ic"></i>STR Reports</a><a><i class="ic"></i>CTR Reports</a>
+      <a><i class="ic"></i>Approvals</a><a><i class="ic"></i>Watchlists</a>
+    </nav>
+    <div class="navsec">Rule &amp; ML Ops</div>
+    <nav class="nav">
+      <a><i class="ic"></i>Rules</a><a><i class="ic"></i>Shadow Stats</a>
+      <a><i class="ic"></i>ML Models</a><a><i class="ic"></i>Drift Monitoring</a>
+    </nav>
+    <div class="navsec">Admin</div>
+    <nav class="nav">
+      <a><i class="ic"></i>Users &amp; Roles</a><a><i class="ic"></i>Jurisdictions</a>
+      <a><i class="ic"></i>Audit Trail</a><a><i class="ic"></i>System Health</a>
+    </nav>
+  </aside>
+  <div class="main">
+    <div class="top">
+      <div><h1>System Overview</h1><div class="sub">Platform-wide monitoring · last 30 days</div></div>
+      <div class="right">
+        <span class="pill jur">🇬🇭 Ghana FIC · GHS ▾</span>
+        <span class="pill">May 02 – Jun 01, 2026 ▾</span>
+        <span class="pill">🔔</span>
+        <div class="ava" style="background:#2563eb">SA</div>
+      </div>
+    </div>
+    <div class="body">
+      <div class="grid kpis">
+        <div class="kpi"><div class="lab">Transactions Ingested</div><div class="val">1.71M</div><div class="chg up">▲ 4.2% vs prev 30d</div></div>
+        <div class="kpi"><div class="lab">Customers Monitored</div><div class="val">13,465</div><div class="chg up">▲ 1.1%</div></div>
+        <div class="kpi"><div class="lab">Alerts Generated</div><div class="val">9,983</div><div class="chg up">▲ 6.8%</div></div>
+        <div class="kpi"><div class="lab">Open Cases</div><div class="val">320</div><div class="chg down">▲ 9.2%</div></div>
+        <div class="kpi"><div class="lab">System Uptime</div><div class="val">99.98%</div><div class="chg neu">SLA 99.9%</div></div>
+      </div>
+
+      <div class="cards" style="grid-template-columns:2fr 1fr">
+        <div class="card">
+          <h3>Transaction Volume <span class="mini">Daily · GHS</span></h3>
+          <div class="pad">
+            <svg viewBox="0 0 640 180" width="100%" height="180">
+              <polyline fill="none" stroke="#14b8a6" stroke-width="2.5" points="0,140 80,120 160,128 240,90 320,100 400,70 480,82 560,48 640,60"/>
+              <polygon fill="rgba(20,184,166,.08)" points="0,140 80,120 160,128 240,90 320,100 400,70 480,82 560,48 640,60 640,180 0,180"/>
+              <g font-size="9" fill="#94a3b8"><text x="0" y="176">May 4</text><text x="290" y="176">May 18</text><text x="600" y="176">Jun 1</text></g>
+            </svg>
+          </div>
+        </div>
+        <div class="card">
+          <h3>System Health</h3>
+          <div class="pad">
+            <div class="health"><span><span class="dot" style="background:var(--green)"></span>API Gateway</span><span class="muted">Healthy</span></div>
+            <div class="health"><span><span class="dot" style="background:var(--green)"></span>Risk Engine (3-layer)</span><span class="muted">Healthy</span></div>
+            <div class="health"><span><span class="dot" style="background:var(--green)"></span>Kafka Ingestion</span><span class="muted">Healthy</span></div>
+            <div class="health"><span><span class="dot" style="background:var(--amber)"></span>Sanctions / PEP Sync</span><span class="muted">Degraded</span></div>
+            <div class="health"><span><span class="dot" style="background:var(--green)"></span>TimescaleDB</span><span class="muted">Healthy</span></div>
+            <div class="health"><span><span class="dot" style="background:var(--green)"></span>Celery Workers</span><span class="muted">15 active</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="cards" style="grid-template-columns:1fr 1fr">
+        <div class="card">
+          <h3>Alerts by Channel <span class="mini">9,983 total</span></h3>
+          <div class="pad">
+            <div class="bar-row"><span class="nm">Mobile Money (MoMo)</span><span class="track"><span class="fill" style="width:62%;background:#14b8a6"></span></span><span class="pc">61.7%</span></div>
+            <div class="bar-row"><span class="nm">USSD</span><span class="track"><span class="fill" style="width:21%;background:#2563eb"></span></span><span class="pc">21.4%</span></div>
+            <div class="bar-row"><span class="nm">Agent / Cash-out</span><span class="track"><span class="fill" style="width:10%;background:#f59e0b"></span></span><span class="pc">9.8%</span></div>
+            <div class="bar-row"><span class="nm">Bank Transfer</span><span class="track"><span class="fill" style="width:7%;background:#7c3aed"></span></span><span class="pc">7.1%</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Recent Admin Activity</h3>
+          <table>
+            <tr><td>Sanctions list (OFAC SDN) re-synced</td><td class="muted">10:42</td></tr>
+            <tr><td>New role created · Compliance Officer</td><td class="muted">10:20</td></tr>
+            <tr><td>Rule R-118 velocity threshold updated</td><td class="muted">10:05</td></tr>
+            <tr><td>Jurisdiction added · Nigeria NFIU</td><td class="muted">09:31</td></tr>
+            <tr><td>User deactivated · j.owusu@autheo</td><td class="muted">09:05</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====================================================== 2. COMPLIANCE OFFICER ====================================================== -->
+<section class="screen" id="officer">
+  <aside class="side">
+    <div class="brand"><div class="logo">A</div><div><b>Authéo</b><span>TRANSACTION MONITOR</span></div></div>
+    <div class="navsec">Overview</div>
+    <nav class="nav"><a class="active"><i class="ic"></i>Dashboard</a></nav>
+    <div class="navsec">Monitor</div>
+    <nav class="nav">
+      <a><i class="ic"></i>Alerts</a><a><i class="ic"></i>Cases</a>
+      <a><i class="ic"></i>Transactions</a><a><i class="ic"></i>Customers</a>
+      <a><i class="ic"></i>Sanctions Check</a>
+    </nav>
+    <div class="navsec">Compliance</div>
+    <nav class="nav">
+      <a><i class="ic"></i>STR Reports</a><a><i class="ic"></i>CTR Reports</a>
+      <a><i class="ic"></i>Approvals</a><a><i class="ic"></i>Watchlists</a>
+    </nav>
+    <div class="navsec">Rule &amp; ML Ops</div>
+    <nav class="nav"><a><i class="ic"></i>Rules</a><a><i class="ic"></i>Shadow Stats</a></nav>
+    <div class="navsec">Oversight</div>
+    <nav class="nav"><a><i class="ic"></i>Audit Trail</a></nav>
+  </aside>
+  <div class="main">
+    <div class="top">
+      <div><h1>Welcome, Ama Boateng 👋</h1><div class="sub">Compliance Officer · here's what needs your attention</div></div>
+      <div class="right">
+        <span class="pill jur">🇬🇭 Ghana FIC · GHS ▾</span>
+        <span class="pill">Last 7 days ▾</span>
+        <span class="pill">🔔 12</span>
+        <div class="ava" style="background:#7c3aed">AB</div>
+      </div>
+    </div>
+    <div class="body">
+      <div class="grid kpis" style="grid-template-columns:repeat(4,1fr)">
+        <div class="kpi"><div class="lab">Pending STR Approvals</div><div class="val">12</div><div class="chg down">Requires action</div></div>
+        <div class="kpi"><div class="lab">Open Cases (team)</div><div class="val">128</div><div class="chg up">▲ 15 vs last 7d</div></div>
+        <div class="kpi"><div class="lab">STRs Filed → FIC</div><div class="val">45</div><div class="chg up">▲ 12 this week</div></div>
+        <div class="kpi"><div class="lab">SLA Compliance</div><div class="val">92.5%</div><div class="chg up">▲ 2.1%</div></div>
+      </div>
+
+      <div class="cards" style="grid-template-columns:1.3fr 1fr">
+        <div class="card">
+          <h3>Cases by Status</h3>
+          <div class="pad donut-wrap">
+            <svg width="140" height="140" viewBox="0 0 42 42">
+              <circle cx="21" cy="21" r="15.9" fill="none" stroke="#eef1f7" stroke-width="6"/>
+              <circle cx="21" cy="21" r="15.9" fill="none" stroke="#14b8a6" stroke-width="6" stroke-dasharray="45 55" stroke-dashoffset="0" transform="rotate(-90 21 21)"/>
+              <circle cx="21" cy="21" r="15.9" fill="none" stroke="#f59e0b" stroke-width="6" stroke-dasharray="32 68" stroke-dashoffset="-45" transform="rotate(-90 21 21)"/>
+              <circle cx="21" cy="21" r="15.9" fill="none" stroke="#2563eb" stroke-width="6" stroke-dasharray="23 77" stroke-dashoffset="-77" transform="rotate(-90 21 21)"/>
+              <text x="21" y="20" text-anchor="middle" font-size="6" font-weight="700" fill="#171717">128</text>
+              <text x="21" y="26" text-anchor="middle" font-size="3" fill="#64748b">Total</text>
+            </svg>
+            <div class="legend">
+              <span><i style="background:#14b8a6"></i>Open · 45%</span>
+              <span><i style="background:#f59e0b"></i>Awaiting approval · 32%</span>
+              <span><i style="background:#2563eb"></i>In review · 23%</span>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Pending Approvals <span class="mini">Four-eyes queue</span></h3>
+          <table>
+            <thead><tr><th>Case</th><th>Type</th><th>Risk</th><th>Amount</th></tr></thead>
+            <tr><td>CASE-1389</td><td>STR filing</td><td><span class="tag t-high">High</span></td><td>GHS 25,000</td></tr>
+            <tr><td>CASE-1387</td><td>Watchlist add</td><td><span class="tag t-high">High</span></td><td>GHS 18,540</td></tr>
+            <tr><td>CASE-1382</td><td>STR filing</td><td><span class="tag t-med">Medium</span></td><td>GHS 7,200</td></tr>
+            <tr><td>CASE-1377</td><td>Case escalation</td><td><span class="tag t-med">Medium</span></td><td>GHS 5,000</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <div class="cards" style="grid-template-columns:1fr">
+        <div class="card">
+          <h3>Recent High-Risk Alerts <span class="mini">3-layer risk score</span></h3>
+          <table>
+            <thead><tr><th>Alert ID</th><th>Customer</th><th>Scenario</th><th>Channel</th><th>Risk</th><th>Amount</th><th>Status</th></tr></thead>
+            <tr><td>ALT-24052-001</td><td>Akosua Mensah</td><td>Structuring / smurfing</td><td>MoMo</td><td><span class="tag t-high">High</span></td><td>GHS 25,000</td><td><span class="tag t-new">New</span></td></tr>
+            <tr><td>ALT-24052-002</td><td>Kwame Boateng</td><td>Rapid pass-through</td><td>USSD</td><td><span class="tag t-high">High</span></td><td>GHS 18,540</td><td><span class="tag t-rev">In review</span></td></tr>
+            <tr><td>ALT-24051-014</td><td>Ama Owusu</td><td>Sanctions/PEP match</td><td>Agent</td><td><span class="tag t-high">High</span></td><td>GHS 12,000</td><td><span class="tag t-new">New</span></td></tr>
+            <tr><td>ALT-24051-008</td><td>Kofi Asante</td><td>Velocity anomaly (ML)</td><td>MoMo</td><td><span class="tag t-med">Medium</span></td><td>GHS 5,000</td><td><span class="tag t-rev">In review</span></td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====================================================== 3. ANALYST ====================================================== -->
+<section class="screen" id="analyst">
+  <aside class="side">
+    <div class="brand"><div class="logo">A</div><div><b>Authéo</b><span>TRANSACTION MONITOR</span></div></div>
+    <div class="navsec">Overview</div>
+    <nav class="nav"><a class="active"><i class="ic"></i>Dashboard</a></nav>
+    <div class="navsec">Monitor</div>
+    <nav class="nav">
+      <a><i class="ic"></i>Alerts</a><a><i class="ic"></i>Cases</a>
+      <a><i class="ic"></i>Transactions</a><a><i class="ic"></i>Customers</a>
+      <a><i class="ic"></i>Sanctions Check</a>
+    </nav>
+    <div class="navsec">Account</div>
+    <nav class="nav"><a><i class="ic"></i>Settings</a></nav>
+  </aside>
+  <div class="main">
+    <div class="top">
+      <div><h1>My Triage Queue</h1><div class="sub">Analyst · alerts assigned to you</div></div>
+      <div class="right">
+        <span class="pill jur">🇬🇭 Ghana FIC · GHS ▾</span>
+        <span class="pill">Today ▾</span>
+        <span class="pill">🔔 5</span>
+        <div class="ava" style="background:# ea580c;background:#ea580c">KA</div>
+      </div>
+    </div>
+    <div class="body">
+      <div class="grid kpis" style="grid-template-columns:repeat(4,1fr)">
+        <div class="kpi"><div class="lab">My Open Alerts</div><div class="val">15</div><div class="chg neu">7 high · 5 med · 3 low</div></div>
+        <div class="kpi"><div class="lab">Awaiting My Review</div><div class="val">8</div><div class="chg down">2 overdue</div></div>
+        <div class="kpi"><div class="lab">Cleared Today</div><div class="val">7</div><div class="chg up">▲ on pace</div></div>
+        <div class="kpi"><div class="lab">Avg Handling Time</div><div class="val">11m</div><div class="chg up">▼ 1.4m faster</div></div>
+      </div>
+
+      <div class="cards" style="grid-template-columns:1fr 1.3fr">
+        <div class="card">
+          <h3>My Alerts by Risk</h3>
+          <div class="pad donut-wrap">
+            <svg width="140" height="140" viewBox="0 0 42 42">
+              <circle cx="21" cy="21" r="15.9" fill="none" stroke="#eef1f7" stroke-width="6"/>
+              <circle cx="21" cy="21" r="15.9" fill="none" stroke="#e11d48" stroke-width="6" stroke-dasharray="47 53" transform="rotate(-90 21 21)"/>
+              <circle cx="21" cy="21" r="15.9" fill="none" stroke="#f59e0b" stroke-width="6" stroke-dasharray="33 67" stroke-dashoffset="-47" transform="rotate(-90 21 21)"/>
+              <circle cx="21" cy="21" r="15.9" fill="none" stroke="#16a34a" stroke-width="6" stroke-dasharray="20 80" stroke-dashoffset="-80" transform="rotate(-90 21 21)"/>
+              <text x="21" y="20" text-anchor="middle" font-size="6" font-weight="700" fill="#171717">15</text>
+              <text x="21" y="26" text-anchor="middle" font-size="3" fill="#64748b">Open</text>
+            </svg>
+            <div class="legend">
+              <span><i style="background:#e11d48"></i>High · 7</span>
+              <span><i style="background:#f59e0b"></i>Medium · 5</span>
+              <span><i style="background:#16a34a"></i>Low · 3</span>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Top Triggered Scenarios <span class="mini">this week</span></h3>
+          <div class="pad">
+            <div class="bar-row"><span class="nm">Structuring</span><span class="track"><span class="fill" style="width:78%;background:#e11d48"></span></span><span class="pc">78</span></div>
+            <div class="bar-row"><span class="nm">Rapid pass-through</span><span class="track"><span class="fill" style="width:54%;background:#f59e0b"></span></span><span class="pc">54</span></div>
+            <div class="bar-row"><span class="nm">Velocity anomaly (ML)</span><span class="track"><span class="fill" style="width:41%;background:#2563eb"></span></span><span class="pc">41</span></div>
+            <div class="bar-row"><span class="nm">Dormant reactivation</span><span class="track"><span class="fill" style="width:23%;background:#14b8a6"></span></span><span class="pc">23</span></div>
+            <div class="bar-row"><span class="nm">Sanctions/PEP near-match</span><span class="track"><span class="fill" style="width:12%;background:#7c3aed"></span></span><span class="pc">12</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="cards" style="grid-template-columns:1fr">
+        <div class="card">
+          <h3>Alerts Assigned to Me</h3>
+          <table>
+            <thead><tr><th>Alert ID</th><th>Customer</th><th>Scenario</th><th>Channel</th><th>Risk</th><th>Amount</th><th>Age</th><th>Status</th></tr></thead>
+            <tr><td>ALT-24052-031</td><td>Akosua Mensah</td><td>Structuring</td><td>MoMo</td><td><span class="tag t-high">High</span></td><td>GHS 25,000</td><td>22m</td><td><span class="tag t-new">New</span></td></tr>
+            <tr><td>ALT-24052-029</td><td>Yaw Darko</td><td>Rapid pass-through</td><td>USSD</td><td><span class="tag t-high">High</span></td><td>GHS 14,200</td><td>1h</td><td><span class="tag t-rev">In review</span></td></tr>
+            <tr><td>ALT-24052-022</td><td>Efua Sarpong</td><td>Velocity anomaly (ML)</td><td>MoMo</td><td><span class="tag t-med">Medium</span></td><td>GHS 6,800</td><td>2h</td><td><span class="tag t-rev">In review</span></td></tr>
+            <tr><td>ALT-24052-018</td><td>Kojo Antwi</td><td>Dormant reactivation</td><td>Agent</td><td><span class="tag t-med">Medium</span></td><td>GHS 3,900</td><td>3h</td><td><span class="tag t-new">New</span></td></tr>
+            <tr><td>ALT-24052-009</td><td>Abena Nkrumah</td><td>Threshold structuring</td><td>MoMo</td><td><span class="tag t-low">Low</span></td><td>GHS 1,950</td><td>4h</td><td><span class="tag t-ok">Cleared</span></td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====================================================== 4. ML ENGINEER ====================================================== -->
+<section class="screen" id="ml">
+  <aside class="side">
+    <div class="brand"><div class="logo">A</div><div><b>Authéo</b><span>TRANSACTION MONITOR</span></div></div>
+    <div class="navsec">Overview</div>
+    <nav class="nav"><a class="active"><i class="ic"></i>Dashboard</a></nav>
+    <div class="navsec">Rule &amp; ML Ops</div>
+    <nav class="nav">
+      <a><i class="ic"></i>Rules</a><a><i class="ic"></i>Shadow Stats</a>
+      <a><i class="ic"></i>ML Models</a><a><i class="ic"></i>Drift Monitoring</a>
+    </nav>
+    <div class="navsec">Account</div>
+    <nav class="nav"><a><i class="ic"></i>Settings</a></nav>
+  </aside>
+  <div class="main">
+    <div class="top">
+      <div><h1>Model Operations</h1><div class="sub">ML Engineer · risk-scoring model health</div></div>
+      <div class="right">
+        <span class="pill jur">🇬🇭 Ghana FIC · GHS ▾</span>
+        <span class="pill">Last 14 days ▾</span>
+        <span class="pill">🔔 3</span>
+        <div class="ava" style="background:#0d9488">ML</div>
+      </div>
+    </div>
+    <div class="body">
+      <div class="grid kpis" style="grid-template-columns:repeat(4,1fr)">
+        <div class="kpi"><div class="lab">Champion Models Live</div><div class="val">4</div><div class="chg neu">CatBoost · IF · LGBM · GNN</div></div>
+        <div class="kpi"><div class="lab">Features Drifted (7d)</div><div class="val">3<span class="muted" style="font-size:13px"> / 42</span></div><div class="chg down">1 critical</div></div>
+        <div class="kpi"><div class="lab">Shadow Agreement</div><div class="val">94.1%</div><div class="chg up">▲ 0.6%</div></div>
+        <div class="kpi"><div class="lab">Streaming (River ARF)</div><div class="val">Live</div><div class="chg up">lag 38ms</div></div>
+      </div>
+
+      <div class="cards" style="grid-template-columns:1fr">
+        <div class="card">
+          <h3>Model Registry <span class="mini">champion / challenger</span></h3>
+          <table>
+            <thead><tr><th>Model</th><th>Type</th><th>Version</th><th>Status</th><th>AUC</th><th>Precision</th><th>Recall</th><th>Trained</th></tr></thead>
+            <tr><td>catboost_momtsim</td><td>Gradient boosting</td><td>v7</td><td><span class="tag t-ok">Champion</span></td><td>0.971</td><td>0.89</td><td>0.84</td><td>May 28</td></tr>
+            <tr><td>lgbm_momtsim</td><td>Gradient boosting</td><td>v5</td><td><span class="tag t-rev">Challenger</span></td><td>0.964</td><td>0.87</td><td>0.83</td><td>May 28</td></tr>
+            <tr><td>ieee_isolation_forest</td><td>Anomaly (unsup.)</td><td>v3</td><td><span class="tag t-ok">Champion</span></td><td>—</td><td>0.71</td><td>0.66</td><td>May 21</td></tr>
+            <tr><td>n2v_gcn_momtsim</td><td>Graph neural net</td><td>v2</td><td><span class="tag t-ok">Champion</span></td><td>0.958</td><td>0.85</td><td>0.88</td><td>May 19</td></tr>
+            <tr><td>river_arf</td><td>Online / streaming</td><td>live</td><td><span class="tag t-new">Adaptive</span></td><td>0.942</td><td>0.82</td><td>0.80</td><td>continuous</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <div class="cards" style="grid-template-columns:1.4fr 1fr">
+        <div class="card">
+          <h3>Prediction Drift <span class="mini">champion score distribution, 30d</span></h3>
+          <div class="pad">
+            <svg viewBox="0 0 640 170" width="100%" height="170">
+              <polyline fill="none" stroke="#2563eb" stroke-width="2.5" points="0,120 90,118 180,110 270,112 360,100 450,96 540,92 640,70"/>
+              <polyline fill="none" stroke="#e11d48" stroke-width="2.5" stroke-dasharray="5 4" points="0,124 90,122 180,120 270,121 360,119 450,118 540,116 640,115"/>
+              <g font-size="9" fill="#94a3b8"><text x="0" y="165">reference</text><text x="560" y="165">current</text></g>
+            </svg>
+            <div class="muted" style="margin-top:6px"><span class="dot" style="background:#2563eb"></span>Current PSI 0.18 &nbsp;·&nbsp; <span class="dot" style="background:#e11d48"></span>Reference &nbsp;·&nbsp; threshold 0.25</div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Drifted Features <span class="mini">last check May 31</span></h3>
+          <table>
+            <tr><td>txn_amount_zscore</td><td><span class="tag t-high">PSI 0.41</span></td></tr>
+            <tr><td>recipient_in_degree</td><td><span class="tag t-med">PSI 0.27</span></td></tr>
+            <tr><td>hour_of_day</td><td><span class="tag t-med">PSI 0.26</span></td></tr>
+            <tr><td>device_reuse_count</td><td><span class="tag t-low">PSI 0.11</span></td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>

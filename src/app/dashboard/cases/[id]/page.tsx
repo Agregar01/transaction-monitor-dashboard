@@ -14,25 +14,41 @@ import {
   useRequestSarFilingMutation,
   useLinkAlertToCaseMutation,
 } from "@/redux/slices/api/casesApi";
+import { useListAttachmentsQuery } from "@/redux/slices/api/attachmentsApi";
 import { useAppSelector } from "@/redux/store";
 import { SkeletonCard } from "@/components/Skeleton";
 import ActionBadge from "@/components/ActionBadge";
+import CaseTimeline from "@/components/CaseTimeline";
 import { showToast } from "@/components/Toast";
 import { errorMessage } from "@/lib/errors";
 import type { CaseStatus } from "@/types/api";
 
-/**
- * Valid transitions out of each state. SAR_DRAFTED → SAR_FILED goes via
- * four-eyes server-side; we still surface it here.
- */
+/** Valid workflow transitions. ASSIGNED and IN_REVIEW were added in Tier 2. */
 const NEXT_STATES: Record<CaseStatus, CaseStatus[]> = {
-  OPEN: ["INVESTIGATING", "CLOSED"],
+  OPEN: ["ASSIGNED", "INVESTIGATING", "CLOSED"],
+  ASSIGNED: ["IN_REVIEW", "INVESTIGATING", "CLOSED"],
+  IN_REVIEW: ["INVESTIGATING", "CLOSED"],
   INVESTIGATING: ["ESCALATED", "SAR_DRAFTED", "CLOSED"],
   ESCALATED: ["SAR_DRAFTED", "CLOSED"],
   SAR_DRAFTED: ["SAR_FILED", "CLOSED"],
   SAR_FILED: ["CLOSED"],
   CLOSED: [],
 };
+
+function slaColor(due: string | null): string {
+  if (!due) return "";
+  const diff = new Date(due).getTime() - Date.now();
+  if (diff < 0) return "text-red-600 font-semibold";
+  if (diff < 86_400_000) return "text-orange-500 font-semibold"; // < 1 day
+  if (diff < 86_400_000 * 3) return "text-amber-500"; // < 3 days
+  return "text-gray-900 dark:text-white";
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 export default function CaseDetailPage() {
   const params = useParams<{ id: string }>();
@@ -45,6 +61,7 @@ export default function CaseDetailPage() {
   const { data: alerts } = useGetCaseAlertsQuery(caseId);
   const { data: history } = useGetCaseHistoryQuery(caseId);
   const { data: notes } = useGetCaseNotesQuery(caseId);
+  const { data: attachments } = useListAttachmentsQuery(caseId);
 
   const [updateCase, { isLoading: transitioning }] = useUpdateCaseMutation();
   const [requestSarFiling, { isLoading: filingSar }] = useRequestSarFilingMutation();
@@ -55,6 +72,7 @@ export default function CaseDetailPage() {
   const [linkAlertId, setLinkAlertId] = useState("");
   const [transitionNotes, setTransitionNotes] = useState("");
   const [newNote, setNewNote] = useState("");
+  const [assignTo, setAssignTo] = useState(kase?.assigned_to ?? "");
 
   if (isLoading) return <SkeletonCard />;
   if (error || !kase) {
@@ -67,8 +85,6 @@ export default function CaseDetailPage() {
 
   const onTransition = async (to: CaseStatus) => {
     try {
-      // SAR_FILED is gated by four-eyes — route through /sar-filing instead of
-      // the generic status transition endpoint.
       if (to === "SAR_FILED") {
         await requestSarFiling({ case_id: caseId }).unwrap();
         showToast({
@@ -80,6 +96,7 @@ export default function CaseDetailPage() {
         await updateCase({
           id: caseId,
           to_status: to,
+          assigned_to: assignTo.trim() || undefined,
           notes: transitionNotes || undefined,
         }).unwrap();
         showToast({
@@ -91,6 +108,20 @@ export default function CaseDetailPage() {
       setTransitionNotes("");
     } catch (e) {
       showToast({ type: "error", title: "Transition failed", message: errorMessage(e) });
+    }
+  };
+
+  const onAssign = async () => {
+    if (!assignTo.trim()) return;
+    try {
+      await updateCase({
+        id: caseId,
+        to_status: kase.status,
+        assigned_to: assignTo.trim(),
+      }).unwrap();
+      showToast({ type: "success", title: "Assigned", message: assignTo.trim() });
+    } catch (e) {
+      showToast({ type: "error", title: "Assign failed", message: errorMessage(e) });
     }
   };
 
@@ -124,9 +155,11 @@ export default function CaseDetailPage() {
   };
 
   const validNext = NEXT_STATES[kase.status] ?? [];
+  const slaCls = slaColor(kase.due_date);
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">Case</p>
@@ -141,7 +174,9 @@ export default function CaseDetailPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main column */}
         <div className="lg:col-span-2 space-y-6">
+          {/* Linked alerts */}
           <section className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-6">
             <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">
               Linked alerts
@@ -165,7 +200,6 @@ export default function CaseDetailPage() {
                 ))}
               </ul>
             )}
-
             <div className="mt-4 flex gap-2">
               <input
                 type="text"
@@ -184,6 +218,7 @@ export default function CaseDetailPage() {
             </div>
           </section>
 
+          {/* Investigation notes */}
           <section className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-6">
             <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">
               Investigation notes
@@ -193,10 +228,7 @@ export default function CaseDetailPage() {
             ) : (
               <ul className="space-y-3">
                 {notes.map((n) => (
-                  <li
-                    key={n.id}
-                    className="group rounded-lg bg-gray-50 dark:bg-navy-800 px-3 py-2.5"
-                  >
+                  <li key={n.id} className="group rounded-lg bg-gray-50 dark:bg-navy-800 px-3 py-2.5">
                     <div className="flex items-start justify-between gap-3">
                       <p className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap flex-1">
                         {n.body}
@@ -219,7 +251,6 @@ export default function CaseDetailPage() {
                 ))}
               </ul>
             )}
-
             <div className="mt-4 space-y-2">
               <textarea
                 rows={2}
@@ -240,28 +271,58 @@ export default function CaseDetailPage() {
             </div>
           </section>
 
+          {/* Evidence files (F8) */}
           <section className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-6">
             <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">
-              Status history
+              Evidence files
             </h2>
-            {!history || history.length === 0 ? (
-              <p className="text-sm text-gray-400">No transitions recorded.</p>
+            {!attachments || attachments.length === 0 ? (
+              <p className="text-sm text-gray-400">
+                No evidence files attached.{" "}
+                <span className="italic">
+                  (Upload via the API — S3 storage must be enabled on this deployment.)
+                </span>
+              </p>
             ) : (
-              <ul className="space-y-3">
-                {history.map((h) => (
-                  <li key={h.id} className="border-l-2 border-primary/40 pl-3">
-                    <p className="text-sm text-gray-900 dark:text-white">
-                      {h.from_status ? `${h.from_status} → ` : ""}
-                      <strong>{h.to_status.replace(/_/g, " ")}</strong>
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                      {h.changed_by} · {new Date(h.changed_at).toLocaleString()}
-                    </p>
-                    {h.notes && <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">{h.notes}</p>}
+              <ul className="divide-y divide-gray-100 dark:divide-navy-600">
+                {attachments.map((att) => (
+                  <li key={att.id} className="py-2.5 flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                        {att.filename}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {formatBytes(att.file_size)} · {att.content_type} ·{" "}
+                        {new Date(att.uploaded_at).toLocaleDateString()}
+                      </p>
+                      {att.description && (
+                        <p className="text-xs text-gray-600 dark:text-gray-300 mt-0.5">
+                          {att.description}
+                        </p>
+                      )}
+                    </div>
+                    {att.download_url && (
+                      <a
+                        href={att.download_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="shrink-0 text-xs font-medium text-primary hover:underline"
+                      >
+                        Download
+                      </a>
+                    )}
                   </li>
                 ))}
               </ul>
             )}
+          </section>
+
+          {/* Status timeline (F7) */}
+          <section className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-6">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-4">
+              Case timeline
+            </h2>
+            <CaseTimeline entries={history ?? []} />
           </section>
 
           {kase.narrative && (
@@ -274,7 +335,9 @@ export default function CaseDetailPage() {
           )}
         </div>
 
+        {/* Sidebar */}
         <aside className="space-y-6">
+          {/* Transition */}
           <section className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-6 space-y-3">
             <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
               Transition
@@ -296,7 +359,7 @@ export default function CaseDetailPage() {
                       key={s}
                       onClick={() => onTransition(s)}
                       disabled={transitioning || filingSar}
-                      className="px-3 py-2 text-sm font-medium border border-gray-200 dark:border-navy-500 rounded-lg hover:bg-gray-50 dark:hover:bg-navy-600 text-gray-900 dark:text-white disabled:opacity-50"
+                      className="px-3 py-2 text-sm font-medium border border-gray-200 dark:border-navy-500 rounded-lg hover:bg-gray-50 dark:hover:bg-navy-600 text-gray-900 dark:text-white disabled:opacity-50 text-left"
                     >
                       → {s.replace(/_/g, " ")}
                     </button>
@@ -306,6 +369,30 @@ export default function CaseDetailPage() {
             )}
           </section>
 
+          {/* Assignment (F13) */}
+          {kase.status !== "CLOSED" && (
+            <section className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-6 space-y-3">
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                Assign investigator
+              </h3>
+              <input
+                type="text"
+                value={assignTo}
+                onChange={(e) => setAssignTo(e.target.value)}
+                placeholder="User UUID or email"
+                className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-800 text-gray-900 dark:text-white"
+              />
+              <button
+                onClick={onAssign}
+                disabled={transitioning || !assignTo.trim()}
+                className="w-full px-3 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-600 disabled:opacity-50"
+              >
+                Assign
+              </button>
+            </section>
+          )}
+
+          {/* STR filing */}
           {kase.status !== "CLOSED" && (
             <section className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-6 space-y-3">
               <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
@@ -320,11 +407,12 @@ export default function CaseDetailPage() {
             </section>
           )}
 
+          {/* Meta + SLA (F13) */}
           <section className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-6">
             <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">
               Meta
             </h3>
-            <dl className="text-sm space-y-1.5">
+            <dl className="text-sm space-y-2">
               <div className="flex justify-between">
                 <dt className="text-gray-500 dark:text-gray-400">Jurisdiction</dt>
                 <dd className="text-gray-900 dark:text-white">{kase.jurisdiction_id}</dd>
@@ -335,10 +423,17 @@ export default function CaseDetailPage() {
                   {kase.assigned_to ? `${kase.assigned_to.slice(0, 8)}…` : "—"}
                 </dd>
               </div>
-              <div className="flex justify-between">
-                <dt className="text-gray-500 dark:text-gray-400">Due</dt>
-                <dd className="text-gray-900 dark:text-white">
-                  {kase.due_date ? new Date(kase.due_date).toLocaleDateString() : "—"}
+              <div className="flex justify-between items-start">
+                <dt className="text-gray-500 dark:text-gray-400">SLA due</dt>
+                <dd className={`text-right text-xs ${slaCls}`}>
+                  {kase.due_date ? (
+                    <>
+                      {new Date(kase.due_date).toLocaleDateString()}
+                      {Date.now() > new Date(kase.due_date).getTime() && (
+                        <span className="ml-1 text-red-600">⚠ overdue</span>
+                      )}
+                    </>
+                  ) : "—"}
                 </dd>
               </div>
               <div className="flex justify-between">

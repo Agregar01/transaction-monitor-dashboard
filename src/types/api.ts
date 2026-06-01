@@ -316,6 +316,8 @@ export interface Alert {
 export type CaseType = "AML" | "FRAUD" | "SANCTIONS";
 export type CaseStatus =
   | "OPEN"
+  | "ASSIGNED"
+  | "IN_REVIEW"
   | "INVESTIGATING"
   | "ESCALATED"
   | "SAR_DRAFTED"
@@ -346,6 +348,19 @@ export interface CaseStatusHistoryEntry {
   changed_by: string | null;
   changed_at: string;
   notes: string | null;
+}
+
+/** Evidence file attached to a case — backend _attachment_dict(). */
+export interface CaseAttachment {
+  id: string;
+  case_id: string;
+  filename: string;
+  content_type: string;
+  file_size: number;
+  description: string | null;
+  uploaded_by: string | null;
+  uploaded_at: string;
+  download_url?: string;
 }
 
 /** Row from `GET /cases/{id}/alerts` — a link, not the full Alert. */
@@ -672,4 +687,78 @@ export interface BatchIngestResponse {
   failed: number;
   duplicate: number;
   errors: { index: number; error: string }[];
+}
+
+// ─── Analytics / Reports ────────────────────────────────────────────────────
+
+export interface AlertTrendPoint {
+  date: string;
+  total: number;
+  immediate_count: number;
+  fp_count: number;
+}
+
+export interface AnalyticsSummary {
+  period_days: number;
+  alert_trends: AlertTrendPoint[];
+  risk_distribution: { ALLOW: number; FLAG: number; HOLD: number; BLOCK: number };
+  case_breakdown: Record<string, number>;
+  str_ctr_totals: {
+    str_filed: number;
+    str_draft: number;
+    ctr_filed: number;
+    ctr_draft: number;
+  };
+  overall_stats: {
+    transactions_total: number;
+    alerts_total: number;
+    avg_risk_score: number;
+    false_positive_rate: number;
+  };
+  top_rules: {
+    rule_id: string;
+    total_triggers: number;
+    false_positive_count: number;
+    false_positive_rate: number;
+    period_start: string;
+    period_end: string;
+  }[];
+}
+
+export interface RuleThresholdStat {
+  rule_id: string;
+  period_start: string;
+  period_end: string;
+  total_triggers: number;
+  false_positive_count: number;
+  false_positive_rate: number;
+  recommendation: "increase_threshold" | "review_rule" | "well_calibrated" | "monitor";
+}
+
+export interface ClusterSummary {
+  run_date: string | null;
+  clusters: {
+    cluster_label: number;
+    count: number;
+    avg_amount: number;
+    is_noise: boolean;
+  }[];
+  total_clustered: number;
+  noise_count: number;
+}
+
+export interface FalsePositiveRate {
+  rule_id: string;
+  period_start: string;
+  period_end: string;
+  total_triggers: number;
+  false_positive_count: number;
+  false_positive_rate: number;
+}
+
+export interface AuditChainVerification {
+  entries_verified: number;
+  chain_valid: boolean;
+  first_breach: string | null;
+  breach_count: number;
 }

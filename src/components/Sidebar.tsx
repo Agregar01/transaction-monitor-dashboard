@@ -21,6 +21,7 @@ import {
   NoSymbolIcon,
   AdjustmentsHorizontalIcon,
   ChartPieIcon,
+  ChartBarIcon,
   CpuChipIcon,
   ExclamationTriangleIcon,
   UserGroupIcon,
@@ -51,6 +52,7 @@ const complianceNav: NavItem[] = [
   { name: "STR Reports", href: "/dashboard/str", icon: DocumentTextIcon },
   { name: "CTR Reports", href: "/dashboard/ctr", icon: DocumentDuplicateIcon },
   { name: "Approvals", href: "/dashboard/approvals", icon: CheckBadgeIcon },
+  { name: "Reports", href: "/dashboard/reports", icon: ChartBarIcon },
   { name: "Watchlists", href: "/dashboard/watchlists", icon: ShieldExclamationIcon },
   { name: "Sanctions Check", href: "/dashboard/sanctions", icon: NoSymbolIcon },
 ];
@@ -84,6 +86,7 @@ const ROLE_NAV_MAP: Record<string, string[]> = {
   "/dashboard/str": ["SYSTEM_ADMIN", "COMPLIANCE_OFFICER", "SENIOR_ANALYST"],
   "/dashboard/ctr": ["SYSTEM_ADMIN", "COMPLIANCE_OFFICER"],
   "/dashboard/approvals": ["SYSTEM_ADMIN", "COMPLIANCE_OFFICER"],
+  "/dashboard/reports": ["SYSTEM_ADMIN", "COMPLIANCE_OFFICER", "SENIOR_ANALYST", "ML_ENGINEER", "AUDITOR"],
   "/dashboard/watchlists": ["SYSTEM_ADMIN", "COMPLIANCE_OFFICER"],
   "/dashboard/sanctions": ["SYSTEM_ADMIN", "COMPLIANCE_OFFICER", "SENIOR_ANALYST", "ANALYST"],
   "/dashboard/rules": ["SYSTEM_ADMIN", "ML_ENGINEER", "COMPLIANCE_OFFICER", "AUDITOR"],
