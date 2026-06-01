@@ -8,7 +8,6 @@ import StatCard from "@/components/StatCard";
 import {
   BellAlertIcon,
   InboxStackIcon,
-  DocumentTextIcon,
   ShieldCheckIcon,
 } from "@heroicons/react/24/outline";
 
