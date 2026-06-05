@@ -5,7 +5,7 @@ import { MapContainer, TileLayer, CircleMarker, Marker, Tooltip, useMap } from "
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { GeoCountryStat, GeoCluster } from "@/types/api";
-import { COUNTRY_CENTROIDS } from "@/app/dashboard/geo/page";
+import { COUNTRY_CENTROIDS } from "@/app/dashboard/geo/centroids";
 
 // Fix missing default icon images (Leaflet webpack issue)
 delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;

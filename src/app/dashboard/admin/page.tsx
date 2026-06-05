@@ -10,7 +10,7 @@ import {
 } from "@/redux/slices/api/rulesApi";
 import { useListJurisdictionsQuery } from "@/redux/slices/api/jurisdictionsApi";
 import { useGetAnalyticsSummaryQuery } from "@/redux/slices/api/analyticsApi";
-import { SkeletonTable, SkeletonStats } from "@/components/Skeleton";
+import { SkeletonTable } from "@/components/Skeleton";
 import { showToast } from "@/components/Toast";
 import { errorMessage } from "@/lib/errors";
 import type { Rule } from "@/types/api";

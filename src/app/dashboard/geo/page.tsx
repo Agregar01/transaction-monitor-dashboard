@@ -8,49 +8,6 @@ import type { GeoCountryStat, GeoCluster, GeoCorridor } from "@/types/api";
 // Leaflet must be imported client-side only (no SSR)
 const GeoMap = dynamic(() => import("@/components/GeoMap"), { ssr: false });
 
-// Country centroids for African + Gulf corridor countries (ISO-2 → [lat, lng])
-export const COUNTRY_CENTROIDS: Record<string, [number, number]> = {
-  GH: [7.9465, -1.0232],
-  NG: [9.082, 8.6753],
-  KE: [-1.2921, 36.8219],
-  ZA: [-30.5595, 22.9375],
-  SN: [14.4974, -14.4524],
-  CI: [7.539, -5.5471],
-  CM: [3.848, 11.5021],
-  TZ: [-6.369, 34.8888],
-  UG: [1.3733, 32.2903],
-  ET: [9.145, 40.4897],
-  RW: [-1.9403, 29.8739],
-  MZ: [-18.6657, 35.5296],
-  ZM: [-13.1339, 27.8493],
-  MW: [-13.2543, 34.3015],
-  BJ: [9.3077, 2.3158],
-  BF: [12.3641, -1.5275],
-  ML: [17.5707, -3.9962],
-  NE: [17.6078, 8.0817],
-  SL: [8.4606, -11.7799],
-  GM: [13.4432, -15.3101],
-  LR: [6.4281, -9.4295],
-  GN: [11.8037, -15.1804],
-  GW: [11.8037, -15.1804],
-  AO: [-11.2027, 17.8739],
-  CD: [-4.0383, 21.7587],
-  CG: [-0.228, 15.8277],
-  SD: [12.8628, 30.2176],
-  EG: [26.8206, 30.8025],
-  MA: [31.7917, -7.0926],
-  TN: [33.8869, 9.5375],
-  DZ: [28.0339, 1.6596],
-  LY: [26.3351, 17.2283],
-  AE: [23.4241, 53.8478],
-  SA: [23.8859, 45.0792],
-  GB: [55.3781, -3.436],
-  US: [37.0902, -95.7129],
-  CN: [35.8617, 104.1954],
-  IN: [20.5937, 78.9629],
-  XX: [0, 20], // unknown fallback
-};
-
 function formatCurrency(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
