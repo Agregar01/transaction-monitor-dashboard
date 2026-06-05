@@ -810,6 +810,40 @@ export interface AuditChainVerification {
   breach_count: number;
 }
 
+/** F2-F4 — Geographic heatmap from GET /analytics/geo-heatmap */
+export interface GeoCountryStat {
+  country_code: string;
+  transaction_count: number;
+  total_volume: number;
+  unique_senders: number;
+  alert_count: number;
+  fraud_rate: number;
+}
+
+export interface GeoCluster {
+  cluster_id: number;
+  size: number;
+  avg_amount: number;
+  dominant_channel: string | null;
+  country_code: string;
+  run_date: string;
+}
+
+export interface GeoCorridor {
+  sender_country: string;
+  receiver_country: string;
+  txn_count: number;
+  total_volume: number;
+}
+
+export interface GeoHeatmapData {
+  period_days: number;
+  country_stats: GeoCountryStat[];
+  clusters: GeoCluster[];
+  top_corridors: GeoCorridor[];
+  generated_at: string;
+}
+
 /** M2 — Insider threat analysis from GET /analytics/insider-threat */
 export interface InsiderThreatUser {
   user_id: string;

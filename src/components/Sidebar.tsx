@@ -32,6 +32,7 @@ import {
   ArrowRightOnRectangleIcon,
   Bars3Icon,
   XMarkIcon,
+  GlobeAltIcon,
 } from "@heroicons/react/24/outline";
 
 type NavItem = {
@@ -53,6 +54,7 @@ const complianceNav: NavItem[] = [
   { name: "CTR Reports", href: "/dashboard/ctr", icon: DocumentDuplicateIcon },
   { name: "Approvals", href: "/dashboard/approvals", icon: CheckBadgeIcon },
   { name: "Reports", href: "/dashboard/reports", icon: ChartBarIcon },
+  { name: "Geo Heatmap", href: "/dashboard/geo", icon: GlobeAltIcon },
   { name: "Watchlists", href: "/dashboard/watchlists", icon: ShieldExclamationIcon },
   { name: "Sanctions Check", href: "/dashboard/sanctions", icon: NoSymbolIcon },
 ];
@@ -99,6 +101,7 @@ const ROLE_NAV_MAP: Record<string, string[]> = {
   "/dashboard/admin": ["SYSTEM_ADMIN", "COMPLIANCE_OFFICER"],
   "/dashboard/jurisdictions": ["SYSTEM_ADMIN"],
   "/dashboard/health": ["SYSTEM_ADMIN", "OPERATIONS"],
+  "/dashboard/geo": ["SYSTEM_ADMIN", "COMPLIANCE_OFFICER", "SENIOR_ANALYST", "ML_ENGINEER", "AUDITOR"],
   "/dashboard/settings": [], // visible to everyone
 };
 

@@ -6,6 +6,7 @@ import type {
   FalsePositiveRate,
   AuditChainVerification,
   InsiderThreatReport,
+  GeoHeatmapData,
 } from "@/types/api";
 
 export const analyticsApi = baseApi.injectEndpoints({
@@ -28,6 +29,9 @@ export const analyticsApi = baseApi.injectEndpoints({
     getInsiderThreatReport: b.query<InsiderThreatReport, { period_days?: number }>({
       query: (params) => ({ url: "/analytics/insider-threat", params }),
     }),
+    getGeoHeatmap: b.query<GeoHeatmapData, { period_days?: number }>({
+      query: (params) => ({ url: "/analytics/geo-heatmap", params }),
+    }),
   }),
 });
 
@@ -38,4 +42,5 @@ export const {
   useGetFalsePositiveRatesQuery,
   useVerifyAuditChainQuery,
   useGetInsiderThreatReportQuery,
+  useGetGeoHeatmapQuery,
 } = analyticsApi;
