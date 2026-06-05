@@ -8,6 +8,8 @@ import { useListAlertsQuery } from "@/redux/slices/api/alertsApi";
 import { useListCasesQuery } from "@/redux/slices/api/casesApi";
 import { useListSTRQuery } from "@/redux/slices/api/strApi";
 import { useListApprovalsQuery } from "@/redux/slices/api/approvalsApi";
+import { useListTransactionsQuery } from "@/redux/slices/api/transactionsApi";
+import { useGetAnalyticsSummaryQuery } from "@/redux/slices/api/analyticsApi";
 import {
   useListChampionsQuery,
   useGetLatestDriftQuery,
@@ -135,6 +137,16 @@ export default function DashboardOverviewPage() {
   const { data: champions } = useListChampionsQuery(undefined, { skip: !isMl });
   const { data: latestDrift } = useGetLatestDriftQuery(undefined, { skip: !isMl });
 
+  // Real population aggregates — executive strip + risk donut source.
+  const { data: analytics } = useGetAnalyticsSummaryQuery({ period_days: 30 });
+  const isExec = persona === "admin" || persona === "compliance";
+
+  // Live transaction feed (real-time monitoring fold-in); not for ML persona.
+  const { data: liveTxns } = useListTransactionsQuery(
+    { page_size: 8 },
+    { pollingInterval: fastPoll, skip: isMl },
+  );
+
   // Role-tailored KPI row.
   const kpis = useMemo<Kpi[]>(() => {
     const openAlertsCard: Kpi = {
@@ -251,9 +263,22 @@ export default function DashboardOverviewPage() {
     };
   }, [alertsLast14d]);
 
-  // Distribution of the last 14 days of alerts across the four risk bands.
+  // Alert distribution across the four risk bands. Prefer the real population
+  // from /analytics/summary; fall back to bucketing the 14-day sample.
   const riskBreakdown = useMemo(() => {
     const order: RiskBand[] = ["ALLOW", "FLAG", "HOLD", "BLOCK"];
+    const dist = analytics?.risk_distribution;
+    const fromAnalytics = order.map((b) => dist?.[b] ?? 0);
+    const analyticsTotal = fromAnalytics.reduce((a, b) => a + b, 0);
+    if (analyticsTotal > 0) {
+      return {
+        labels: order,
+        series: fromAnalytics,
+        colors: order.map((b) => riskBandColors[b]),
+        total: analyticsTotal,
+        caption: "all alerts · last 30 days",
+      };
+    }
     const counts: Record<RiskBand, number> = { ALLOW: 0, FLAG: 0, HOLD: 0, BLOCK: 0 };
     for (const a of alertsLast14d?.items ?? []) {
       counts[riskBand(a.risk_score)] += 1;
@@ -263,8 +288,9 @@ export default function DashboardOverviewPage() {
       series: order.map((b) => counts[b]),
       colors: order.map((b) => riskBandColors[b]),
       total: order.reduce((sum, b) => sum + counts[b], 0),
+      caption: "recent alerts · last 14 days",
     };
-  }, [alertsLast14d]);
+  }, [analytics, alertsLast14d]);
 
   const isLoading = !openAlerts && !alertsLast14d;
 
@@ -297,6 +323,47 @@ export default function DashboardOverviewPage() {
         </div>
       )}
 
+      {/* Executive summary strip — real 30-day aggregates from /analytics/summary. */}
+      {isExec && analytics && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            {
+              label: "Transactions · 30d",
+              value: (analytics.overall_stats?.transactions_total ?? 0).toLocaleString(),
+              cls: "text-gray-900 dark:text-white",
+            },
+            {
+              label: "False positive rate",
+              value: `${((analytics.overall_stats?.false_positive_rate ?? 0) * 100).toFixed(1)}%`,
+              cls:
+                (analytics.overall_stats?.false_positive_rate ?? 0) > 0.3
+                  ? "text-red-600"
+                  : "text-emerald-600",
+            },
+            {
+              label: "Avg risk score",
+              value: String(Math.round(analytics.overall_stats?.avg_risk_score ?? 0)),
+              cls: "text-purple-600",
+            },
+            {
+              label: "STR / CTR filed",
+              value: `${analytics.str_ctr_totals?.str_filed ?? 0} / ${analytics.str_ctr_totals?.ctr_filed ?? 0}`,
+              cls: "text-emerald-600",
+            },
+          ].map((t) => (
+            <div
+              key={t.label}
+              className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-4"
+            >
+              <p className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                {t.label}
+              </p>
+              <p className={`text-2xl font-semibold mt-1 ${t.cls}`}>{t.value}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 shadow-sm p-6">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-4">
@@ -325,9 +392,10 @@ export default function DashboardOverviewPage() {
         </div>
 
         <div className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 shadow-sm p-6">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-4">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
             Alerts by risk band
           </h2>
+          <p className="text-xs text-gray-400 mb-4 mt-0.5">{riskBreakdown.caption}</p>
           {riskBreakdown.total === 0 ? (
             <div className="py-16 text-center text-sm text-gray-400">
               No alerts in the last 14 days.
@@ -411,6 +479,7 @@ export default function DashboardOverviewPage() {
           )}
         </div>
       ) : (
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <div className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 shadow-sm">
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-navy-600">
             <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
@@ -462,6 +531,57 @@ export default function DashboardOverviewPage() {
               ))}
             </ul>
           )}
+        </div>
+
+        {/* Live transaction feed — polls every 10s while the tab is visible. */}
+        <div className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 shadow-sm">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-navy-600">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+              Live transactions
+            </h2>
+            <Link
+              href="/dashboard/transactions"
+              className="text-xs font-medium text-primary hover:underline"
+            >
+              View all →
+            </Link>
+          </div>
+          {!liveTxns ? (
+            <div className="px-6 py-12 text-center text-sm text-gray-400">Loading…</div>
+          ) : liveTxns.items.length === 0 ? (
+            <div className="px-6 py-12 text-center text-sm text-gray-500 dark:text-gray-400">
+              No transactions yet.
+            </div>
+          ) : (
+            <ul className="divide-y divide-gray-100 dark:divide-navy-600">
+              {liveTxns.items.slice(0, 8).map((t) => (
+                <li
+                  key={t.transaction_id}
+                  className="px-6 py-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-navy-600 transition-colors"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Link
+                      href={`/dashboard/transactions/${t.transaction_id}`}
+                      className="font-mono text-xs text-primary hover:underline truncate"
+                    >
+                      {t.transaction_id.slice(0, 10)}…
+                    </Link>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">{t.channel}</span>
+                    <span className="text-xs font-mono text-gray-700 dark:text-gray-300">
+                      {t.amount == null ? "—" : Number(t.amount).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <RiskBadge score={t.combined_risk_score} />
+                    <span className="text-xs text-gray-400 hidden sm:inline">
+                      {new Date(t.timestamp).toLocaleTimeString()}
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
         </div>
       )}
     </div>
