@@ -13,6 +13,8 @@ import {
   useUpdateCaseMutation,
   useRequestSarFilingMutation,
   useLinkAlertToCaseMutation,
+  useGetCaseDeviceHistoryQuery,
+  useGetCaseTransactionChainQuery,
 } from "@/redux/slices/api/casesApi";
 import { useListAttachmentsQuery } from "@/redux/slices/api/attachmentsApi";
 import { useAppSelector } from "@/redux/store";
@@ -22,6 +24,8 @@ import CaseTimeline from "@/components/CaseTimeline";
 import { showToast } from "@/components/Toast";
 import { errorMessage } from "@/lib/errors";
 import type { CaseStatus } from "@/types/api";
+
+type Tab = "overview" | "devices" | "chain";
 
 /** Valid workflow transitions. ASSIGNED and IN_REVIEW were added in Tier 2. */
 const NEXT_STATES: Record<CaseStatus, CaseStatus[]> = {
@@ -62,6 +66,8 @@ export default function CaseDetailPage() {
   const { data: history } = useGetCaseHistoryQuery(caseId);
   const { data: notes } = useGetCaseNotesQuery(caseId);
   const { data: attachments } = useListAttachmentsQuery(caseId);
+  const { data: deviceHistory } = useGetCaseDeviceHistoryQuery(caseId);
+  const { data: txnChain } = useGetCaseTransactionChainQuery({ case_id: caseId });
 
   const [updateCase, { isLoading: transitioning }] = useUpdateCaseMutation();
   const [requestSarFiling, { isLoading: filingSar }] = useRequestSarFilingMutation();
@@ -69,6 +75,7 @@ export default function CaseDetailPage() {
   const [addNote, { isLoading: addingNote }] = useAddCaseNoteMutation();
   const [deleteNote] = useDeleteCaseNoteMutation();
 
+  const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [linkAlertId, setLinkAlertId] = useState("");
   const [transitionNotes, setTransitionNotes] = useState("");
   const [newNote, setNewNote] = useState("");
@@ -173,9 +180,29 @@ export default function CaseDetailPage() {
         </div>
       </div>
 
+      {/* Tab bar */}
+      <div className="flex gap-1 bg-gray-100 dark:bg-navy-700 rounded-lg p-1 w-fit">
+        {(["overview", "devices", "chain"] as Tab[]).map((t) => (
+          <button
+            key={t}
+            onClick={() => setActiveTab(t)}
+            className={`px-4 py-1.5 text-xs font-medium rounded-md capitalize transition-colors ${
+              activeTab === t
+                ? "bg-white dark:bg-navy-600 text-gray-900 dark:text-white shadow-sm"
+                : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+            }`}
+          >
+            {t === "chain" ? "Txn chain" : t}
+          </button>
+        ))}
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main column */}
         <div className="lg:col-span-2 space-y-6">
+          {/* ── Overview tab ─────────────────────────────────────────────── */}
+          {activeTab === "overview" && (<>
+
           {/* Linked alerts */}
           <section className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-6">
             <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">
@@ -333,6 +360,131 @@ export default function CaseDetailPage() {
               <p className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">{kase.narrative}</p>
             </section>
           )}
+
+          </>)} {/* end overview tab */}
+
+          {/* ── Device history tab (F9) ───────────────────────────────────── */}
+          {activeTab === "devices" && (
+            <section className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-6">
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-4">
+                Device history
+              </h2>
+              {!deviceHistory || deviceHistory.devices.length === 0 ? (
+                <p className="text-sm text-gray-400">No device fingerprints found for transactions in this case.</p>
+              ) : (
+                <div className="space-y-4">
+                  {deviceHistory.devices.map((dev) => (
+                    <div
+                      key={dev.device_id}
+                      className="rounded-lg border border-gray-100 dark:border-navy-600 p-4"
+                    >
+                      <div className="flex items-start justify-between gap-3 mb-3">
+                        <p className="font-mono text-xs text-primary break-all">{dev.device_id}</p>
+                        <div className="flex gap-2 shrink-0">
+                          {dev.is_rooted && (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">
+                              Rooted
+                            </span>
+                          )}
+                          {dev.sim_swap_detected && (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                              SIM swap
+                            </span>
+                          )}
+                          {dev.imei_change_detected && (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300">
+                              IMEI change
+                            </span>
+                          )}
+                          {dev.distinct_customer_count > 1 && (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
+                              {dev.distinct_customer_count} customers
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1.5 text-xs">
+                        {[
+                          ["OS", `${dev.last_os_type ?? "—"} ${dev.last_os_version ?? ""}`],
+                          ["MNO", dev.last_mno ?? "—"],
+                          ["IMEI", dev.last_imei ?? "—"],
+                          ["ICCID", dev.last_iccid ?? "—"],
+                          ["Txns", String(dev.transaction_count)],
+                          ["First seen", dev.first_seen_at ? new Date(dev.first_seen_at).toLocaleDateString() : "—"],
+                          ["Last seen", dev.last_seen_at ? new Date(dev.last_seen_at).toLocaleDateString() : "—"],
+                        ].map(([label, value]) => (
+                          <div key={label}>
+                            <dt className="text-gray-500 dark:text-gray-400">{label}</dt>
+                            <dd className="font-medium text-gray-900 dark:text-white truncate">{value}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+
+          {/* ── Transaction chain tab (F10) ───────────────────────────────── */}
+          {activeTab === "chain" && (
+            <section className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-6">
+              <div className="flex items-baseline justify-between mb-4">
+                <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                  Transaction chain
+                </h2>
+                {txnChain && (
+                  <span className="text-xs text-gray-400">
+                    {txnChain.total_nodes} customers · {txnChain.total_edges} transactions
+                  </span>
+                )}
+              </div>
+              {!txnChain || txnChain.edges.length === 0 ? (
+                <p className="text-sm text-gray-400">No transaction chain data for this case.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b border-gray-100 dark:border-navy-600">
+                        <th className="text-left py-2 pr-3 font-medium text-gray-500 dark:text-gray-400">Txn ID</th>
+                        <th className="text-left py-2 pr-3 font-medium text-gray-500 dark:text-gray-400">From</th>
+                        <th className="text-left py-2 pr-3 font-medium text-gray-500 dark:text-gray-400">To</th>
+                        <th className="text-right py-2 pr-3 font-medium text-gray-500 dark:text-gray-400">Amount</th>
+                        <th className="text-left py-2 font-medium text-gray-500 dark:text-gray-400">Date</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50 dark:divide-navy-700">
+                      {txnChain.edges.map((edge) => (
+                        <tr key={edge.transaction_id} className="hover:bg-gray-50 dark:hover:bg-navy-800">
+                          <td className="py-2 pr-3 font-mono text-primary">
+                            <Link
+                              href={`/dashboard/transactions/${edge.transaction_id}`}
+                              className="hover:underline"
+                            >
+                              {edge.transaction_id.slice(0, 10)}…
+                            </Link>
+                          </td>
+                          <td className="py-2 pr-3 font-mono text-gray-700 dark:text-gray-300 max-w-[100px] truncate">
+                            {edge.from ? `${edge.from.slice(0, 10)}…` : "—"}
+                          </td>
+                          <td className="py-2 pr-3 font-mono text-gray-700 dark:text-gray-300 max-w-[100px] truncate">
+                            {edge.to ? `${edge.to.slice(0, 10)}…` : "—"}
+                          </td>
+                          <td className="py-2 pr-3 text-right text-gray-900 dark:text-white">
+                            {edge.amount.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                          </td>
+                          <td className="py-2 text-gray-500 dark:text-gray-400">
+                            {edge.created_at ? new Date(edge.created_at).toLocaleDateString() : "—"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
+          )}
+
         </div>
 
         {/* Sidebar */}

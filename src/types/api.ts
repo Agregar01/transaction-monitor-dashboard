@@ -363,6 +363,53 @@ export interface CaseAttachment {
   download_url?: string;
 }
 
+/** F9 — device profile returned by GET /cases/{id}/device-history */
+export interface DeviceProfile {
+  device_id: string;
+  last_customer_id: string | null;
+  last_imei: string | null;
+  last_iccid: string | null;
+  last_mno: string | null;
+  last_os_type: string | null;
+  last_os_version: string | null;
+  is_rooted: boolean | null;
+  transaction_count: number;
+  distinct_customer_count: number;
+  sim_swap_detected: boolean;
+  imei_change_detected: boolean;
+  first_seen_at: string | null;
+  last_seen_at: string | null;
+}
+
+export interface CaseDeviceHistory {
+  case_id: string;
+  devices: DeviceProfile[];
+}
+
+/** F10 — transaction chain edge/node returned by GET /cases/{id}/transaction-chain */
+export interface ChainNode {
+  id: string;
+  layer: number;
+}
+
+export interface ChainEdge {
+  transaction_id: string;
+  from: string | null;
+  to: string | null;
+  amount: number;
+  created_at: string | null;
+  transaction_type: string | null;
+  channel: string | null;
+}
+
+export interface CaseTransactionChain {
+  case_id: string;
+  nodes: ChainNode[];
+  edges: ChainEdge[];
+  total_nodes: number;
+  total_edges: number;
+}
+
 /** Row from `GET /cases/{id}/alerts` — a link, not the full Alert. */
 export interface CaseAlertLink {
   id: string;

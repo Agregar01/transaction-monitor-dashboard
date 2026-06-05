@@ -8,6 +8,8 @@ import type {
   CaseStatusHistoryEntry,
   CaseAlertLink,
   CaseNote,
+  CaseDeviceHistory,
+  CaseTransactionChain,
   MutationResponse,
 } from "@/types/api";
 
@@ -96,6 +98,13 @@ export const casesApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: (_r, _e, { case_id }) => [{ type: "CaseNote", id: case_id }],
     }),
+    getCaseDeviceHistory: b.query<CaseDeviceHistory, string>({
+      query: (case_id) => `/cases/${case_id}/device-history`,
+    }),
+    getCaseTransactionChain: b.query<CaseTransactionChain, { case_id: string; depth?: number }>({
+      query: ({ case_id, depth = 2 }) =>
+        `/cases/${case_id}/transaction-chain?depth=${depth}`,
+    }),
   }),
 });
 
@@ -111,4 +120,6 @@ export const {
   useGetCaseNotesQuery,
   useAddCaseNoteMutation,
   useDeleteCaseNoteMutation,
+  useGetCaseDeviceHistoryQuery,
+  useGetCaseTransactionChainQuery,
 } = casesApi;
