@@ -32,6 +32,7 @@ export const ALLOWED_PREFIXES = [
   "/api/v1/approvals/",
   "/api/v1/jurisdictions/",
   "/api/v1/audit/",
+  "/api/v1/analytics/",
   "/api/v1/shadow/",
   "/api/v1/tenant/",
   "/api/v1/health/",
