@@ -102,6 +102,20 @@ export const rulesApi = baseApi.injectEndpoints({
         { type: "Rule", id: "LIST" },
       ],
     }),
+    enableRule: b.mutation<MutationResponse, { rule_id: string }>({
+      query: ({ rule_id }) => ({ url: `/rules/${rule_id}/enable`, method: "POST" }),
+      invalidatesTags: (_r, _e, { rule_id }) => [
+        { type: "Rule", id: rule_id },
+        { type: "Rule", id: "LIST" },
+      ],
+    }),
+    disableRule: b.mutation<MutationResponse, { rule_id: string }>({
+      query: ({ rule_id }) => ({ url: `/rules/${rule_id}/disable`, method: "POST" }),
+      invalidatesTags: (_r, _e, { rule_id }) => [
+        { type: "Rule", id: rule_id },
+        { type: "Rule", id: "LIST" },
+      ],
+    }),
     getRuleSchema: b.query<RuleSchema, void>({
       query: () => "/rules/schema",
     }),
@@ -118,6 +132,8 @@ export const {
   useUpdateRuleMutation,
   usePromoteRuleMutation,
   useArchiveRuleMutation,
+  useEnableRuleMutation,
+  useDisableRuleMutation,
   useGetRuleSchemaQuery,
   useValidateRuleMutation,
 } = rulesApi;

@@ -65,6 +65,7 @@ const ruleOpsNav: NavItem[] = [
 ];
 
 const adminNav: NavItem[] = [
+  { name: "Admin Config", href: "/dashboard/admin", icon: AdjustmentsHorizontalIcon },
   { name: "Users & Roles", href: "/dashboard/users", icon: UserGroupIcon },
   { name: "Jurisdictions", href: "/dashboard/jurisdictions", icon: BuildingLibraryIcon },
   { name: "Audit Trail", href: "/dashboard/audit", icon: ClipboardDocumentListIcon },
@@ -95,6 +96,7 @@ const ROLE_NAV_MAP: Record<string, string[]> = {
   "/dashboard/drift": ["SYSTEM_ADMIN", "ML_ENGINEER"],
   "/dashboard/audit": ["SYSTEM_ADMIN", "AUDITOR", "COMPLIANCE_OFFICER"],
   "/dashboard/users": ["SYSTEM_ADMIN"],
+  "/dashboard/admin": ["SYSTEM_ADMIN", "COMPLIANCE_OFFICER"],
   "/dashboard/jurisdictions": ["SYSTEM_ADMIN"],
   "/dashboard/health": ["SYSTEM_ADMIN", "OPERATIONS"],
   "/dashboard/settings": [], // visible to everyone
