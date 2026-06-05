@@ -5,6 +5,7 @@ import type {
   ClusterSummary,
   FalsePositiveRate,
   AuditChainVerification,
+  InsiderThreatReport,
 } from "@/types/api";
 
 export const analyticsApi = baseApi.injectEndpoints({
@@ -24,6 +25,9 @@ export const analyticsApi = baseApi.injectEndpoints({
     verifyAuditChain: b.query<AuditChainVerification, { limit?: number }>({
       query: (params) => ({ url: "/audit/verify-chain", params }),
     }),
+    getInsiderThreatReport: b.query<InsiderThreatReport, { period_days?: number }>({
+      query: (params) => ({ url: "/analytics/insider-threat", params }),
+    }),
   }),
 });
 
@@ -33,4 +37,5 @@ export const {
   useGetTransactionClustersQuery,
   useGetFalsePositiveRatesQuery,
   useVerifyAuditChainQuery,
+  useGetInsiderThreatReportQuery,
 } = analyticsApi;

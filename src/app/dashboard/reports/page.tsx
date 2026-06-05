@@ -6,6 +6,7 @@ import {
   useGetAnalyticsSummaryQuery,
   useGetRuleThresholdStatsQuery,
   useGetTransactionClustersQuery,
+  useGetInsiderThreatReportQuery,
 } from "@/redux/slices/api/analyticsApi";
 import { SkeletonStats } from "@/components/Skeleton";
 import StatCard from "@/components/StatCard";
@@ -43,6 +44,7 @@ export default function ReportsPage() {
   );
   const { data: thresholdStats } = useGetRuleThresholdStatsQuery({ period_days: period });
   const { data: clusters } = useGetTransactionClustersQuery({});
+  const { data: insiderThreat } = useGetInsiderThreatReportQuery({ period_days: period });
 
   const alertTrendSeries = useMemo(() => {
     const rows = data?.alert_trends ?? [];
@@ -365,6 +367,87 @@ export default function ReportsPage() {
             </>
           )}
         </div>
+      </div>
+      {/* M2 — Insider threat signals */}
+      <div className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 shadow-sm p-6">
+        <div className="flex items-baseline justify-between mb-4">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+            Insider threat signals
+          </h2>
+          {insiderThreat && (
+            <span className="text-xs text-gray-400">
+              {insiderThreat.total_actions.toLocaleString()} audit actions · {insiderThreat.unique_actors} actors
+            </span>
+          )}
+        </div>
+        {!insiderThreat ? (
+          <div className="py-8 text-center text-sm text-gray-400">Loading…</div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Bulk actors */}
+            <div>
+              <h3 className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
+                High-volume actors (&gt;2σ)
+              </h3>
+              {insiderThreat.bulk_actors.length === 0 ? (
+                <p className="text-xs text-gray-400">None flagged.</p>
+              ) : (
+                <ul className="space-y-1">
+                  {insiderThreat.bulk_actors.map((u) => (
+                    <li key={u.user_id} className="flex items-center justify-between text-xs">
+                      <span className="font-mono text-gray-700 dark:text-gray-300 truncate max-w-[120px]">
+                        {u.user_id.slice(0, 8)}…
+                      </span>
+                      <span className="font-medium text-red-600">{u.action_count} actions</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            {/* Off-hours access */}
+            <div>
+              <h3 className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
+                Off-hours access (UTC)
+              </h3>
+              {insiderThreat.off_hours_access.length === 0 ? (
+                <p className="text-xs text-gray-400">None flagged.</p>
+              ) : (
+                <ul className="space-y-1">
+                  {insiderThreat.off_hours_access.slice(0, 5).map((u) => (
+                    <li key={u.user_id} className="flex items-center justify-between text-xs">
+                      <span className="font-mono text-gray-700 dark:text-gray-300 truncate max-w-[120px]">
+                        {u.user_id.slice(0, 8)}…
+                      </span>
+                      <span className="font-medium text-amber-600">{u.off_hours_count} actions</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            {/* Self-approvals + sensitive access */}
+            <div>
+              <h3 className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
+                Self-approval signals
+              </h3>
+              {insiderThreat.self_approval_signals.length === 0 ? (
+                <p className="text-xs text-gray-400">None detected.</p>
+              ) : (
+                <ul className="space-y-1">
+                  {insiderThreat.self_approval_signals.slice(0, 5).map((u) => (
+                    <li key={u.user_id} className="flex items-center justify-between text-xs">
+                      <span className="font-mono text-gray-700 dark:text-gray-300 truncate max-w-[120px]">
+                        {u.user_id.slice(0, 8)}…
+                      </span>
+                      <span className="font-medium text-orange-600">{u.self_approve_count}×</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

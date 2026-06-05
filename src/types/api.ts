@@ -809,3 +809,29 @@ export interface AuditChainVerification {
   first_breach: string | null;
   breach_count: number;
 }
+
+/** M2 — Insider threat analysis from GET /analytics/insider-threat */
+export interface InsiderThreatUser {
+  user_id: string;
+  action_count?: number;
+  off_hours_count?: number;
+  self_approve_count?: number;
+}
+
+export interface InsiderThreatSensitiveAccess {
+  user_id: string;
+  resource_type: string;
+  count: number;
+}
+
+export interface InsiderThreatReport {
+  period_days: number;
+  total_actions: number;
+  unique_actors: number;
+  bulk_action_threshold: number;
+  bulk_actors: InsiderThreatUser[];
+  off_hours_access: InsiderThreatUser[];
+  sensitive_resource_access: InsiderThreatSensitiveAccess[];
+  self_approval_signals: InsiderThreatUser[];
+  top_users_by_activity: InsiderThreatUser[];
+}
