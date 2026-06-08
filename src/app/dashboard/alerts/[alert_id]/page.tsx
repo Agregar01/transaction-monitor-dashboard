@@ -259,6 +259,7 @@ export default function AlertDetailPage() {
             </h3>
             <input
               type="email"
+              aria-label="Assign to analyst email"
               placeholder="analyst@autheo.test"
               value={assignTo}
               onChange={(e) => setAssignTo(e.target.value)}
@@ -299,6 +300,7 @@ export default function AlertDetailPage() {
                 Resolve
               </h3>
               <select
+                aria-label="Resolution"
                 value={resolution}
                 onChange={(e) => setResolution(e.target.value as AlertResolution)}
                 className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-800 text-gray-900 dark:text-white"

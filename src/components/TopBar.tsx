@@ -45,7 +45,7 @@ function ApiStatusDot() {
 
   return (
     <div className="flex items-center gap-1.5" title={labels[status]}>
-      <span className={`w-2 h-2 rounded-full ${colors[status]}`} />
+      <span className={`w-2 h-2 rounded-full ${colors[status]}`} role="img" aria-label={labels[status]} />
       <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">
         {labels[status]}
       </span>
@@ -82,8 +82,15 @@ function ProfileDropdown() {
     const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
     document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", handler);
+      document.removeEventListener("keydown", onKey);
+    };
   }, []);
 
   const displayName = fullName || email || "User";
@@ -93,6 +100,9 @@ function ProfileDropdown() {
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(!open)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label="Open profile menu"
         className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-navy-600 transition-colors"
       >
         <UserCircleIcon className="h-7 w-7 text-gray-400 dark:text-gray-500" />

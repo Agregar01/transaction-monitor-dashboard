@@ -24,6 +24,23 @@ body {
   }
 }
 
+/*
+ * Global keyboard focus indicator (WCAG 2.4.7). Most interactive elements in
+ * the app don't set their own focus ring; this gives every focusable element a
+ * visible, high-contrast ring on keyboard focus only (:focus-visible, so mouse
+ * clicks don't show it). Individual components can still override.
+ */
+:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+/* On the dark navy sidebar, indigo-on-navy is weak — use a white ring there. */
+.bg-navy :focus-visible,
+.dark :focus-visible {
+  outline-color: #ffffff;
+}
+
 @keyframes slide-in {
   from { transform: translateX(100%); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }

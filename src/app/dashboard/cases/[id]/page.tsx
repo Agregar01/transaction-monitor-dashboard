@@ -181,10 +181,12 @@ export default function CaseDetailPage() {
       </div>
 
       {/* Tab bar */}
-      <div className="flex gap-1 bg-gray-100 dark:bg-navy-700 rounded-lg p-1 w-fit">
+      <div className="flex gap-1 bg-gray-100 dark:bg-navy-700 rounded-lg p-1 w-fit" role="tablist">
         {(["overview", "devices", "chain"] as Tab[]).map((t) => (
           <button
             key={t}
+            role="tab"
+            aria-selected={activeTab === t}
             onClick={() => setActiveTab(t)}
             className={`px-4 py-1.5 text-xs font-medium rounded-md capitalize transition-colors ${
               activeTab === t
@@ -230,6 +232,7 @@ export default function CaseDetailPage() {
             <div className="mt-4 flex gap-2">
               <input
                 type="text"
+                aria-label="Alert UUID to link"
                 value={linkAlertId}
                 onChange={(e) => setLinkAlertId(e.target.value)}
                 placeholder="Alert UUID to link"
@@ -529,6 +532,7 @@ export default function CaseDetailPage() {
               </h3>
               <input
                 type="text"
+                aria-label="Assign investigator"
                 value={assignTo}
                 onChange={(e) => setAssignTo(e.target.value)}
                 placeholder="User UUID or email"

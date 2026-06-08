@@ -116,6 +116,7 @@ export default function CasesListPage() {
             Status
           </label>
           <select
+            aria-label="Filter by status"
             value={status}
             onChange={(e) => {
               setPage(1);
@@ -136,6 +137,7 @@ export default function CasesListPage() {
             Type
           </label>
           <select
+            aria-label="Filter by case type"
             value={caseType}
             onChange={(e) => {
               setPage(1);
@@ -156,6 +158,7 @@ export default function CasesListPage() {
             Priority
           </label>
           <select
+            aria-label="Filter by priority"
             value={priority}
             onChange={(e) => {
               setPage(1);
@@ -177,6 +180,7 @@ export default function CasesListPage() {
           </label>
           <input
             type="text"
+            aria-label="Filter by assigned to"
             value={assignedTo}
             onChange={(e) => {
               setPage(1);

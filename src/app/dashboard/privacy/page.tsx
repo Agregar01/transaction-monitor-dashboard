@@ -212,6 +212,7 @@ export default function PrivacyPage() {
               </p>
               <div className="flex gap-2">
                 <input
+                  aria-label="Customer ID to export"
                   value={exportId}
                   onChange={(e) => setExportId(e.target.value)}
                   placeholder="Customer ID"
@@ -240,6 +241,7 @@ export default function PrivacyPage() {
               </p>
               <div className="flex gap-2">
                 <input
+                  aria-label="Customer ID to erase"
                   value={eraseId}
                   onChange={(e) => setEraseId(e.target.value)}
                   placeholder="Customer ID"
@@ -267,12 +269,13 @@ export default function PrivacyPage() {
           <h2 className="font-semibold text-gray-800 dark:text-gray-100">Log a data-subject request</h2>
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
             <input
+              aria-label="Customer ID"
               value={newId}
               onChange={(e) => setNewId(e.target.value)}
               placeholder="Customer ID"
               className={`${inputCls} sm:col-span-2`}
             />
-            <select value={newType} onChange={(e) => setNewType(e.target.value as DsarType)} className={inputCls}>
+            <select aria-label="Request type" value={newType} onChange={(e) => setNewType(e.target.value as DsarType)} className={inputCls}>
               <option value="ACCESS">Access</option>
               <option value="ERASURE">Erasure</option>
             </select>
@@ -285,6 +288,7 @@ export default function PrivacyPage() {
             </button>
           </div>
           <input
+            aria-label="Notes (optional)"
             value={newNotes}
             onChange={(e) => setNewNotes(e.target.value)}
             placeholder="Notes (optional)"
@@ -299,6 +303,7 @@ export default function PrivacyPage() {
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-gray-800 dark:text-gray-100">Requests</h2>
             <select
+              aria-label="Filter by status"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               className="border border-gray-200 dark:border-navy-500 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-navy-800 text-gray-900 dark:text-white"

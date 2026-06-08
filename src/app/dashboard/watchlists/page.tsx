@@ -129,6 +129,7 @@ export default function WatchlistsPage() {
               <div className="p-4 border-b border-gray-100 dark:border-navy-600 flex gap-2">
                 <input
                   type="text"
+                  aria-label="New entry value"
                   value={newEntry}
                   onChange={(e) => setNewEntry(e.target.value)}
                   placeholder="New entry value"

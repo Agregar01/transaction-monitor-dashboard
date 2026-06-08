@@ -104,6 +104,7 @@ export default function AlertsListPage() {
             Status
           </label>
           <select
+            aria-label="Filter by status"
             value={status}
             onChange={(e) => {
               setPage(1);
@@ -124,6 +125,7 @@ export default function AlertsListPage() {
             Priority
           </label>
           <select
+            aria-label="Filter by priority"
             value={priority}
             onChange={(e) => {
               setPage(1);
@@ -145,6 +147,7 @@ export default function AlertsListPage() {
           </label>
           <input
             type="text"
+            aria-label="Filter by assigned analyst email"
             value={assignedTo}
             onChange={(e) => {
               setPage(1);

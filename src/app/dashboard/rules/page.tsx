@@ -61,6 +61,7 @@ export default function RulesPage() {
 
         <div className="ml-auto flex items-center gap-3">
           <select
+            aria-label="Filter by category"
             value={category}
             onChange={(e) => setCategory(e.target.value as RuleCategory | "")}
             className="px-3 py-1.5 text-sm border border-gray-200 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-800 text-gray-900 dark:text-white"

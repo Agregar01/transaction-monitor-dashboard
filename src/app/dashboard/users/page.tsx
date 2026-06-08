@@ -52,12 +52,14 @@ function CreateUserModal({ onClose }: { onClose: () => void }) {
         <input
           required
           type="email"
+          aria-label="Email"
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-800 text-gray-900 dark:text-white"
         />
         <input
+          aria-label="Full name (optional)"
           placeholder="Full name (optional)"
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
@@ -66,6 +68,7 @@ function CreateUserModal({ onClose }: { onClose: () => void }) {
         <input
           required
           type="password"
+          aria-label="Password (min 12 chars)"
           placeholder="Password (min 12 chars)"
           minLength={12}
           value={password}
@@ -164,6 +167,7 @@ function EditUserModal({ user, onClose }: { user: User; onClose: () => void }) {
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{user.email}</p>
         </div>
         <input
+          aria-label="Full name"
           placeholder="Full name"
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}

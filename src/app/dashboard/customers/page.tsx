@@ -80,6 +80,7 @@ export default function CustomersListPage() {
             Risk level
           </label>
           <select
+            aria-label="Filter by risk level"
             value={riskLevel}
             onChange={(e) => {
               setPage(1);
@@ -101,6 +102,7 @@ export default function CustomersListPage() {
           </label>
           <input
             type="text"
+            aria-label="Filter by country"
             value={country}
             onChange={(e) => {
               setPage(1);

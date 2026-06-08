@@ -38,6 +38,7 @@ export default function STRListPage() {
             Status
           </label>
           <select
+            aria-label="Filter by status"
             value={status}
             onChange={(e) => {
               setPage(1);
@@ -59,6 +60,7 @@ export default function STRListPage() {
           </label>
           <input
             type="text"
+            aria-label="Filter by jurisdiction"
             value={jurisdictionId}
             onChange={(e) => {
               setPage(1);

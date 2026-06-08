@@ -59,6 +59,7 @@ export default function CTRListPage() {
           Status
         </label>
         <select
+          aria-label="Filter by status"
           value={status}
           onChange={(e) => {
             setPage(1);

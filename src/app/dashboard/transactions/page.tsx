@@ -79,6 +79,7 @@ export default function TransactionsListPage() {
 
       <div className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-4 grid grid-cols-1 md:grid-cols-4 gap-3">
         <input
+          aria-label="Customer ID"
           placeholder="Customer ID"
           value={customerId}
           onChange={(e) => {
@@ -88,6 +89,7 @@ export default function TransactionsListPage() {
           className="px-3 py-2 text-sm border border-gray-200 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-800 text-gray-900 dark:text-white"
         />
         <select
+          aria-label="Filter by flagged status"
           value={flagged}
           onChange={(e) => {
             setPage(1);
@@ -100,6 +102,7 @@ export default function TransactionsListPage() {
           <option value="false">Not flagged</option>
         </select>
         <select
+          aria-label="Filter by transaction type"
           value={transactionType}
           onChange={(e) => {
             setPage(1);
@@ -115,6 +118,7 @@ export default function TransactionsListPage() {
           ))}
         </select>
         <select
+          aria-label="Filter by channel"
           value={channel}
           onChange={(e) => {
             setPage(1);

@@ -82,6 +82,7 @@ export default function STRNewPage() {
             </label>
             <input
               required
+              aria-label="Subject customer ID"
               value={subjectCustomerId}
               onChange={(e) => setSubjectCustomerId(e.target.value)}
               className="w-full px-3 py-2 text-sm font-mono border border-gray-200 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-800 text-gray-900 dark:text-white"
@@ -93,6 +94,7 @@ export default function STRNewPage() {
             </label>
             <input
               required
+              aria-label="Subject name"
               value={subjectName}
               onChange={(e) => setSubjectName(e.target.value)}
               className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-800 text-gray-900 dark:text-white"
@@ -105,6 +107,7 @@ export default function STRNewPage() {
             Suspicious activity type
           </label>
           <select
+            aria-label="Suspicious activity type"
             value={activityType}
             onChange={(e) => setActivityType(e.target.value)}
             className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-800 text-gray-900 dark:text-white"
@@ -126,6 +129,7 @@ export default function STRNewPage() {
             <input
               type="number"
               required
+              aria-label="Total amount"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               className="w-full px-3 py-2 text-sm font-mono border border-gray-200 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-800 text-gray-900 dark:text-white"
@@ -136,6 +140,7 @@ export default function STRNewPage() {
               Currency
             </label>
             <input
+              aria-label="Currency"
               value={currency}
               onChange={(e) => setCurrency(e.target.value.toUpperCase())}
               maxLength={3}
@@ -149,6 +154,7 @@ export default function STRNewPage() {
             Jurisdiction
           </label>
           <select
+            aria-label="Jurisdiction"
             value={jurisdictionId}
             onChange={(e) => setJurisdictionId(e.target.value)}
             className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-800 text-gray-900 dark:text-white"

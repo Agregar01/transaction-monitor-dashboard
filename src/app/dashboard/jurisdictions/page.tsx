@@ -139,6 +139,7 @@ export default function JurisdictionsPage() {
               </label>
               <input
                 type="number"
+                aria-label="CTR threshold — cash"
                 value={ctrCash}
                 onChange={(e) => setCtrCash(e.target.value)}
                 className="w-full px-3 py-2 text-sm font-mono border border-gray-200 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-800 text-gray-900 dark:text-white"
@@ -150,6 +151,7 @@ export default function JurisdictionsPage() {
               </label>
               <input
                 type="number"
+                aria-label="CTR threshold — non-cash"
                 value={ctrNonCash}
                 onChange={(e) => setCtrNonCash(e.target.value)}
                 className="w-full px-3 py-2 text-sm font-mono border border-gray-200 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-800 text-gray-900 dark:text-white"
@@ -161,6 +163,7 @@ export default function JurisdictionsPage() {
               </label>
               <input
                 type="number"
+                aria-label="STR deadline (hours)"
                 value={strDeadline}
                 onChange={(e) => setStrDeadline(e.target.value)}
                 className="w-full px-3 py-2 text-sm font-mono border border-gray-200 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-800 text-gray-900 dark:text-white"

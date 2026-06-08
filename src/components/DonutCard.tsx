@@ -33,11 +33,16 @@ export default function DonutCard({
         <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
           {title}
         </h2>
-        {subtitle && <p className="text-xs text-gray-400 mt-0.5">{subtitle}</p>}
+        {subtitle && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{subtitle}</p>}
       </div>
       {total === 0 ? (
-        <div className="py-16 text-center text-sm text-gray-400">No data.</div>
+        <div className="py-16 text-center text-sm text-gray-500 dark:text-gray-400">No data.</div>
       ) : (
+        <>
+          {/* Text alternative — the ApexCharts SVG is invisible to screen readers. */}
+          <p className="sr-only">
+            {title}: {labels.map((l, i) => `${l} ${series[i]}`).join(", ")} (total {total}).
+          </p>
         <Chart
           options={{
             chart: { type: "donut", fontFamily: "var(--font-geist-sans), sans-serif" },
@@ -67,6 +72,7 @@ export default function DonutCard({
           type="donut"
           height={height}
         />
+        </>
       )}
     </div>
   );

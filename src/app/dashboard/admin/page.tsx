@@ -107,6 +107,7 @@ function RuleRow({ rule }: { rule: Rule }) {
           <div className="flex items-center gap-1">
             <input
               type="number"
+              aria-label="Risk contribution"
               value={contrib}
               onChange={(e) => setContrib(e.target.value)}
               min={0}
@@ -204,10 +205,12 @@ export default function AdminPage() {
       </div>
 
       {/* Tab bar */}
-      <div className="flex border-b border-gray-200 dark:border-navy-600">
+      <div className="flex border-b border-gray-200 dark:border-navy-600" role="tablist">
         {tabs.map(({ key, label, icon: Icon }) => (
           <button
             key={key}
+            role="tab"
+            aria-selected={tab === key}
             onClick={() => setTab(key)}
             className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
               tab === key
@@ -229,6 +232,7 @@ export default function AdminPage() {
           {/* Filters */}
           <div className="flex gap-3 flex-wrap items-center">
             <select
+              aria-label="Filter by category"
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
               className="px-3 py-1.5 text-sm border border-gray-200 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-700 text-gray-900 dark:text-white"
@@ -238,6 +242,7 @@ export default function AdminPage() {
               ))}
             </select>
             <select
+              aria-label="Filter by status"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               className="px-3 py-1.5 text-sm border border-gray-200 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-700 text-gray-900 dark:text-white"

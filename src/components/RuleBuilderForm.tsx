@@ -64,7 +64,7 @@ function ValueInput({
 
   if (meta?.type === "boolean") {
     return (
-      <select value={row.rawValue} onChange={(e) => onChange(e.target.value)} className={base}>
+      <select aria-label="Condition value" value={row.rawValue} onChange={(e) => onChange(e.target.value)} className={base}>
         <option value="">— pick —</option>
         <option value="true">true</option>
         <option value="false">false</option>
@@ -74,7 +74,7 @@ function ValueInput({
 
   if (meta?.type === "string" && meta.allowed_values && !isListOp) {
     return (
-      <select value={row.rawValue} onChange={(e) => onChange(e.target.value)} className={base}>
+      <select aria-label="Condition value" value={row.rawValue} onChange={(e) => onChange(e.target.value)} className={base}>
         <option value="">— pick —</option>
         {(meta.allowed_values as string[]).map((v) => (
           <option key={v} value={v}>{v}</option>
@@ -113,6 +113,7 @@ function ValueInput({
     return (
       <input
         type="number"
+        aria-label="Condition value"
         value={row.rawValue}
         onChange={(e) => onChange(e.target.value)}
         placeholder={String(meta.example ?? 0)}
@@ -125,6 +126,7 @@ function ValueInput({
   return (
     <input
       type="text"
+      aria-label="Condition value"
       value={row.rawValue}
       onChange={(e) => onChange(e.target.value)}
       placeholder={isListOp ? "value1, value2, …" : "value"}
@@ -309,6 +311,7 @@ export default function RuleBuilderForm({ existing, onSuccess, onCancel }: Props
             <label className={labelCls}>Rule ID *</label>
             <input
               type="text"
+              aria-label="Rule ID"
               value={ruleId}
               onChange={(e) => setRuleId(e.target.value)}
               disabled={isEditing}
@@ -320,6 +323,7 @@ export default function RuleBuilderForm({ existing, onSuccess, onCancel }: Props
             <label className={labelCls}>Rule name *</label>
             <input
               type="text"
+              aria-label="Rule name"
               value={ruleName}
               onChange={(e) => setRuleName(e.target.value)}
               placeholder="High-value transfer"
@@ -331,7 +335,7 @@ export default function RuleBuilderForm({ existing, onSuccess, onCancel }: Props
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label className={labelCls}>Category</label>
-            <select value={category} onChange={(e) => setCategory(e.target.value as RuleCategory)} className={inputCls}>
+            <select aria-label="Category" value={category} onChange={(e) => setCategory(e.target.value as RuleCategory)} className={inputCls}>
               {(schema?.categories ?? []).map((c) => (
                 <option key={c} value={c}>{c}</option>
               ))}
@@ -339,7 +343,7 @@ export default function RuleBuilderForm({ existing, onSuccess, onCancel }: Props
           </div>
           <div>
             <label className={labelCls}>Severity</label>
-            <select value={severity} onChange={(e) => setSeverity(e.target.value as RuleSeverity)} className={inputCls}>
+            <select aria-label="Severity" value={severity} onChange={(e) => setSeverity(e.target.value as RuleSeverity)} className={inputCls}>
               {(schema?.severities ?? []).map((s) => (
                 <option key={s} value={s}>{s}</option>
               ))}
@@ -349,6 +353,7 @@ export default function RuleBuilderForm({ existing, onSuccess, onCancel }: Props
             <label className={labelCls}>Risk score (0–200)</label>
             <input
               type="number"
+              aria-label="Risk score (0–200)"
               min={0}
               max={200}
               value={riskScore}
@@ -376,6 +381,7 @@ export default function RuleBuilderForm({ existing, onSuccess, onCancel }: Props
           </label>
           <input
             type="text"
+            aria-label="Explain template"
             value={explainTemplate}
             onChange={(e) => setExplainTemplate(e.target.value)}
             placeholder="Amount {amount} exceeds threshold"
@@ -420,6 +426,7 @@ export default function RuleBuilderForm({ existing, onSuccess, onCancel }: Props
                 {/* Field picker */}
                 <div className="flex-1 min-w-0">
                   <select
+                    aria-label="Condition field"
                     value={row.field}
                     onChange={(e) => updateCondition(idx, { field: e.target.value })}
                     className="w-full px-2 py-1.5 text-sm border border-gray-200 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary font-mono"
@@ -437,6 +444,7 @@ export default function RuleBuilderForm({ existing, onSuccess, onCancel }: Props
                 {/* Operator picker */}
                 <div className="w-28 flex-shrink-0">
                   <select
+                    aria-label="Condition operator"
                     value={row.op}
                     onChange={(e) => updateCondition(idx, { op: e.target.value })}
                     className="w-full px-2 py-1.5 text-sm border border-gray-200 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary font-mono"

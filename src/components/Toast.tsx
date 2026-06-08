@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 
 export interface ToastMessage {
@@ -27,23 +27,44 @@ export function showToast(toast: Omit<ToastMessage, "id">) {
   }
 }
 
+const DISMISS_MS = 6000;
+
 export default function ToastContainer() {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  // Per-toast dismissal timers so we can pause-on-hover/focus (WCAG 2.2.1).
+  const timers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+
+  const dismiss = useCallback((id: string) => {
+    const timer = timers.current.get(id);
+    if (timer) {
+      clearTimeout(timer);
+      timers.current.delete(id);
+    }
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
+  const startTimer = useCallback((id: string) => {
+    timers.current.set(id, setTimeout(() => dismiss(id), DISMISS_MS));
+  }, [dismiss]);
+
+  const pauseTimer = useCallback((id: string) => {
+    const timer = timers.current.get(id);
+    if (timer) {
+      clearTimeout(timer);
+      timers.current.delete(id);
+    }
+  }, []);
 
   const addToast = useCallback((toast: Omit<ToastMessage, "id">) => {
     const id = `${Date.now()}-${Math.random()}`;
     setToasts((prev) => [...prev.slice(-4), { ...toast, id }]);
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 6000);
-  }, []);
+    startTimer(id);
+  }, [startTimer]);
 
   useEffect(() => {
     addToastGlobal = addToast;
     return () => { addToastGlobal = null; };
   }, [addToast]);
-
-  const dismiss = (id: string) => setToasts((prev) => prev.filter((t) => t.id !== id));
 
   if (toasts.length === 0) return null;
 
@@ -52,6 +73,10 @@ export default function ToastContainer() {
       {toasts.map((t) => (
         <div
           key={t.id}
+          onMouseEnter={() => pauseTimer(t.id)}
+          onMouseLeave={() => startTimer(t.id)}
+          onFocus={() => pauseTimer(t.id)}
+          onBlur={() => startTimer(t.id)}
           className={`border rounded-lg px-4 py-3 shadow-lg animate-slide-in flex items-start gap-3 ${typeStyles[t.type]}`}
         >
           <div className="flex-1 min-w-0">

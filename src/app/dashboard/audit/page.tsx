@@ -74,6 +74,16 @@ function Row({ entry }: { entry: AuditEntry }) {
     <>
       <tr
         onClick={() => setOpen((v) => !v)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setOpen((v) => !v);
+          }
+        }}
+        tabIndex={0}
+        role="button"
+        aria-expanded={open}
+        aria-label="Toggle change detail"
         className="hover:bg-gray-50 dark:hover:bg-navy-600 cursor-pointer"
       >
         <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
@@ -135,6 +145,7 @@ export default function AuditPage() {
 
       <div className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-4 grid grid-cols-1 md:grid-cols-3 gap-3">
         <select
+          aria-label="Filter by action"
           value={action}
           onChange={(e) => {
             resetPage();
@@ -150,6 +161,7 @@ export default function AuditPage() {
           ))}
         </select>
         <input
+          aria-label="Filter by resource type"
           value={resourceType}
           onChange={(e) => {
             resetPage();
@@ -159,6 +171,7 @@ export default function AuditPage() {
           className="px-3 py-2 text-sm border border-gray-200 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-800 text-gray-900 dark:text-white"
         />
         <input
+          aria-label="Filter by changed by user"
           value={changedBy}
           onChange={(e) => {
             resetPage();

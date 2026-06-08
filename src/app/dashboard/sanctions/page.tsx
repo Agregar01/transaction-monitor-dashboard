@@ -72,6 +72,7 @@ export default function SanctionsScreeningPage() {
           </label>
           <input
             required
+            aria-label="Name"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. John Doe"
@@ -84,6 +85,7 @@ export default function SanctionsScreeningPage() {
               Nationality (optional)
             </label>
             <input
+              aria-label="Nationality (optional)"
               value={nationality}
               onChange={(e) => setNationality(e.target.value.toUpperCase())}
               maxLength={3}
@@ -95,6 +97,7 @@ export default function SanctionsScreeningPage() {
               ID number (optional)
             </label>
             <input
+              aria-label="ID number (optional)"
               value={idNumber}
               onChange={(e) => setIdNumber(e.target.value)}
               className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-800 text-gray-900 dark:text-white"

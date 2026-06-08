@@ -57,6 +57,7 @@ export default function NewCasePage() {
           <input
             type="text"
             required
+            aria-label="Title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Suspicious mobile money structuring — customer X"
@@ -70,6 +71,7 @@ export default function NewCasePage() {
               Type
             </label>
             <select
+              aria-label="Case type"
               value={caseType}
               onChange={(e) => setCaseType(e.target.value as CaseType)}
               className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-800 text-gray-900 dark:text-white"
@@ -84,6 +86,7 @@ export default function NewCasePage() {
               Priority
             </label>
             <select
+              aria-label="Priority"
               value={priority}
               onChange={(e) => setPriority(e.target.value as CasePriority)}
               className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-800 text-gray-900 dark:text-white"
@@ -100,6 +103,7 @@ export default function NewCasePage() {
             Jurisdiction
           </label>
           <select
+            aria-label="Jurisdiction"
             value={jurisdictionId}
             onChange={(e) => setJurisdictionId(e.target.value)}
             className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-800 text-gray-900 dark:text-white"
