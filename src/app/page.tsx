@@ -1,20 +1,8 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useAppSelector } from "@/redux/store";
-
+// Server component. The middleware redirects "/" at the edge based on the
+// session cookie before this renders; this is a no-JS fallback for the rare
+// case the matcher is bypassed.
 export default function Home() {
-  const router = useRouter();
-  const isAuthenticated = useAppSelector((s) => s.auth.isAuthenticated);
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      router.replace("/dashboard");
-    } else {
-      router.replace("/login");
-    }
-  }, [isAuthenticated, router]);
-
-  return null;
+  redirect("/login");
 }

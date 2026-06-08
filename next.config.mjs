@@ -1,9 +1,11 @@
-import createNextIntlPlugin from "next-intl/plugin";
-
-const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Trim barrel imports: @heroicons/react is imported by ~16 files via the
+  // /24/outline barrel. optimizePackageImports rewrites these to per-icon
+  // paths so only the icons actually used land in the bundle.
+  experimental: {
+    optimizePackageImports: ["@heroicons/react"],
+  },
   async headers() {
     return [
       {
@@ -43,7 +45,8 @@ const nextConfig = {
                 ? "script-src 'self' 'unsafe-inline'"
                 : "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
               "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: blob:",
+              // Leaflet/OSM raster tiles are fetched client-side from the tile CDN.
+              "img-src 'self' data: blob: https://*.tile.openstreetmap.org",
               "font-src 'self' data:",
               // Browser only ever calls /api/proxy/* (same-origin); backend connect happens server-side via BACKEND_URL.
               // Keeping 'self' is sufficient. Add explicit backend host here if direct calls are ever added.
@@ -61,4 +64,4 @@ const nextConfig = {
   },
 };
 
-export default withNextIntl(nextConfig);
+export default nextConfig;

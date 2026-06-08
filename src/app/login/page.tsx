@@ -100,6 +100,7 @@ export default function LoginPage() {
             alt="Autheo"
             width={160}
             height={42}
+            priority
             className="mx-auto"
           />
           <h1 className="text-xl font-semibold text-gray-900 dark:text-white">

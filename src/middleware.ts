@@ -16,6 +16,13 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const hasSession = Boolean(request.cookies.get(SESSION_COOKIE)?.value);
 
+  // Root entry point: redirect at the edge instead of shipping a client
+  // component that hydrates and then router.replace()s (a guaranteed waterfall
+  // on the most-hit URL).
+  if (pathname === "/") {
+    return NextResponse.redirect(new URL(hasSession ? "/dashboard" : "/login", request.url));
+  }
+
   if (pathname.startsWith("/dashboard") && !hasSession) {
     const loginUrl = new URL("/login", request.url);
     // Only forward purely-relative paths to prevent open-redirect via ?redirect=.
@@ -44,5 +51,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/login", "/forgot-password"],
+  matcher: ["/", "/dashboard/:path*", "/login", "/forgot-password"],
 };
