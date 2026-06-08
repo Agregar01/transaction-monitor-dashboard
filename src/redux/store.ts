@@ -44,6 +44,11 @@ const authPersistConfig = {
     "email",
     "fullName",
     "roles",
+    // permissions + features drive the permission-nav Sidebar. They MUST be
+    // persisted, else a page reload rehydrates them empty and the nav collapses
+    // to only the always-on routes (Overview/Settings) for every role.
+    "permissions",
+    "features",
     "isAuthenticated",
     "csrfToken",
     "jurisdictionCode",
