@@ -266,16 +266,16 @@ export default function DashboardOverviewPage() {
   // Alert distribution across the four risk bands. Prefer the real population
   // from /analytics/summary; fall back to bucketing the 14-day sample.
   const riskBreakdown = useMemo(() => {
-    const order: RiskBand[] = ["ALLOW", "FLAG", "HOLD", "BLOCK"];
-    // The distribution is computed over ALERTS only: ALLOW transactions never
-    // alert (structurally 0) and the decision engine rarely leaves anything at
-    // FLAG. Render only the bands that actually carry alerts so the two empty
-    // slices don't read as a broken chart, and caption it as alert decisions.
+    const order: RiskBand[] = ["ALLOW", "FLAG", "STEP_UP", "HOLD", "BLOCK"];
+    // /analytics/summary computes risk_distribution over ALL transactions
+    // (combined_risk_score), so every decision band — including ALLOW — appears.
+    // Render only the bands that carry volume so empty slices don't clutter.
     const present = (counts: Record<RiskBand, number>) => order.filter((b) => counts[b] > 0);
     const dist = analytics?.risk_distribution;
     const fromAnalytics: Record<RiskBand, number> = {
       ALLOW: dist?.ALLOW ?? 0,
       FLAG: dist?.FLAG ?? 0,
+      STEP_UP: dist?.STEP_UP ?? 0,
       HOLD: dist?.HOLD ?? 0,
       BLOCK: dist?.BLOCK ?? 0,
     };
@@ -287,10 +287,11 @@ export default function DashboardOverviewPage() {
         series: bands.map((b) => fromAnalytics[b]),
         colors: bands.map((b) => riskBandColors[b]),
         total: analyticsTotal,
-        caption: "alert decisions · last 30 days",
+        caption: "all transactions · last 30 days",
       };
     }
-    const counts: Record<RiskBand, number> = { ALLOW: 0, FLAG: 0, HOLD: 0, BLOCK: 0 };
+    // Fallback when analytics is unavailable: bucket the recent alert sample.
+    const counts: Record<RiskBand, number> = { ALLOW: 0, FLAG: 0, STEP_UP: 0, HOLD: 0, BLOCK: 0 };
     for (const a of alertsLast14d?.items ?? []) {
       counts[riskBand(a.risk_score)] += 1;
     }
@@ -300,7 +301,7 @@ export default function DashboardOverviewPage() {
       series: bands.map((b) => counts[b]),
       colors: bands.map((b) => riskBandColors[b]),
       total: order.reduce((sum, b) => sum + counts[b], 0),
-      caption: "alert decisions · last 14 days",
+      caption: "recent alerts · last 14 days",
     };
   }, [analytics, alertsLast14d]);
 
@@ -405,7 +406,7 @@ export default function DashboardOverviewPage() {
 
         <div className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 shadow-sm p-6">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-            Alerts by risk band
+            Risk band distribution
           </h2>
           <p className="text-xs text-gray-400 mb-4 mt-0.5">{riskBreakdown.caption}</p>
           {riskBreakdown.total === 0 ? (
@@ -429,7 +430,7 @@ export default function DashboardOverviewPage() {
                         show: true,
                         total: {
                           show: true,
-                          label: "Alerts",
+                          label: "Total",
                           color: "#94a3b8",
                           formatter: () => String(riskBreakdown.total),
                         },

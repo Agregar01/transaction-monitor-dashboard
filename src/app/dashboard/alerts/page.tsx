@@ -51,7 +51,7 @@ export default function AlertsListPage() {
   const { data: sample } = useListAlertsQuery({ page_size: 200 });
 
   const riskBreakdown = useMemo(() => {
-    const order: RiskBand[] = ["ALLOW", "FLAG", "HOLD", "BLOCK"];
+    const order: RiskBand[] = ["ALLOW", "FLAG", "STEP_UP", "HOLD", "BLOCK"];
     const dist = analytics?.risk_distribution;
     const series = order.map((b) => dist?.[b] ?? 0);
     return {

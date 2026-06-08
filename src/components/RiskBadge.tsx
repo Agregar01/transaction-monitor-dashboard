@@ -2,7 +2,8 @@ import { riskBand, type RiskBand } from "@/config/constants";
 
 const bandClasses: Record<RiskBand, string> = {
   ALLOW: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200",
-  FLAG: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200",
+  FLAG: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-200",
+  STEP_UP: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200",
   HOLD: "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-200",
   BLOCK: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-200",
 };

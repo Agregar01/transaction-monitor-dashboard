@@ -24,10 +24,11 @@ const PERIODS = [7, 14, 30, 90] as const;
 type Period = (typeof PERIODS)[number];
 
 const RISK_COLORS: Record<string, string> = {
-  ALLOW: "#22c55e",
-  FLAG:  "#f59e0b",
-  HOLD:  "#f97316",
-  BLOCK: "#ef4444",
+  ALLOW:   "#22c55e",
+  FLAG:    "#eab308",
+  STEP_UP: "#f59e0b",
+  HOLD:    "#f97316",
+  BLOCK:   "#ef4444",
 };
 
 const RECO_META: Record<string, { label: string; cls: string }> = {
@@ -63,10 +64,10 @@ export default function ReportsPage() {
   }, [data]);
 
   const riskDist = useMemo(() => {
-    const dist = data?.risk_distribution ?? { ALLOW: 0, FLAG: 0, HOLD: 0, BLOCK: 0 };
-    const order = ["ALLOW", "FLAG", "HOLD", "BLOCK"] as const;
-    // Computed over alerts only — ALLOW never alerts and FLAG rarely survives the
-    // decision engine, so show only the populated bands rather than two dead slices.
+    const dist = data?.risk_distribution ?? { ALLOW: 0, FLAG: 0, STEP_UP: 0, HOLD: 0, BLOCK: 0 };
+    const order = ["ALLOW", "FLAG", "STEP_UP", "HOLD", "BLOCK"] as const;
+    // Computed over all transactions (combined_risk_score); show only the bands
+    // that actually carry volume rather than rendering empty slices.
     const present = order.filter((k) => (dist[k] ?? 0) > 0);
     return {
       labels: present,
@@ -214,7 +215,7 @@ export default function ReportsPage() {
             Risk distribution
           </h2>
           <p className="text-xs text-gray-400 mb-4 mt-0.5">
-            alert decisions — cleared (ALLOW) transactions don&apos;t alert
+            all transactions by decision band · last {period} days
           </p>
           {riskDist.total === 0 ? (
             <div className="py-16 text-center text-sm text-gray-400">No data.</div>
@@ -235,7 +236,7 @@ export default function ReportsPage() {
                         show: true,
                         total: {
                           show: true,
-                          label: "Alerts",
+                          label: "Total",
                           color: "#94a3b8",
                           formatter: () => String(riskDist.total),
                         },

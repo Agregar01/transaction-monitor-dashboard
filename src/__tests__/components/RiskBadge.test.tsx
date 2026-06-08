@@ -9,9 +9,14 @@ describe("riskBand helper — 0-300 boundary semantics", () => {
     expect(riskBand(89)).toBe("ALLOW");
   });
 
-  it("classifies 90-149 as FLAG", () => {
+  it("classifies 90-119 as FLAG", () => {
     expect(riskBand(90)).toBe("FLAG");
-    expect(riskBand(149)).toBe("FLAG");
+    expect(riskBand(119)).toBe("FLAG");
+  });
+
+  it("classifies 120-149 as STEP_UP", () => {
+    expect(riskBand(120)).toBe("STEP_UP");
+    expect(riskBand(149)).toBe("STEP_UP");
   });
 
   it("classifies 150-199 as HOLD", () => {

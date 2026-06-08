@@ -2,25 +2,29 @@
  * AML-specific color tokens and helpers used across the dashboard.
  *
  * The TMS risk score is 0-300 (Customer + Transaction + Behavioral, summed).
- * Bands:
- *   ALLOW  0   - 89
- *   FLAG   90  - 149
- *   HOLD   150 - 199
- *   BLOCK  200 - 300
+ * Bands (must mirror the backend decision-engine config — flag=90, step_up=120,
+ * hold=150, block=200 — and the /analytics/summary risk_distribution buckets):
+ *   ALLOW    0   - 89
+ *   FLAG     90  - 119
+ *   STEP_UP  120 - 149
+ *   HOLD     150 - 199
+ *   BLOCK    200 - 300
  */
 
-export type RiskBand = "ALLOW" | "FLAG" | "HOLD" | "BLOCK";
+export type RiskBand = "ALLOW" | "FLAG" | "STEP_UP" | "HOLD" | "BLOCK";
 
 export const riskBandColors: Record<RiskBand, string> = {
   ALLOW: "#22c55e",
-  FLAG: "#f59e0b",
-  HOLD: "#fb923c",
+  FLAG: "#eab308",
+  STEP_UP: "#f59e0b",
+  HOLD: "#f97316",
   BLOCK: "#ef4444",
 };
 
 export function riskBand(score: number): RiskBand {
   if (score >= 200) return "BLOCK";
   if (score >= 150) return "HOLD";
+  if (score >= 120) return "STEP_UP";
   if (score >= 90) return "FLAG";
   return "ALLOW";
 }

@@ -47,8 +47,8 @@ export default function TransactionsListPage() {
   }, [sample]);
 
   const riskBreakdown = useMemo(() => {
-    const order: RiskBand[] = ["ALLOW", "FLAG", "HOLD", "BLOCK"];
-    const counts: Record<RiskBand, number> = { ALLOW: 0, FLAG: 0, HOLD: 0, BLOCK: 0 };
+    const order: RiskBand[] = ["ALLOW", "FLAG", "STEP_UP", "HOLD", "BLOCK"];
+    const counts: Record<RiskBand, number> = { ALLOW: 0, FLAG: 0, STEP_UP: 0, HOLD: 0, BLOCK: 0 };
     for (const t of sample?.items ?? []) counts[riskBand(t.combined_risk_score)] += 1;
     return { labels: order, series: order.map((b) => counts[b]), colors: order.map((b) => riskBandColors[b]) };
   }, [sample]);

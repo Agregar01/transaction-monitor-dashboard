@@ -810,7 +810,7 @@ export interface AlertTrendPoint {
 export interface AnalyticsSummary {
   period_days: number;
   alert_trends: AlertTrendPoint[];
-  risk_distribution: { ALLOW: number; FLAG: number; HOLD: number; BLOCK: number };
+  risk_distribution: { ALLOW: number; FLAG: number; STEP_UP: number; HOLD: number; BLOCK: number };
   case_breakdown: Record<string, number>;
   str_ctr_totals: {
     str_filed: number;
