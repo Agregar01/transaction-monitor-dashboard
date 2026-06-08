@@ -45,7 +45,12 @@ const variantClasses: Record<string, string> = {
 };
 
 export default function ActionBadge({ action }: { action: string }) {
-  const cls = variantClasses[action] ?? "bg-slate-100 text-slate-700 dark:bg-slate-700/40 dark:text-slate-200";
+  // Match case-insensitively: some backend enums are Title-case (e.g. customer
+  // risk_level "Low"/"Medium"/"High") while the map is keyed UPPERCASE.
+  const cls =
+    variantClasses[action] ??
+    variantClasses[action?.toUpperCase()] ??
+    "bg-slate-100 text-slate-700 dark:bg-slate-700/40 dark:text-slate-200";
   return (
     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${cls}`}>
       {action.replace(/_/g, " ")}

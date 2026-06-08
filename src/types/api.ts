@@ -183,7 +183,9 @@ export interface RelatedTransaction {
 
 // ─── Customers ──────────────────────────────────────────────────────────────
 
-export type RiskLevel = "LOW" | "MEDIUM" | "HIGH" | "VERY_HIGH" | "CRITICAL";
+// Backend stores Title-case Low/Medium/High (customer.py RiskLevel enum). `| string`
+// keeps us resilient if a jurisdiction ever adds bands.
+export type RiskLevel = "Low" | "Medium" | "High" | string;
 
 export interface Customer {
   customer_id: string;

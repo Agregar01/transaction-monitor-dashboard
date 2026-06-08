@@ -7,15 +7,14 @@ import { SkeletonTable } from "@/components/Skeleton";
 import ActionBadge from "@/components/ActionBadge";
 import DonutCard from "@/components/DonutCard";
 import type { RiskLevel } from "@/types/api";
+import { CUSTOMER_RISK_LEVELS } from "@/config/constants";
 
-const RISK_LEVELS: RiskLevel[] = ["LOW", "MEDIUM", "HIGH", "VERY_HIGH", "CRITICAL"];
+const RISK_LEVELS: RiskLevel[] = [...CUSTOMER_RISK_LEVELS];
 
-const RISK_LEVEL_COLORS: Record<RiskLevel, string> = {
-  LOW: "#22c55e",
-  MEDIUM: "#f59e0b",
-  HIGH: "#fb923c",
-  VERY_HIGH: "#ef4444",
-  CRITICAL: "#991b1b",
+const RISK_LEVEL_COLORS: Record<string, string> = {
+  Low: "#22c55e",
+  Medium: "#f59e0b",
+  High: "#ef4444",
 };
 
 const CATEGORY_PALETTE = ["#14b8a6", "#2563eb", "#f59e0b", "#7c3aed", "#ec4899"];

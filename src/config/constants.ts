@@ -67,6 +67,19 @@ export const approvalStatusColors: Record<string, string> = {
   EXPIRED: "#94a3b8",
 };
 
+/**
+ * Backend domain enums as actually STORED/EMITTED by the TMS.
+ *
+ * Source of truth is the SQLAlchemy enums in the backend (`app/models/transaction.py`,
+ * `app/models/customer.py`) — note these are Title-case, NOT the UPPERCASE values in
+ * the backend's unused `app/models/enums.py`. The `/transactions` and `/customers`
+ * filter endpoints match on these exact strings, so dropdowns must send them verbatim
+ * (uppercasing them silently returns zero rows).
+ */
+export const TRANSACTION_TYPES = ["Deposit", "Transfer", "Withdrawal"] as const;
+export const CHANNELS = ["ATM", "Bank", "Card", "Momo", "Agent"] as const;
+export const CUSTOMER_RISK_LEVELS = ["Low", "Medium", "High"] as const;
+
 /** Subset of the 8 RBAC role names used by the role-gated sidebar. */
 export const TMS_ROLES = [
   "SYSTEM_ADMIN",

@@ -8,7 +8,7 @@ import { API_V1 } from "@/config/api";
 import { SkeletonTable } from "@/components/Skeleton";
 import RiskBadge from "@/components/RiskBadge";
 import DonutCard from "@/components/DonutCard";
-import { riskBand, riskBandColors, type RiskBand } from "@/config/constants";
+import { riskBand, riskBandColors, type RiskBand, TRANSACTION_TYPES, CHANNELS } from "@/config/constants";
 
 // Distinct, non-semantic palette for categorical breakdowns (channels).
 const CATEGORY_PALETTE = ["#14b8a6", "#2563eb", "#f59e0b", "#7c3aed", "#ec4899", "#0ea5e9", "#84cc16"];
@@ -99,24 +99,36 @@ export default function TransactionsListPage() {
           <option value="true">Flagged only</option>
           <option value="false">Not flagged</option>
         </select>
-        <input
-          placeholder="Type (TRANSFER, DEPOSIT…)"
+        <select
           value={transactionType}
           onChange={(e) => {
             setPage(1);
-            setTransactionType(e.target.value.toUpperCase());
+            setTransactionType(e.target.value);
           }}
           className="px-3 py-2 text-sm border border-gray-200 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-800 text-gray-900 dark:text-white"
-        />
-        <input
-          placeholder="Channel (USSD, MOBILE…)"
+        >
+          <option value="">Any type</option>
+          {TRANSACTION_TYPES.map((t) => (
+            <option key={t} value={t}>
+              {t}
+            </option>
+          ))}
+        </select>
+        <select
           value={channel}
           onChange={(e) => {
             setPage(1);
-            setChannel(e.target.value.toUpperCase());
+            setChannel(e.target.value);
           }}
           className="px-3 py-2 text-sm border border-gray-200 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-800 text-gray-900 dark:text-white"
-        />
+        >
+          <option value="">Any channel</option>
+          {CHANNELS.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
       </div>
 
       {sampleSize > 0 && (
