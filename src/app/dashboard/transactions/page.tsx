@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useState, useMemo } from "react";
 import { useListTransactionsQuery } from "@/redux/slices/api/transactionsApi";
+import ExportButton from "@/components/ExportButton";
+import { API_V1 } from "@/config/api";
 import { SkeletonTable } from "@/components/Skeleton";
 import RiskBadge from "@/components/RiskBadge";
 import DonutCard from "@/components/DonutCard";
@@ -53,13 +55,26 @@ export default function TransactionsListPage() {
 
   const sampleSize = sample?.items.length ?? 0;
 
+  const exportUrl = (() => {
+    const p = new URLSearchParams();
+    if (customerId) p.set("customer_id", customerId);
+    if (flagged) p.set("flagged", flagged);
+    if (transactionType) p.set("transaction_type", transactionType);
+    if (channel) p.set("channel", channel);
+    const qs = p.toString();
+    return `${API_V1}/export/transactions${qs ? `?${qs}` : ""}`;
+  })();
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Transactions</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Browse scored transactions. Click any row to see the timeline.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Transactions</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Browse scored transactions. Click any row to see the timeline.
+          </p>
+        </div>
+        <ExportButton url={exportUrl} filename="transactions.csv" requiredPermission="view_audit_trail" />
       </div>
 
       <div className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-4 grid grid-cols-1 md:grid-cols-4 gap-3">

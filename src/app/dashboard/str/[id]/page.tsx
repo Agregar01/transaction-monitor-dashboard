@@ -13,6 +13,7 @@ import { SkeletonCard } from "@/components/Skeleton";
 import ActionBadge from "@/components/ActionBadge";
 import { showToast } from "@/components/Toast";
 import { errorMessage } from "@/lib/errors";
+import { API_V1 } from "@/config/api";
 
 export default function STRDetailPage() {
   const params = useParams<{ id: string }>();
@@ -87,6 +88,13 @@ export default function STRDetailPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <a
+            href={`${API_V1}/export/str/${str.id}/pdf`}
+            download
+            className="px-3 py-1.5 text-sm font-medium rounded-lg border border-gray-300 dark:border-navy-500 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-navy-700"
+          >
+            PDF
+          </a>
           <ActionBadge action={str.status} />
         </div>
       </div>

@@ -41,6 +41,7 @@ export const ALLOWED_PREFIXES = [
   "/api/v1/drift/",
   "/api/v1/attachments/",
   "/api/v1/privacy/",
+  "/api/v1/export/",
 ] as const;
 
 export const CSRF_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);

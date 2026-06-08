@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useState, useMemo } from "react";
 import { useListCasesQuery } from "@/redux/slices/api/casesApi";
 import { useGetAnalyticsSummaryQuery } from "@/redux/slices/api/analyticsApi";
+import ExportButton from "@/components/ExportButton";
+import { API_V1 } from "@/config/api";
 import { SkeletonTable } from "@/components/Skeleton";
 import ActionBadge from "@/components/ActionBadge";
 import DonutCard from "@/components/DonutCard";
@@ -86,12 +88,26 @@ export default function CasesListPage() {
             Investigation cases. State machine enforced server-side.
           </p>
         </div>
-        <Link
-          href="/dashboard/cases/new"
-          className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary-600"
-        >
-          <PlusIcon className="h-4 w-4" /> New case
-        </Link>
+        <div className="flex items-center gap-2">
+          <ExportButton
+            url={(() => {
+              const p = new URLSearchParams();
+              if (status) p.set("status", status);
+              if (caseType) p.set("case_type", caseType);
+              if (priority) p.set("priority", priority);
+              const qs = p.toString();
+              return `${API_V1}/export/cases${qs ? `?${qs}` : ""}`;
+            })()}
+            filename="cases.csv"
+            requiredPermission="view_cases"
+          />
+          <Link
+            href="/dashboard/cases/new"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary-600"
+          >
+            <PlusIcon className="h-4 w-4" /> New case
+          </Link>
+        </div>
       </div>
 
       <div className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-4 grid grid-cols-1 md:grid-cols-4 gap-3">

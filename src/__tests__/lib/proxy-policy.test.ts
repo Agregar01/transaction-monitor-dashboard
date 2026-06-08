@@ -15,6 +15,9 @@ describe("isAllowedPath — SSRF guard", () => {
     expect(isAllowedPath("/api/v1/approvals")).toBe(true);
     expect(isAllowedPath("/api/v1/health/detailed")).toBe(true);
     expect(isAllowedPath("/api/v1/analytics/summary")).toBe(true);
+    expect(isAllowedPath("/api/v1/privacy/requests")).toBe(true);
+    expect(isAllowedPath("/api/v1/export/transactions")).toBe(true);
+    expect(isAllowedPath("/api/v1/export/str/abc/pdf")).toBe(true);
   });
 
   it("rejects unknown TMS paths", () => {

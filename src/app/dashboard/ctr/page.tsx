@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useListCTRQuery, useExemptCTRMutation, ctrXmlUrl } from "@/redux/slices/api/ctrApi";
+import { API_V1 } from "@/config/api";
 import { SkeletonTable } from "@/components/Skeleton";
 import ActionBadge from "@/components/ActionBadge";
 import { showToast } from "@/components/Toast";
@@ -130,6 +131,13 @@ export default function CTRListPage() {
                         XML
                       </a>
                     )}
+                    <a
+                      href={`${API_V1}/export/ctr/${r.id}/pdf`}
+                      download
+                      className="text-primary hover:underline"
+                    >
+                      PDF
+                    </a>
                     {r.status !== "EXEMPT" && r.status !== "FILED" && (
                       <button
                         onClick={() => setExemptDialog({ id: r.id })}

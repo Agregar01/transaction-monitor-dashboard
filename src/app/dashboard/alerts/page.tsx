@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useState, useMemo } from "react";
 import { useListAlertsQuery } from "@/redux/slices/api/alertsApi";
 import { useGetAnalyticsSummaryQuery } from "@/redux/slices/api/analyticsApi";
+import ExportButton from "@/components/ExportButton";
+import { API_V1 } from "@/config/api";
 import { SkeletonTable } from "@/components/Skeleton";
 import RiskBadge from "@/components/RiskBadge";
 import ActionBadge from "@/components/ActionBadge";
@@ -83,6 +85,17 @@ export default function AlertsListPage() {
             Rule- and ML-triggered alerts. Polls every 10s.
           </p>
         </div>
+        <ExportButton
+          url={(() => {
+            const p = new URLSearchParams();
+            if (priority) p.set("priority", priority);
+            if (status) p.set("status", status);
+            const qs = p.toString();
+            return `${API_V1}/export/alerts${qs ? `?${qs}` : ""}`;
+          })()}
+          filename="alerts.csv"
+          requiredPermission="view_audit_trail"
+        />
       </div>
 
       <div className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-4 grid grid-cols-1 md:grid-cols-4 gap-3">
