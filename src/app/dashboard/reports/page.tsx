@@ -10,6 +10,8 @@ import {
 } from "@/redux/slices/api/analyticsApi";
 import { SkeletonStats } from "@/components/Skeleton";
 import StatCard from "@/components/StatCard";
+import { useAppSelector } from "@/redux/store";
+import { currencyForJurisdiction, formatMoney } from "@/lib/currency";
 import {
   BellAlertIcon,
   InboxStackIcon,
@@ -37,6 +39,8 @@ const RECO_META: Record<string, { label: string; cls: string }> = {
 
 export default function ReportsPage() {
   const [period, setPeriod] = useState<Period>(30);
+  const jurisdictionCode = useAppSelector((s) => s.auth.jurisdictionCode);
+  const currency = currencyForJurisdiction(jurisdictionCode);
 
   const { data, isLoading } = useGetAnalyticsSummaryQuery(
     { period_days: period },
@@ -359,7 +363,7 @@ export default function ReportsPage() {
                     <li key={c.cluster_label} className="py-2 flex items-center justify-between gap-3 text-sm">
                       <span className="text-gray-900 dark:text-white">Cluster #{c.cluster_label}</span>
                       <span className="text-xs text-gray-500 dark:text-gray-400">
-                        {c.count.toLocaleString()} txns · avg {Math.round(c.avg_amount).toLocaleString()} GHS
+                        {c.count.toLocaleString()} txns · avg {formatMoney(c.avg_amount, currency)}
                       </span>
                     </li>
                   ))}

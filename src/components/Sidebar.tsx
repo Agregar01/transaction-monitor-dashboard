@@ -5,7 +5,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { useAppDispatch, useAppSelector } from "@/redux/store";
-import { logout } from "@/redux/slices/authSlice";
+import { logout, type TenantFeatures } from "@/redux/slices/authSlice";
 import { baseApi } from "@/redux/slices/api/baseApi";
 import DarkModeToggle from "@/components/DarkModeToggle";
 import {
@@ -119,6 +119,32 @@ export function filterNavByPermissions(items: NavItem[], permissions: string[]):
   });
 }
 
+/**
+ * Routes hidden when their jurisdiction disables the corresponding feature
+ * (TenantConfig flags from /tenant/info). A jurisdiction that turns off, say,
+ * CTR reporting shouldn't show the CTR link at all.
+ */
+const FEATURE_NAV_MAP: Record<string, keyof TenantFeatures> = {
+  "/dashboard/ctr": "ctr",
+  "/dashboard/str": "str",
+  "/dashboard/sanctions": "sanctions",
+  "/dashboard/watchlists": "sanctions",
+  "/dashboard/models": "ml",
+  "/dashboard/drift": "ml",
+  "/dashboard/shadow": "ml",
+};
+
+export function filterNavByFeatures(
+  items: NavItem[],
+  features: TenantFeatures | null,
+): NavItem[] {
+  if (!features) return items; // not loaded yet — don't hide prematurely
+  return items.filter((item) => {
+    const flag = FEATURE_NAV_MAP[item.href];
+    return flag ? features[flag] : true;
+  });
+}
+
 function NavSection({
   label,
   items,
@@ -165,7 +191,9 @@ function NavSection({
 function SidebarContent({ onNav }: { onNav?: () => void }) {
   const pathname = usePathname();
   const dispatch = useAppDispatch();
-  const { permissions, jurisdictionCode, email } = useAppSelector((s) => s.auth);
+  const { permissions, jurisdictionCode, email, features } = useAppSelector((s) => s.auth);
+  const navFor = (items: NavItem[]) =>
+    filterNavByFeatures(filterNavByPermissions(items, permissions), features);
 
   return (
     <>
@@ -183,25 +211,25 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
       <nav className="flex-1 px-3 py-0 space-y-0.5 overflow-y-auto">
         <NavSection
           label="Monitor"
-          items={filterNavByPermissions(monitorNav, permissions)}
+          items={navFor(monitorNav)}
           pathname={pathname}
           onNav={onNav}
         />
         <NavSection
           label="Compliance"
-          items={filterNavByPermissions(complianceNav, permissions)}
+          items={navFor(complianceNav)}
           pathname={pathname}
           onNav={onNav}
         />
         <NavSection
           label="Rule & ML Ops"
-          items={filterNavByPermissions(ruleOpsNav, permissions)}
+          items={navFor(ruleOpsNav)}
           pathname={pathname}
           onNav={onNav}
         />
         <NavSection
           label="Admin"
-          items={filterNavByPermissions(adminNav, permissions)}
+          items={navFor(adminNav)}
           pathname={pathname}
           onNav={onNav}
         />

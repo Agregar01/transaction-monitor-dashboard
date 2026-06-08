@@ -1,5 +1,13 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
+/** Per-jurisdiction feature flags from /tenant/info (TenantConfig). */
+export interface TenantFeatures {
+  ctr: boolean;
+  str: boolean;
+  sanctions: boolean;
+  ml: boolean;
+}
+
 export interface AuthState {
   userId: string | null;
   email: string | null;
@@ -12,9 +20,11 @@ export interface AuthState {
   /** Double-submit CSRF token. Read from a non-httpOnly cookie at login, mirrored
    *  in Redux for RTK Query to attach to mutation headers. */
   csrfToken: string | null;
-  /** Active jurisdiction for this deployment (GHA / NGA / KEN). */
+  /** Active jurisdiction for this deployment (GHA / NGA / KEN / ZAF). */
   jurisdictionCode: string | null;
   jurisdictionDisplayName: string | null;
+  /** Jurisdiction feature flags from /tenant/info. null until loaded. */
+  features: TenantFeatures | null;
 }
 
 const initialState: AuthState = {
@@ -27,6 +37,7 @@ const initialState: AuthState = {
   csrfToken: null,
   jurisdictionCode: null,
   jurisdictionDisplayName: null,
+  features: null,
 };
 
 interface SetCredentialsPayload {
@@ -38,6 +49,7 @@ interface SetCredentialsPayload {
   csrfToken?: string | null;
   jurisdictionCode?: string | null;
   jurisdictionDisplayName?: string | null;
+  features?: TenantFeatures | null;
 }
 
 const authSlice = createSlice({
@@ -54,6 +66,7 @@ const authSlice = createSlice({
       state.csrfToken = action.payload.csrfToken ?? null;
       state.jurisdictionCode = action.payload.jurisdictionCode ?? null;
       state.jurisdictionDisplayName = action.payload.jurisdictionDisplayName ?? null;
+      state.features = action.payload.features ?? null;
     },
     logout(state) {
       state.userId = null;
@@ -65,6 +78,7 @@ const authSlice = createSlice({
       state.csrfToken = null;
       state.jurisdictionCode = null;
       state.jurisdictionDisplayName = null;
+      state.features = null;
     },
   },
 });

@@ -7,6 +7,7 @@ import { useGetTenantInfoQuery } from "@/redux/slices/api/tenantApi";
 import { useCreateSTRMutation } from "@/redux/slices/api/strApi";
 import { showToast } from "@/components/Toast";
 import { errorMessage } from "@/lib/errors";
+import { currencyForJurisdiction } from "@/lib/currency";
 
 export default function STRNewPage() {
   const router = useRouter();
@@ -20,7 +21,7 @@ export default function STRNewPage() {
   const [subjectName, setSubjectName] = useState("");
   const [activityType, setActivityType] = useState("STRUCTURING");
   const [amount, setAmount] = useState("");
-  const [currency, setCurrency] = useState("GHS");
+  const [currency, setCurrency] = useState(currencyForJurisdiction(jurisdictionCode));
   const [narrative, setNarrative] = useState("");
   const [jurisdictionId, setJurisdictionId] = useState(
     jurisdictionCode ?? tenant?.jurisdiction_code ?? "GHA",

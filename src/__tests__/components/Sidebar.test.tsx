@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { filterNavByPermissions } from "@/components/Sidebar";
+import { filterNavByPermissions, filterNavByFeatures } from "@/components/Sidebar";
 import { HomeIcon } from "@heroicons/react/24/outline";
 
 const NAV = [
@@ -48,5 +48,30 @@ describe("filterNavByPermissions", () => {
   it("with no permissions, only the empty-policy links survive", () => {
     const visible = filterNavByPermissions(NAV, []).map((i) => i.href);
     expect(visible).toEqual(["/dashboard", "/dashboard/settings"]);
+  });
+});
+
+describe("filterNavByFeatures", () => {
+  const FEATURED = [
+    { name: "STR", href: "/dashboard/str", icon: HomeIcon },
+    { name: "Sanctions", href: "/dashboard/sanctions", icon: HomeIcon },
+    { name: "Rules", href: "/dashboard/rules", icon: HomeIcon }, // not feature-gated
+  ];
+
+  it("hides feature-gated links when the jurisdiction disables them", () => {
+    const visible = filterNavByFeatures(FEATURED, {
+      ctr: true,
+      str: false,
+      sanctions: false,
+      ml: true,
+    }).map((i) => i.href);
+    expect(visible).not.toContain("/dashboard/str");
+    expect(visible).not.toContain("/dashboard/sanctions");
+    expect(visible).toContain("/dashboard/rules"); // never feature-gated
+  });
+
+  it("shows everything before features have loaded (null)", () => {
+    const visible = filterNavByFeatures(FEATURED, null).map((i) => i.href);
+    expect(visible).toEqual(FEATURED.map((i) => i.href));
   });
 });

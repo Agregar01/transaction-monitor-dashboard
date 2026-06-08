@@ -25,6 +25,7 @@ interface LoginResponse {
   csrf_token: string;
   jurisdiction_code: string | null;
   jurisdiction_display_name: string | null;
+  features: { ctr: boolean; str: boolean; sanctions: boolean; ml: boolean } | null;
 }
 
 export default function LoginPage() {
@@ -78,6 +79,7 @@ export default function LoginPage() {
           csrfToken: data.csrf_token,
           jurisdictionCode: data.jurisdiction_code,
           jurisdictionDisplayName: data.jurisdiction_display_name,
+          features: data.features,
         }),
       );
 

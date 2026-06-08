@@ -122,6 +122,9 @@ async function fetchTenant(accessToken: string) {
     return {
       jurisdiction_code: data.jurisdiction_code as string,
       display_name: data.display_name as string,
+      features: (data.features ?? null) as
+        | { ctr: boolean; str: boolean; sanctions: boolean; ml: boolean }
+        | null,
     };
   } catch {
     return null;
@@ -324,6 +327,7 @@ async function proxyRequest(req: NextRequest) {
       csrf_token: csrfToken,
       jurisdiction_code: tenant?.jurisdiction_code ?? null,
       jurisdiction_display_name: tenant?.display_name ?? null,
+      features: tenant?.features ?? null,
     });
 
     response.cookies.set(ACCESS_COOKIE, tokenPair.access_token, { ...base, maxAge: ACCESS_MAX_AGE });
