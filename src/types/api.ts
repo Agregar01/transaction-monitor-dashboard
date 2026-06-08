@@ -133,8 +133,12 @@ export interface Jurisdiction {
 
 // ─── Transactions ───────────────────────────────────────────────────────────
 
-export type TransactionType = "DEPOSIT" | "WITHDRAWAL" | "TRANSFER" | "PAYMENT" | "REVERSAL" | string;
-export type Channel = "USSD" | "MOBILE" | "WEB" | "AGENT" | "API" | string;
+// Backend stores Title-case values (transaction.py local enums), NOT the UPPERCASE
+// set in the unused enums.py. These literals must mirror the actually-emitted values
+// — and the dropdown source-of-truth in config/constants.ts (TRANSACTION_TYPES,
+// CHANNELS). `| string` keeps them permissive against future additions.
+export type TransactionType = "Deposit" | "Transfer" | "Withdrawal" | string;
+export type Channel = "ATM" | "Bank" | "Card" | "Momo" | "Agent" | string;
 export type FlowType = "P2P" | "P2M" | "B2P" | "CASH_IN" | "CASH_OUT" | string;
 
 /**

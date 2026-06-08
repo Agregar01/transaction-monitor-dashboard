@@ -65,13 +65,26 @@ export default function ReportsPage() {
   const riskDist = useMemo(() => {
     const dist = data?.risk_distribution ?? { ALLOW: 0, FLAG: 0, HOLD: 0, BLOCK: 0 };
     const order = ["ALLOW", "FLAG", "HOLD", "BLOCK"] as const;
+    // Computed over alerts only — ALLOW never alerts and FLAG rarely survives the
+    // decision engine, so show only the populated bands rather than two dead slices.
+    const present = order.filter((k) => (dist[k] ?? 0) > 0);
     return {
-      labels: [...order],
-      series: order.map((k) => dist[k]),
-      colors: order.map((k) => RISK_COLORS[k]),
-      total: order.reduce((s, k) => s + dist[k], 0),
+      labels: present,
+      series: present.map((k) => dist[k]),
+      colors: present.map((k) => RISK_COLORS[k]),
+      total: order.reduce((s, k) => s + (dist[k] ?? 0), 0),
     };
   }, [data]);
+
+  // Latest window the rule-threshold job actually covered — surfaced so an empty
+  // or sparse panel reads as "job hasn't run", not "feature broken" (D1).
+  const thresholdAsOf = useMemo(() => {
+    const ends = (thresholdStats ?? [])
+      .map((s) => s.period_end)
+      .filter((d): d is string => Boolean(d))
+      .sort();
+    return ends.length ? ends[ends.length - 1] : null;
+  }, [thresholdStats]);
 
   const caseSeries = useMemo(() => {
     const bd = data?.case_breakdown ?? {};
@@ -197,9 +210,12 @@ export default function ReportsPage() {
         </div>
 
         <div className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 shadow-sm p-6">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-4">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
             Risk distribution
           </h2>
+          <p className="text-xs text-gray-400 mb-4 mt-0.5">
+            alert decisions — cleared (ALLOW) transactions don&apos;t alert
+          </p>
           {riskDist.total === 0 ? (
             <div className="py-16 text-center text-sm text-gray-400">No data.</div>
           ) : (
@@ -311,11 +327,20 @@ export default function ReportsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Rule threshold recommendations */}
         <div className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 shadow-sm p-6">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-4">
-            Rule tuning recommendations
-          </h2>
+          <div className="flex items-baseline justify-between mb-4">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+              Rule tuning recommendations
+            </h2>
+            {thresholdAsOf && (
+              <span className="text-xs text-gray-400">
+                as of {new Date(thresholdAsOf).toLocaleDateString()}
+              </span>
+            )}
+          </div>
           {!thresholdStats || thresholdStats.length === 0 ? (
-            <div className="py-8 text-center text-sm text-gray-400">No threshold analysis yet.</div>
+            <div className="py-8 text-center text-sm text-gray-400">
+              No threshold analysis yet — computed by a nightly job.
+            </div>
           ) : (
             <ul className="divide-y divide-gray-100 dark:divide-navy-600">
               {thresholdStats.slice(0, 8).map((s) => {

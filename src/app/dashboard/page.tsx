@@ -267,28 +267,40 @@ export default function DashboardOverviewPage() {
   // from /analytics/summary; fall back to bucketing the 14-day sample.
   const riskBreakdown = useMemo(() => {
     const order: RiskBand[] = ["ALLOW", "FLAG", "HOLD", "BLOCK"];
+    // The distribution is computed over ALERTS only: ALLOW transactions never
+    // alert (structurally 0) and the decision engine rarely leaves anything at
+    // FLAG. Render only the bands that actually carry alerts so the two empty
+    // slices don't read as a broken chart, and caption it as alert decisions.
+    const present = (counts: Record<RiskBand, number>) => order.filter((b) => counts[b] > 0);
     const dist = analytics?.risk_distribution;
-    const fromAnalytics = order.map((b) => dist?.[b] ?? 0);
-    const analyticsTotal = fromAnalytics.reduce((a, b) => a + b, 0);
+    const fromAnalytics: Record<RiskBand, number> = {
+      ALLOW: dist?.ALLOW ?? 0,
+      FLAG: dist?.FLAG ?? 0,
+      HOLD: dist?.HOLD ?? 0,
+      BLOCK: dist?.BLOCK ?? 0,
+    };
+    const analyticsTotal = order.reduce((sum, b) => sum + fromAnalytics[b], 0);
     if (analyticsTotal > 0) {
+      const bands = present(fromAnalytics);
       return {
-        labels: order,
-        series: fromAnalytics,
-        colors: order.map((b) => riskBandColors[b]),
+        labels: bands,
+        series: bands.map((b) => fromAnalytics[b]),
+        colors: bands.map((b) => riskBandColors[b]),
         total: analyticsTotal,
-        caption: "all alerts · last 30 days",
+        caption: "alert decisions · last 30 days",
       };
     }
     const counts: Record<RiskBand, number> = { ALLOW: 0, FLAG: 0, HOLD: 0, BLOCK: 0 };
     for (const a of alertsLast14d?.items ?? []) {
       counts[riskBand(a.risk_score)] += 1;
     }
+    const bands = present(counts);
     return {
-      labels: order,
-      series: order.map((b) => counts[b]),
-      colors: order.map((b) => riskBandColors[b]),
+      labels: bands,
+      series: bands.map((b) => counts[b]),
+      colors: bands.map((b) => riskBandColors[b]),
       total: order.reduce((sum, b) => sum + counts[b], 0),
-      caption: "recent alerts · last 14 days",
+      caption: "alert decisions · last 14 days",
     };
   }, [analytics, alertsLast14d]);
 
