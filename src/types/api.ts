@@ -44,7 +44,7 @@ export interface Role {
 
 // ─── Tenant ─────────────────────────────────────────────────────────────────
 
-export type JurisdictionCode = "GHA" | "NGA" | "KEN";
+export type JurisdictionCode = "GHA" | "NGA" | "KEN" | "ZAF";
 
 export interface TenantInfo {
   jurisdiction_code: JurisdictionCode;
@@ -57,6 +57,62 @@ export interface TenantInfo {
   };
   config_loaded: boolean;
   supported_jurisdictions: JurisdictionCode[];
+}
+
+// ─── Data Privacy (DSAR / erasure) ──────────────────────────────────────────
+
+export type DsarType = "ACCESS" | "ERASURE";
+export type DsarStatus = "PENDING" | "COMPLETED" | "REJECTED";
+
+export interface DsarRequest {
+  id: string;
+  customer_id: string;
+  request_type: DsarType;
+  status: DsarStatus;
+  requested_by: string;
+  jurisdiction_code: string;
+  notes: string | null;
+  completed_at: string | null;
+  created_at: string;
+}
+
+export interface DsarRequestList {
+  total: number;
+  page: number;
+  page_size: number;
+  items: DsarRequest[];
+}
+
+/** GET /privacy/status — per-jurisdiction data-protection posture. */
+export interface PrivacyStatus {
+  jurisdiction: string;
+  dp_applicable: boolean;
+  law: string;
+  authority_code: string;
+  authority_name: string;
+  dsar_response_days: number;
+  data_residency_location: string;
+  residency_required: boolean;
+  compliant: boolean;
+  gap: string | null;
+  pii_tables: string[];
+}
+
+/** GET /privacy/dsar/{id} — structured PII export. Shape is open-ended. */
+export interface DsarExport {
+  customer_id: string;
+  customer: Record<string, unknown> | null;
+  transactions: Record<string, unknown>[];
+  pii_fields_exported: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+/** POST /privacy/erasure/{id} — 202 four-eyes response (or immediate for admin). */
+export interface ErasureResponse {
+  status: "PENDING_APPROVAL" | "ANONYMISED";
+  customer_id: string;
+  approval_id: string;
+  message: string;
 }
 
 export interface Jurisdiction {
