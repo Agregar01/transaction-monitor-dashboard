@@ -51,6 +51,7 @@ export const alertsApi = baseApi.injectEndpoints({
       invalidatesTags: (_r, _e, { alert_id }) => [
         { type: "Alert", id: alert_id },
         { type: "Alert", id: "LIST" },
+        "Analytics",
       ],
     }),
     assignAlert: b.mutation<MutationResponse, { alert_id: string; analyst_id: string; notes?: string }>({
@@ -84,6 +85,7 @@ export const alertsApi = baseApi.injectEndpoints({
       invalidatesTags: (_r, _e, { alert_id }) => [
         { type: "Alert", id: alert_id },
         { type: "Alert", id: "LIST" },
+        "Analytics",
       ],
     }),
   }),

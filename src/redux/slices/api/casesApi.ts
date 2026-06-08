@@ -52,6 +52,7 @@ export const casesApi = baseApi.injectEndpoints({
         { type: "Case", id },
         { type: "CaseHistory", id },
         { type: "Case", id: "LIST" },
+        "Analytics",
       ],
     }),
     requestSarFiling: b.mutation<MutationResponse, { case_id: string }>({
@@ -59,6 +60,7 @@ export const casesApi = baseApi.injectEndpoints({
       invalidatesTags: (_r, _e, { case_id }) => [
         { type: "Case", id: case_id },
         { type: "Approval", id: "LIST" },
+        "Analytics",
       ],
     }),
     linkAlertToCase: b.mutation<MutationResponse, { case_id: string; alert_id: string }>({

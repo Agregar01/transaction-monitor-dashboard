@@ -29,6 +29,11 @@ export const approvalsApi = baseApi.injectEndpoints({
       invalidatesTags: (_r, _e, { id }) => [
         { type: "Approval", id },
         { type: "Approval", id: "LIST" },
+        // Approvals gate STR/CTR filing + case advancement → analytics shift.
+        "Analytics",
+        { type: "STRReport", id: "LIST" },
+        { type: "CTRReport", id: "LIST" },
+        { type: "Case", id: "LIST" },
       ],
     }),
     rejectAction: b.mutation<MutationResponse, { id: string; notes?: string }>({

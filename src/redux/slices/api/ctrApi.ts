@@ -26,6 +26,7 @@ export const ctrApi = baseApi.injectEndpoints({
       invalidatesTags: (_r, _e, { id }) => [
         { type: "CTRReport", id },
         { type: "CTRReport", id: "LIST" },
+        "Analytics",
       ],
     }),
     exemptCTR: b.mutation<
@@ -37,6 +38,7 @@ export const ctrApi = baseApi.injectEndpoints({
         { type: "CTRReport", id },
         { type: "CTRReport", id: "LIST" },
         { type: "Approval", id: "LIST" },
+        "Analytics",
       ],
     }),
   }),

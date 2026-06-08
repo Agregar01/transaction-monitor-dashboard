@@ -56,6 +56,7 @@ export const strApi = baseApi.injectEndpoints({
         { type: "STRReport", id },
         { type: "STRReport", id: "LIST" },
         { type: "Approval", id: "LIST" },
+        "Analytics",
       ],
     }),
   }),
