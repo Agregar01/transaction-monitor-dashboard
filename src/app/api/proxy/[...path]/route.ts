@@ -104,6 +104,7 @@ async function fetchMe(accessToken: string) {
       email: string;
       full_name: string | null;
       roles: string[];
+      permissions: string[];
     };
   } catch {
     return null;
@@ -319,6 +320,7 @@ async function proxyRequest(req: NextRequest) {
       email: me.email,
       full_name: me.full_name,
       roles: me.roles,
+      permissions: me.permissions ?? [],
       csrf_token: csrfToken,
       jurisdiction_code: tenant?.jurisdiction_code ?? null,
       jurisdiction_display_name: tenant?.display_name ?? null,
@@ -333,6 +335,7 @@ async function proxyRequest(req: NextRequest) {
         email: me.email,
         full_name: me.full_name,
         roles: me.roles,
+        permissions: me.permissions ?? [],
       }),
       { ...base, maxAge: REFRESH_MAX_AGE },
     );

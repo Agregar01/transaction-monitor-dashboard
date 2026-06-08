@@ -21,6 +21,7 @@ interface LoginResponse {
   email: string;
   full_name: string | null;
   roles: string[];
+  permissions: string[];
   csrf_token: string;
   jurisdiction_code: string | null;
   jurisdiction_display_name: string | null;
@@ -73,6 +74,7 @@ export default function LoginPage() {
           email: data.email,
           fullName: data.full_name,
           roles: data.roles,
+          permissions: data.permissions,
           csrfToken: data.csrf_token,
           jurisdictionCode: data.jurisdiction_code,
           jurisdictionDisplayName: data.jurisdiction_display_name,

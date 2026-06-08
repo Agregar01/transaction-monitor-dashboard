@@ -6,6 +6,8 @@ export interface AuthState {
   fullName: string | null;
   /** RBAC role names from /auth/me, e.g. ["COMPLIANCE_OFFICER", "ML_ENGINEER"]. */
   roles: string[];
+  /** Flat permission list resolved from all roles, e.g. ["view_cases", "file_str"]. */
+  permissions: string[];
   isAuthenticated: boolean;
   /** Double-submit CSRF token. Read from a non-httpOnly cookie at login, mirrored
    *  in Redux for RTK Query to attach to mutation headers. */
@@ -20,6 +22,7 @@ const initialState: AuthState = {
   email: null,
   fullName: null,
   roles: [],
+  permissions: [],
   isAuthenticated: false,
   csrfToken: null,
   jurisdictionCode: null,
@@ -31,6 +34,7 @@ interface SetCredentialsPayload {
   email: string;
   fullName?: string | null;
   roles: string[];
+  permissions?: string[];
   csrfToken?: string | null;
   jurisdictionCode?: string | null;
   jurisdictionDisplayName?: string | null;
@@ -45,6 +49,7 @@ const authSlice = createSlice({
       state.email = action.payload.email;
       state.fullName = action.payload.fullName ?? null;
       state.roles = action.payload.roles ?? [];
+      state.permissions = action.payload.permissions ?? [];
       state.isAuthenticated = true;
       state.csrfToken = action.payload.csrfToken ?? null;
       state.jurisdictionCode = action.payload.jurisdictionCode ?? null;
@@ -55,6 +60,7 @@ const authSlice = createSlice({
       state.email = null;
       state.fullName = null;
       state.roles = [];
+      state.permissions = [];
       state.isAuthenticated = false;
       state.csrfToken = null;
       state.jurisdictionCode = null;

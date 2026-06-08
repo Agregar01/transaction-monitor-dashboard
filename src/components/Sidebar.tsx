@@ -76,42 +76,52 @@ const adminNav: NavItem[] = [
 ];
 
 /**
- * Role → allowed-routes mapping. A user sees a link if ANY of their roles
- * appears in the route's allowed list. Backend enforces 403 on the actual
- * endpoint regardless — this is convenience, not security.
+ * Permission → allowed-routes mapping.
+ * A route is visible when the user holds ANY of the listed permissions.
+ * Empty array = visible to every authenticated user.
+ * Backend enforces 403 on the actual endpoint regardless — this is UI convenience, not security.
+ *
+ * For pages that call multiple permissioned endpoints (e.g. /admin = rules + jurisdictions
+ * + analytics), we use the most permissive gate (any-of). Individual sections within those
+ * pages degrade gracefully via RTK Query isError when a specific permission is absent.
  */
-const ROLE_NAV_MAP: Record<string, string[]> = {
-  "/dashboard": ["SYSTEM_ADMIN", "COMPLIANCE_OFFICER", "SENIOR_ANALYST", "ANALYST", "AUDITOR", "ML_ENGINEER", "OPERATIONS"],
-  "/dashboard/alerts": ["SYSTEM_ADMIN", "COMPLIANCE_OFFICER", "SENIOR_ANALYST", "ANALYST"],
-  "/dashboard/cases": ["SYSTEM_ADMIN", "COMPLIANCE_OFFICER", "SENIOR_ANALYST", "ANALYST"],
-  "/dashboard/transactions": ["SYSTEM_ADMIN", "COMPLIANCE_OFFICER", "SENIOR_ANALYST", "ANALYST", "AUDITOR"],
-  "/dashboard/customers": ["SYSTEM_ADMIN", "COMPLIANCE_OFFICER", "SENIOR_ANALYST", "ANALYST", "AUDITOR"],
-  "/dashboard/str": ["SYSTEM_ADMIN", "COMPLIANCE_OFFICER", "SENIOR_ANALYST"],
-  "/dashboard/ctr": ["SYSTEM_ADMIN", "COMPLIANCE_OFFICER"],
-  "/dashboard/approvals": ["SYSTEM_ADMIN", "COMPLIANCE_OFFICER"],
-  "/dashboard/reports": ["SYSTEM_ADMIN", "COMPLIANCE_OFFICER", "SENIOR_ANALYST", "ML_ENGINEER", "AUDITOR"],
-  "/dashboard/watchlists": ["SYSTEM_ADMIN", "COMPLIANCE_OFFICER"],
-  "/dashboard/sanctions": ["SYSTEM_ADMIN", "COMPLIANCE_OFFICER", "SENIOR_ANALYST", "ANALYST"],
-  "/dashboard/rules": ["SYSTEM_ADMIN", "ML_ENGINEER", "COMPLIANCE_OFFICER", "AUDITOR"],
-  "/dashboard/shadow": ["SYSTEM_ADMIN", "ML_ENGINEER", "COMPLIANCE_OFFICER"],
-  "/dashboard/models": ["SYSTEM_ADMIN", "ML_ENGINEER"],
-  "/dashboard/drift": ["SYSTEM_ADMIN", "ML_ENGINEER"],
-  "/dashboard/audit": ["SYSTEM_ADMIN", "AUDITOR", "COMPLIANCE_OFFICER"],
-  "/dashboard/users": ["SYSTEM_ADMIN"],
-  "/dashboard/admin": ["SYSTEM_ADMIN", "COMPLIANCE_OFFICER"],
-  "/dashboard/jurisdictions": ["SYSTEM_ADMIN"],
-  "/dashboard/health": ["SYSTEM_ADMIN", "OPERATIONS"],
-  "/dashboard/geo": ["SYSTEM_ADMIN", "COMPLIANCE_OFFICER", "SENIOR_ANALYST", "ML_ENGINEER", "AUDITOR"],
-  "/dashboard/settings": [], // visible to everyone
+const PERMISSION_NAV_MAP: Record<string, string[]> = {
+  "/dashboard":               [],                                                         // any authenticated user
+  "/dashboard/alerts":        ["view_cases"],
+  "/dashboard/cases":         ["view_cases"],
+  "/dashboard/transactions":  ["view_cases", "access_audit_trail"],
+  "/dashboard/customers":     ["view_cases", "access_audit_trail"],
+  "/dashboard/str":           ["file_str"],
+  "/dashboard/ctr":           ["approve_action", "configure_thresholds"],
+  "/dashboard/approvals":     ["approve_action"],
+  "/dashboard/reports":       ["view_analytics"],
+  "/dashboard/geo":           ["view_analytics"],
+  "/dashboard/watchlists":    ["manage_sanctions_lists"],
+  "/dashboard/sanctions":     ["manage_sanctions_lists", "view_cases"],
+  "/dashboard/rules":         ["view_rules"],
+  "/dashboard/shadow":        ["view_shadow_stats"],
+  "/dashboard/models":        ["view_models"],
+  "/dashboard/drift":         ["view_drift"],
+  "/dashboard/audit":         ["view_audit_trail", "access_audit_trail"],
+  "/dashboard/users":         ["view_users"],
+  "/dashboard/admin":         ["create_rule", "configure_thresholds", "view_analytics"],  // any-of
+  "/dashboard/jurisdictions": ["configure_thresholds"],
+  "/dashboard/health":        ["manage_api_keys"],
+  "/dashboard/settings":      [],                                                         // any authenticated user
 };
 
-export function filterNavByRoles(items: NavItem[], roles: string[]): NavItem[] {
+export function filterNavByPermissions(items: NavItem[], permissions: string[]): NavItem[] {
   return items.filter((item) => {
-    const allowed = ROLE_NAV_MAP[item.href];
-    if (!allowed) return true; // unmapped routes default to visible
-    if (allowed.length === 0) return true; // explicit "everyone"
-    return roles.some((r) => allowed.includes(r));
+    const required = PERMISSION_NAV_MAP[item.href];
+    if (!required) return true;           // unmapped routes default to visible
+    if (required.length === 0) return true; // explicit "everyone"
+    return required.some((p) => permissions.includes(p));
   });
+}
+
+/** @deprecated Use filterNavByPermissions. Kept for any external callers during migration. */
+export function filterNavByRoles(items: NavItem[], roles: string[]): NavItem[] {
+  return items;
 }
 
 function NavSection({
@@ -160,7 +170,7 @@ function NavSection({
 function SidebarContent({ onNav }: { onNav?: () => void }) {
   const pathname = usePathname();
   const dispatch = useAppDispatch();
-  const { roles, jurisdictionCode, email } = useAppSelector((s) => s.auth);
+  const { permissions, jurisdictionCode, email } = useAppSelector((s) => s.auth);
 
   return (
     <>
@@ -178,25 +188,25 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
       <nav className="flex-1 px-3 py-0 space-y-0.5 overflow-y-auto">
         <NavSection
           label="Monitor"
-          items={filterNavByRoles(monitorNav, roles)}
+          items={filterNavByPermissions(monitorNav, permissions)}
           pathname={pathname}
           onNav={onNav}
         />
         <NavSection
           label="Compliance"
-          items={filterNavByRoles(complianceNav, roles)}
+          items={filterNavByPermissions(complianceNav, permissions)}
           pathname={pathname}
           onNav={onNav}
         />
         <NavSection
           label="Rule & ML Ops"
-          items={filterNavByRoles(ruleOpsNav, roles)}
+          items={filterNavByPermissions(ruleOpsNav, permissions)}
           pathname={pathname}
           onNav={onNav}
         />
         <NavSection
           label="Admin"
-          items={filterNavByRoles(adminNav, roles)}
+          items={filterNavByPermissions(adminNav, permissions)}
           pathname={pathname}
           onNav={onNav}
         />

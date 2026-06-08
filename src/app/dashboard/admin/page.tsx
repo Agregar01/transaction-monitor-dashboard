@@ -14,11 +14,13 @@ import { SkeletonTable } from "@/components/Skeleton";
 import { showToast } from "@/components/Toast";
 import { errorMessage } from "@/lib/errors";
 import type { Rule } from "@/types/api";
+import { useAppSelector } from "@/redux/store";
 import {
   Cog6ToothIcon,
   ShieldCheckIcon,
   GlobeAltIcon,
   ChartBarIcon,
+  LockClosedIcon,
 } from "@heroicons/react/24/outline";
 
 type AdminTab = "rules" | "jurisdictions" | "system";
@@ -139,14 +141,33 @@ function RuleRow({ rule }: { rule: Rule }) {
   );
 }
 
+function PermissionDenied({ section }: { section: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 text-center gap-3">
+      <LockClosedIcon className="h-8 w-8 text-gray-300 dark:text-navy-500" />
+      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+        You don&apos;t have permission to view {section}.
+      </p>
+      <p className="text-xs text-gray-400 dark:text-navy-400">
+        Contact your system administrator to request access.
+      </p>
+    </div>
+  );
+}
+
 export default function AdminPage() {
   const [tab, setTab] = useState<AdminTab>("rules");
   const [categoryFilter, setCategoryFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
 
-  const { data: rules, isLoading: rulesLoading } = useListRulesQuery({});
-  const { data: jurisdictions, isLoading: juriLoading } = useListJurisdictionsQuery();
-  const { data: analytics } = useGetAnalyticsSummaryQuery({ period_days: 90 });
+  const { permissions } = useAppSelector((s) => s.auth);
+  const canManageRules = permissions.includes("create_rule") || permissions.includes("modify_rule") || permissions.includes("view_rules");
+  const canManageJurisdictions = permissions.includes("configure_thresholds");
+  const canViewAnalytics = permissions.includes("view_analytics");
+
+  const { data: rules, isLoading: rulesLoading, isError: rulesError } = useListRulesQuery({}, { skip: !canManageRules });
+  const { data: jurisdictions, isLoading: juriLoading, isError: juriError } = useListJurisdictionsQuery(undefined, { skip: !canManageJurisdictions });
+  const { data: analytics } = useGetAnalyticsSummaryQuery({ period_days: 90 }, { skip: !canViewAnalytics });
 
   const filteredRules = (rules ?? []).filter((r) => {
     if (categoryFilter !== "ALL" && r.rule_category !== categoryFilter) return false;
@@ -201,7 +222,9 @@ export default function AdminPage() {
       </div>
 
       {/* ── Rule Config tab ─────────────────────────────────────────────────── */}
-      {tab === "rules" && (
+      {tab === "rules" && (!canManageRules || rulesError ? (
+        <PermissionDenied section="rule configuration" />
+      ) : (
         <div className="space-y-4">
           {/* Filters */}
           <div className="flex gap-3 flex-wrap items-center">
@@ -270,10 +293,12 @@ export default function AdminPage() {
             .
           </p>
         </div>
-      )}
+      ))}
 
       {/* ── Jurisdiction SLA tab ─────────────────────────────────────────────── */}
-      {tab === "jurisdictions" && (
+      {tab === "jurisdictions" && (!canManageJurisdictions || juriError ? (
+        <PermissionDenied section="jurisdiction settings" />
+      ) : (
         <div className="space-y-4">
           <p className="text-sm text-gray-500 dark:text-gray-400">
             Regulatory thresholds and STR deadlines per jurisdiction. Edits require four-eyes approval.
@@ -341,7 +366,7 @@ export default function AdminPage() {
             </div>
           )}
         </div>
-      )}
+      ))}
 
       {/* ── System tab ────────────────────────────────────────────────────────── */}
       {tab === "system" && (
