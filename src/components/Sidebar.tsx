@@ -33,6 +33,7 @@ import {
   Bars3Icon,
   XMarkIcon,
   GlobeAltIcon,
+  FingerPrintIcon,
 } from "@heroicons/react/24/outline";
 
 type NavItem = {
@@ -70,6 +71,7 @@ const adminNav: NavItem[] = [
   { name: "Admin Config", href: "/dashboard/admin", icon: AdjustmentsHorizontalIcon },
   { name: "Users & Roles", href: "/dashboard/users", icon: UserGroupIcon },
   { name: "Jurisdictions", href: "/dashboard/jurisdictions", icon: BuildingLibraryIcon },
+  { name: "Data Privacy", href: "/dashboard/privacy", icon: FingerPrintIcon },
   { name: "Audit Trail", href: "/dashboard/audit", icon: ClipboardDocumentListIcon },
   { name: "System Health", href: "/dashboard/health", icon: ServerIcon },
   { name: "Settings", href: "/dashboard/settings", icon: Cog6ToothIcon },
@@ -103,6 +105,7 @@ const PERMISSION_NAV_MAP: Record<string, string[]> = {
   "/dashboard/models":        ["view_models"],
   "/dashboard/drift":         ["view_drift"],
   "/dashboard/audit":         ["view_audit_trail", "access_audit_trail"],
+  "/dashboard/privacy":       ["view_dsar", "manage_dsar", "erase_pii"],
   "/dashboard/users":         ["view_users"],
   "/dashboard/admin":         ["create_rule", "configure_thresholds", "view_analytics"],  // any-of
   "/dashboard/jurisdictions": ["configure_thresholds"],
