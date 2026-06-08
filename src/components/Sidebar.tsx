@@ -97,7 +97,7 @@ const PERMISSION_NAV_MAP: Record<string, string[]> = {
   "/dashboard/reports":       ["view_analytics"],
   "/dashboard/geo":           ["view_analytics"],
   "/dashboard/watchlists":    ["manage_sanctions_lists"],
-  "/dashboard/sanctions":     ["manage_sanctions_lists", "view_cases"],
+  "/dashboard/sanctions":     ["manage_sanctions_lists"],
   "/dashboard/rules":         ["view_rules"],
   "/dashboard/shadow":        ["view_shadow_stats"],
   "/dashboard/models":        ["view_models"],
@@ -117,11 +117,6 @@ export function filterNavByPermissions(items: NavItem[], permissions: string[]):
     if (required.length === 0) return true; // explicit "everyone"
     return required.some((p) => permissions.includes(p));
   });
-}
-
-/** @deprecated Use filterNavByPermissions. Kept for any external callers during migration. */
-export function filterNavByRoles(items: NavItem[], roles: string[]): NavItem[] {
-  return items;
 }
 
 function NavSection({
