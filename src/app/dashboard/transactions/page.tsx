@@ -8,7 +8,7 @@ import { API_V1 } from "@/config/api";
 import { SkeletonTable } from "@/components/Skeleton";
 import RiskBadge from "@/components/RiskBadge";
 import DonutCard from "@/components/DonutCard";
-import TriageFunnel from "@/components/TriageFunnel";
+import RiskComposition from "@/components/RiskComposition";
 import Pagination from "@/components/Pagination";
 import { riskBand, type RiskBand, TRANSACTION_TYPES, CHANNELS } from "@/config/constants";
 
@@ -146,7 +146,7 @@ export default function TransactionsListPage() {
             series={channelBreakdown.series}
             colors={channelBreakdown.colors}
           />
-          <TriageFunnel
+          <RiskComposition
             title="By risk band"
             subtitle={`Recent ${sampleSize} transactions`}
             bands={riskBreakdown.bands}

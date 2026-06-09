@@ -10,7 +10,7 @@ import {
 } from "@/redux/slices/api/analyticsApi";
 import { SkeletonStats } from "@/components/Skeleton";
 import StatCard from "@/components/StatCard";
-import TriageFunnel from "@/components/TriageFunnel";
+import RiskComposition from "@/components/RiskComposition";
 import { useAppSelector } from "@/redux/store";
 import { currencyForJurisdiction, formatMoney } from "@/lib/currency";
 import { type RiskBand } from "@/config/constants";
@@ -137,6 +137,7 @@ export default function ReportsPage() {
             subtitle={`last ${period} days`}
             icon={<BellAlertIcon className="h-8 w-8" />}
             color="text-amber-600"
+            trend={(data?.alert_trends ?? []).map((r) => r.total)}
           />
           <StatCard
             title="FP Rate"
@@ -203,7 +204,7 @@ export default function ReportsPage() {
           )}
         </div>
 
-        <TriageFunnel
+        <RiskComposition
           title="Risk distribution"
           subtitle={`all transactions by decision band · last ${period} days`}
           bands={riskDist.bands}
