@@ -327,28 +327,28 @@ export default function DashboardOverviewPage() {
   }, [analytics, alertsLast14d]);
 
   // Persona-aware "needs action" band — only the items that person acts on.
-  const hero = useMemo<{ items: ActionItem[]; cta: { label: string; href: string }; clear?: string }>(() => {
+  const hero = useMemo<{ items: ActionItem[]; clear?: string }>(() => {
     const immediate: ActionItem = {
       count: immediateToday?.total ?? 0,
       label: "IMMEDIATE alerts",
       sublabel: "untriaged today",
+      href: "/dashboard/alerts?priority=IMMEDIATE",
     };
     const approvals: ActionItem = {
       count: pendingApprovals?.length ?? 0,
       label: "approvals",
       sublabel: "waiting on you",
+      href: "/dashboard/approvals",
     };
     const strDrafts: ActionItem = {
       count: draftSTR?.total ?? 0,
       label: "STR drafts",
       sublabel: "awaiting filing",
+      href: "/dashboard/str?status=DRAFT",
     };
     switch (persona) {
       case "compliance":
-        return {
-          items: [approvals, strDrafts, immediate],
-          cta: { label: "Open approvals", href: "/dashboard/approvals" },
-        };
+        return { items: [approvals, strDrafts, immediate] };
       case "ml":
         return {
           items: [
@@ -356,22 +356,21 @@ export default function DashboardOverviewPage() {
               count: latestDrift?.critical_features_drifted ?? 0,
               label: "critical features",
               sublabel: "drifted",
+              href: "/dashboard/drift",
             },
           ],
-          cta: { label: "View drift", href: "/dashboard/drift" },
           clear: "No critical drift — models stable.",
         };
       case "analyst":
         return {
-          items: [immediate, { count: openAlerts?.total ?? 0, label: "open alerts", sublabel: "in queue" }],
-          cta: { label: "Open triage queue", href: "/dashboard/alerts?status=OPEN" },
+          items: [
+            immediate,
+            { count: openAlerts?.total ?? 0, label: "open alerts", sublabel: "in queue", href: "/dashboard/alerts?status=OPEN" },
+          ],
         };
       case "admin":
       default:
-        return {
-          items: [immediate, approvals],
-          cta: { label: "Open alerts", href: "/dashboard/alerts?priority=IMMEDIATE" },
-        };
+        return { items: [immediate, approvals] };
     }
   }, [persona, immediateToday, pendingApprovals, draftSTR, openAlerts, latestDrift]);
 
@@ -389,7 +388,7 @@ export default function DashboardOverviewPage() {
         </p>
       </div>
 
-      {!isLoading && <HeroActionBand items={hero.items} cta={hero.cta} clearMessage={hero.clear} />}
+      {!isLoading && <HeroActionBand items={hero.items} clearMessage={hero.clear} />}
 
       {isLoading ? (
         <SkeletonStats count={4} />
