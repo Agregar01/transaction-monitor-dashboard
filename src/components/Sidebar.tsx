@@ -193,9 +193,17 @@ function NavSection({
 function SidebarContent({ onNav }: { onNav?: () => void }) {
   const pathname = usePathname();
   const dispatch = useAppDispatch();
-  const { permissions, jurisdictionCode, email, features } = useAppSelector((s) => s.auth);
+  const { permissions, roles, jurisdictionCode, email, features } = useAppSelector((s) => s.auth);
+  // Plain analysts get a scoped view: population-level analytics (Reports, Geo)
+  // are hidden for them, while SENIOR_ANALYST+ keep them.
+  const SEE_ALL_ROLES = ["SYSTEM_ADMIN", "SENIOR_ANALYST", "COMPLIANCE_OFFICER"];
+  const scopedAnalyst =
+    roles.includes("ANALYST") && !roles.some((r) => SEE_ALL_ROLES.includes(r));
+  const ANALYST_HIDDEN = ["/dashboard/reports", "/dashboard/geo"];
   const navFor = (items: NavItem[]) =>
-    filterNavByFeatures(filterNavByPermissions(items, permissions), features);
+    filterNavByFeatures(filterNavByPermissions(items, permissions), features).filter(
+      (item) => !(scopedAnalyst && ANALYST_HIDDEN.includes(item.href)),
+    );
 
   return (
     <>
