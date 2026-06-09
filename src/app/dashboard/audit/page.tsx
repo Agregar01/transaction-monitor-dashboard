@@ -86,24 +86,24 @@ function Row({ entry }: { entry: AuditEntry }) {
         aria-label="Toggle change detail"
         className="hover:bg-gray-50 dark:hover:bg-navy-600 cursor-pointer"
       >
-        <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
+        <td className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">
           {new Date(entry.created_at).toLocaleString()}
         </td>
-        <td className="px-4 py-3">
+        <td className="px-4 py-2">
           <ActionBadge action={entry.action} />
         </td>
-        <td className="px-4 py-3 text-xs">{entry.resource_type}</td>
-        <td className="px-4 py-3 font-mono text-xs">
+        <td className="px-4 py-2 text-xs">{entry.resource_type}</td>
+        <td className="px-4 py-2 font-mono text-xs">
           {entry.resource_id ? `${entry.resource_id.slice(0, 8)}…` : "—"}
         </td>
-        <td className="px-4 py-3 text-xs font-mono">
+        <td className="px-4 py-2 text-xs font-mono">
           {entry.changed_by ? `${entry.changed_by.slice(0, 8)}…` : "—"}
         </td>
-        <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">{entry.notes ?? "—"}</td>
+        <td className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">{entry.notes ?? "—"}</td>
       </tr>
       {open && (
         <tr className="bg-gray-50 dark:bg-navy-800">
-          <td colSpan={6} className="px-4 py-3">
+          <td colSpan={6} className="px-4 py-2">
             <DiffPanel before={entry.previous_value} after={entry.new_value} />
           </td>
         </tr>
@@ -197,12 +197,12 @@ export default function AuditPage() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 dark:bg-navy-800 text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">
               <tr>
-                <th className="px-4 py-3 text-left">Time</th>
-                <th className="px-4 py-3 text-left">Action</th>
-                <th className="px-4 py-3 text-left">Resource</th>
-                <th className="px-4 py-3 text-left">ID</th>
-                <th className="px-4 py-3 text-left">By</th>
-                <th className="px-4 py-3 text-left">Notes</th>
+                <th className="px-4 py-2 text-left">Time</th>
+                <th className="px-4 py-2 text-left">Action</th>
+                <th className="px-4 py-2 text-left">Resource</th>
+                <th className="px-4 py-2 text-left">ID</th>
+                <th className="px-4 py-2 text-left">By</th>
+                <th className="px-4 py-2 text-left">Notes</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-navy-600">

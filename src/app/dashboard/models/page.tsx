@@ -67,13 +67,13 @@ export default function ModelsPage() {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 dark:bg-navy-800 text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">
                   <tr>
-                    <th className="px-4 py-3 text-left">Version</th>
-                    <th className="px-4 py-3 text-left">Status</th>
-                    <th className="px-4 py-3 text-right">F1</th>
-                    <th className="px-4 py-3 text-right">Precision</th>
-                    <th className="px-4 py-3 text-right">Recall</th>
-                    <th className="px-4 py-3 text-right">Samples</th>
-                    <th className="px-4 py-3 text-left">Trained</th>
+                    <th className="px-4 py-2 text-left">Version</th>
+                    <th className="px-4 py-2 text-left">Status</th>
+                    <th className="px-4 py-2 text-right">F1</th>
+                    <th className="px-4 py-2 text-right">Precision</th>
+                    <th className="px-4 py-2 text-right">Recall</th>
+                    <th className="px-4 py-2 text-right">Samples</th>
+                    <th className="px-4 py-2 text-left">Trained</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-navy-600">
@@ -88,23 +88,23 @@ export default function ModelsPage() {
                           : ""
                       }
                     >
-                      <td className="px-4 py-3 font-mono text-xs">v{m.version}</td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-2 font-mono text-xs">v{m.version}</td>
+                      <td className="px-4 py-2">
                         <ActionBadge action={m.status ?? "UNKNOWN"} />
                       </td>
-                      <td className="px-4 py-3 text-right font-mono text-xs">
+                      <td className="px-4 py-2 text-right font-mono text-xs">
                         <MetricCell metrics={m.metrics} key_="f1_score" />
                       </td>
-                      <td className="px-4 py-3 text-right font-mono text-xs">
+                      <td className="px-4 py-2 text-right font-mono text-xs">
                         <MetricCell metrics={m.metrics} key_="precision" />
                       </td>
-                      <td className="px-4 py-3 text-right font-mono text-xs">
+                      <td className="px-4 py-2 text-right font-mono text-xs">
                         <MetricCell metrics={m.metrics} key_="recall" />
                       </td>
-                      <td className="px-4 py-3 text-right font-mono text-xs">
+                      <td className="px-4 py-2 text-right font-mono text-xs">
                         {m.sample_count?.toLocaleString() ?? "—"}
                       </td>
-                      <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
+                      <td className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">
                         {m.trained_at ? new Date(m.trained_at).toLocaleDateString() : "—"}
                       </td>
                     </tr>

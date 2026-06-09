@@ -259,26 +259,26 @@ export default function UsersPage() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 dark:bg-navy-800 text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">
               <tr>
-                <th className="px-4 py-3 text-left">Email</th>
-                <th className="px-4 py-3 text-left">Full name</th>
-                <th className="px-4 py-3 text-left">Active</th>
-                <th className="px-4 py-3 text-left">Roles</th>
+                <th className="px-4 py-2 text-left">Email</th>
+                <th className="px-4 py-2 text-left">Full name</th>
+                <th className="px-4 py-2 text-left">Active</th>
+                <th className="px-4 py-2 text-left">Roles</th>
                 <th />
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-navy-600">
               {data.map((u) => (
                 <tr key={u.user_id} className="hover:bg-gray-50 dark:hover:bg-navy-600">
-                  <td className="px-4 py-3 font-mono text-xs">{u.email}</td>
-                  <td className="px-4 py-3">{u.full_name ?? "—"}</td>
-                  <td className="px-4 py-3 text-xs">
+                  <td className="px-4 py-2 font-mono text-xs">{u.email}</td>
+                  <td className="px-4 py-2">{u.full_name ?? "—"}</td>
+                  <td className="px-4 py-2 text-xs">
                     {u.active ? (
                       <span className="text-green-600">● active</span>
                     ) : (
                       <span className="text-gray-400">○ inactive</span>
                     )}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-2">
                     <div className="flex flex-wrap gap-1">
                       {u.roles.length === 0 ? (
                         <span className="text-xs text-gray-400">—</span>
@@ -294,7 +294,7 @@ export default function UsersPage() {
                       )}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-4 py-2 text-right">
                     <button
                       onClick={() => setEditing(u)}
                       className="text-xs font-medium text-primary hover:underline"

@@ -203,23 +203,23 @@ function AlertsListInner() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 dark:bg-navy-800 text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">
               <tr>
-                <th className="px-4 py-3 text-left">Priority</th>
-                <th className="px-4 py-3 text-left">Alert ID</th>
-                <th className="px-4 py-3 text-left">Customer</th>
-                <th className="px-4 py-3 text-left">Risk</th>
-                <th className="px-4 py-3 text-right">Rules</th>
-                <th className="px-4 py-3 text-left">Status</th>
-                <th className="px-4 py-3 text-left">Assigned</th>
-                <th className="px-4 py-3 text-left">Time</th>
+                <th className="px-4 py-2 text-left">Priority</th>
+                <th className="px-4 py-2 text-left">Alert ID</th>
+                <th className="px-4 py-2 text-left">Customer</th>
+                <th className="px-4 py-2 text-left">Risk</th>
+                <th className="px-4 py-2 text-right">Rules</th>
+                <th className="px-4 py-2 text-left">Status</th>
+                <th className="px-4 py-2 text-left">Assigned</th>
+                <th className="px-4 py-2 text-left">Time</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-navy-600">
               {data.items.map((a) => (
                 <tr key={a.alert_id} className="hover:bg-gray-50 dark:hover:bg-navy-600 transition-colors">
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-2">
                     <ActionBadge action={a.priority} />
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-2">
                     <Link
                       href={`/dashboard/alerts/${a.alert_id}`}
                       className="font-mono text-xs text-primary hover:underline"
@@ -227,7 +227,7 @@ function AlertsListInner() {
                       {a.alert_id.slice(0, 8)}…
                     </Link>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-2">
                     <Link
                       href={`/dashboard/customers/${a.customer_id}`}
                       className="font-mono text-xs text-gray-700 dark:text-gray-300 hover:underline"
@@ -235,19 +235,19 @@ function AlertsListInner() {
                       {a.customer_id.slice(0, 10)}…
                     </Link>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-2">
                     <RiskBadge score={a.risk_score} />
                   </td>
-                  <td className="px-4 py-3 text-right text-xs font-mono text-gray-600 dark:text-gray-300">
+                  <td className="px-4 py-2 text-right text-xs font-mono text-gray-600 dark:text-gray-300">
                     {a.triggered_rules_count}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-2">
                     <ActionBadge action={a.status} />
                   </td>
-                  <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-300">
+                  <td className="px-4 py-2 text-xs text-gray-600 dark:text-gray-300">
                     {a.assigned_to ?? "—"}
                   </td>
-                  <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
+                  <td className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">
                     {new Date(a.alert_timestamp).toLocaleString()}
                   </td>
                 </tr>

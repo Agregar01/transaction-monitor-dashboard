@@ -92,24 +92,24 @@ export default function CTRListPage() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 dark:bg-navy-800 text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">
               <tr>
-                <th className="px-4 py-3 text-left">ID</th>
-                <th className="px-4 py-3 text-left">Transaction</th>
-                <th className="px-4 py-3 text-left">Amount</th>
-                <th className="px-4 py-3 text-left">Type</th>
-                <th className="px-4 py-3 text-left">Status</th>
-                <th className="px-4 py-3 text-left">Filed</th>
-                <th className="px-4 py-3 text-left">Actions</th>
+                <th className="px-4 py-2 text-left">ID</th>
+                <th className="px-4 py-2 text-left">Transaction</th>
+                <th className="px-4 py-2 text-left">Amount</th>
+                <th className="px-4 py-2 text-left">Type</th>
+                <th className="px-4 py-2 text-left">Status</th>
+                <th className="px-4 py-2 text-left">Filed</th>
+                <th className="px-4 py-2 text-left">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-navy-600">
               {data.items.map((r) => (
                 <tr key={r.id} className="hover:bg-gray-50 dark:hover:bg-navy-600 transition-colors">
-                  <td className="px-4 py-3 font-mono text-xs">{r.id.slice(0, 8)}…</td>
-                  <td className="px-4 py-3 font-mono text-xs">{r.transaction_id.slice(0, 10)}…</td>
-                  <td className="px-4 py-3 font-mono text-xs">
+                  <td className="px-4 py-2 font-mono text-xs">{r.id.slice(0, 8)}…</td>
+                  <td className="px-4 py-2 font-mono text-xs">{r.transaction_id.slice(0, 10)}…</td>
+                  <td className="px-4 py-2 font-mono text-xs">
                     {r.amount.toLocaleString()} {r.currency}
                   </td>
-                  <td className="px-4 py-3 text-xs">
+                  <td className="px-4 py-2 text-xs">
                     {r.transaction_type}
                     {r.is_cash && (
                       <span className="ml-2 text-[10px] uppercase font-semibold text-amber-600">
@@ -117,13 +117,13 @@ export default function CTRListPage() {
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-2">
                     <ActionBadge action={r.status} />
                   </td>
-                  <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
+                  <td className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">
                     {r.filed_at ? new Date(r.filed_at).toLocaleDateString() : "—"}
                   </td>
-                  <td className="px-4 py-3 text-xs space-x-2">
+                  <td className="px-4 py-2 text-xs space-x-2">
                     {r.status === "FILED" && (
                       <a
                         href={ctrXmlUrl(r.id)}

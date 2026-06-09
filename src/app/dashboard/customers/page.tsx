@@ -161,19 +161,19 @@ export default function CustomersListPage() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 dark:bg-navy-800 text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">
               <tr>
-                <th className="px-4 py-3 text-left">Customer ID</th>
-                <th className="px-4 py-3 text-left">Type</th>
-                <th className="px-4 py-3 text-left">Risk</th>
-                <th className="px-4 py-3 text-left">Score</th>
-                <th className="px-4 py-3 text-left">Country</th>
-                <th className="px-4 py-3 text-left">PEP</th>
-                <th className="px-4 py-3 text-left">Created</th>
+                <th className="px-4 py-2 text-left">Customer ID</th>
+                <th className="px-4 py-2 text-left">Type</th>
+                <th className="px-4 py-2 text-left">Risk</th>
+                <th className="px-4 py-2 text-left">Score</th>
+                <th className="px-4 py-2 text-left">Country</th>
+                <th className="px-4 py-2 text-left">PEP</th>
+                <th className="px-4 py-2 text-left">Created</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-navy-600">
               {data.items.map((c) => (
                 <tr key={c.customer_id} className="hover:bg-gray-50 dark:hover:bg-navy-600 transition-colors">
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-2">
                     <Link
                       href={`/dashboard/customers/${c.customer_id}`}
                       className="font-mono text-xs text-primary hover:underline"
@@ -181,20 +181,20 @@ export default function CustomersListPage() {
                       {c.customer_id}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-xs">{c.customer_type}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-2 text-xs">{c.customer_type}</td>
+                  <td className="px-4 py-2">
                     <ActionBadge action={c.risk_level} />
                   </td>
-                  <td className="px-4 py-3 font-mono text-xs">{c.risk_score.toFixed(1)}</td>
-                  <td className="px-4 py-3 text-xs">{c.country_code ?? "—"}</td>
-                  <td className="px-4 py-3 text-xs">
+                  <td className="px-4 py-2 font-mono text-xs">{c.risk_score.toFixed(1)}</td>
+                  <td className="px-4 py-2 text-xs">{c.country_code ?? "—"}</td>
+                  <td className="px-4 py-2 text-xs">
                     {c.is_pep ? (
                       <span className="text-amber-600 font-semibold">PEP</span>
                     ) : (
                       "—"
                     )}
                   </td>
-                  <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
+                  <td className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">
                     {new Date(c.created_at).toLocaleDateString()}
                   </td>
                 </tr>

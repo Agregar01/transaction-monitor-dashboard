@@ -91,18 +91,18 @@ function STRListInner() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 dark:bg-navy-800 text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">
               <tr>
-                <th className="px-4 py-3 text-left">Subject</th>
-                <th className="px-4 py-3 text-left">Activity</th>
-                <th className="px-4 py-3 text-left">Amount</th>
-                <th className="px-4 py-3 text-left">Status</th>
-                <th className="px-4 py-3 text-left">Filed</th>
-                <th className="px-4 py-3 text-left">Filing ref</th>
+                <th className="px-4 py-2 text-left">Subject</th>
+                <th className="px-4 py-2 text-left">Activity</th>
+                <th className="px-4 py-2 text-left">Amount</th>
+                <th className="px-4 py-2 text-left">Status</th>
+                <th className="px-4 py-2 text-left">Filed</th>
+                <th className="px-4 py-2 text-left">Filing ref</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-navy-600">
               {data.items.map((r) => (
                 <tr key={r.id} className="hover:bg-gray-50 dark:hover:bg-navy-600 transition-colors">
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-2">
                     <Link
                       href={`/dashboard/str/${r.id}`}
                       className="font-medium text-primary hover:underline"
@@ -110,19 +110,19 @@ function STRListInner() {
                       {r.subject_name ?? "—"}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-xs">{r.suspicious_activity_type ?? "—"}</td>
-                  <td className="px-4 py-3 font-mono text-xs">
+                  <td className="px-4 py-2 text-xs">{r.suspicious_activity_type ?? "—"}</td>
+                  <td className="px-4 py-2 font-mono text-xs">
                     {r.total_amount == null
                       ? "—"
                       : `${Number(r.total_amount).toLocaleString()} ${r.currency ?? ""}`}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-2">
                     <ActionBadge action={r.status} />
                   </td>
-                  <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
+                  <td className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">
                     {r.filed_at ? new Date(r.filed_at).toLocaleDateString() : "—"}
                   </td>
-                  <td className="px-4 py-3 font-mono text-xs">{r.filing_reference ?? "—"}</td>
+                  <td className="px-4 py-2 font-mono text-xs">{r.filing_reference ?? "—"}</td>
                 </tr>
               ))}
             </tbody>

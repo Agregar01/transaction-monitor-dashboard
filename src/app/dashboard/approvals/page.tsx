@@ -115,33 +115,33 @@ export default function ApprovalsPage() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 dark:bg-navy-800 text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">
               <tr>
-                <th className="px-4 py-3 text-left">Action</th>
-                <th className="px-4 py-3 text-left">Requested by</th>
-                <th className="px-4 py-3 text-left">Created</th>
-                <th className="px-4 py-3 text-left">Expires in</th>
-                <th className="px-4 py-3 text-left">Reviewer</th>
+                <th className="px-4 py-2 text-left">Action</th>
+                <th className="px-4 py-2 text-left">Requested by</th>
+                <th className="px-4 py-2 text-left">Created</th>
+                <th className="px-4 py-2 text-left">Expires in</th>
+                <th className="px-4 py-2 text-left">Reviewer</th>
                 <th />
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-navy-600">
               {data.map((a) => (
                 <tr key={a.id} className="hover:bg-gray-50 dark:hover:bg-navy-600 transition-colors">
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-2">
                     <ActionBadge action={a.action_type.replace(/_/g, " ")} />
                   </td>
-                  <td className="px-4 py-3 text-xs text-gray-700 dark:text-gray-300 font-mono">
+                  <td className="px-4 py-2 text-xs text-gray-700 dark:text-gray-300 font-mono">
                     {a.requested_by ? `${a.requested_by.slice(0, 8)}…` : "—"}
                   </td>
-                  <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
+                  <td className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">
                     {new Date(a.created_at).toLocaleString()}
                   </td>
-                  <td className="px-4 py-3 text-xs text-gray-700 dark:text-gray-300">
+                  <td className="px-4 py-2 text-xs text-gray-700 dark:text-gray-300">
                     <Countdown to={a.expires_at} />
                   </td>
-                  <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 font-mono">
+                  <td className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400 font-mono">
                     {a.reviewed_by ? `${a.reviewed_by.slice(0, 8)}…` : "—"}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-2">
                     <button
                       onClick={() => setSelected(a)}
                       className="text-xs font-medium text-primary hover:underline"

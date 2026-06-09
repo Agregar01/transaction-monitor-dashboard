@@ -76,13 +76,13 @@ export default function DriftPage() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 dark:bg-navy-800 text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">
               <tr>
-                <th className="px-4 py-3 text-left">Date</th>
-                <th className="px-4 py-3 text-right">Features tested</th>
-                <th className="px-4 py-3 text-right">Drifted</th>
-                <th className="px-4 py-3 text-right">Critical</th>
-                <th className="px-4 py-3 text-left">Feature drift</th>
-                <th className="px-4 py-3 text-left">Prediction drift</th>
-                <th className="px-4 py-3 text-right">Samples</th>
+                <th className="px-4 py-2 text-left">Date</th>
+                <th className="px-4 py-2 text-right">Features tested</th>
+                <th className="px-4 py-2 text-right">Drifted</th>
+                <th className="px-4 py-2 text-right">Critical</th>
+                <th className="px-4 py-2 text-left">Feature drift</th>
+                <th className="px-4 py-2 text-left">Prediction drift</th>
+                <th className="px-4 py-2 text-right">Samples</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-navy-600">
@@ -97,19 +97,19 @@ export default function DriftPage() {
                       : ""
                   }
                 >
-                  <td className="px-4 py-3 text-xs font-mono">
+                  <td className="px-4 py-2 text-xs font-mono">
                     {d.report_date ?? "—"}
                   </td>
-                  <td className="px-4 py-3 text-right font-mono text-xs">
+                  <td className="px-4 py-2 text-right font-mono text-xs">
                     {d.features_tested ?? "—"}
                   </td>
-                  <td className="px-4 py-3 text-right font-mono text-xs">
+                  <td className="px-4 py-2 text-right font-mono text-xs">
                     {d.features_drifted ?? 0}
                   </td>
-                  <td className="px-4 py-3 text-right font-mono text-xs">
+                  <td className="px-4 py-2 text-right font-mono text-xs">
                     {d.critical_features_drifted ?? 0}
                   </td>
-                  <td className="px-4 py-3 text-xs">
+                  <td className="px-4 py-2 text-xs">
                     {d.skipped_insufficient_data ? (
                       <span className="text-gray-400">{d.skip_reason ?? "skipped"}</span>
                     ) : d.feature_drift_detected ? (
@@ -118,7 +118,7 @@ export default function DriftPage() {
                       <span className="text-green-600">stable</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-xs">
+                  <td className="px-4 py-2 text-xs">
                     {d.skipped_insufficient_data ? (
                       <span className="text-gray-400">—</span>
                     ) : d.prediction_drift_detected ? (
@@ -127,7 +127,7 @@ export default function DriftPage() {
                       <span className="text-green-600">stable</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-right font-mono text-xs">
+                  <td className="px-4 py-2 text-right font-mono text-xs">
                     {d.current_sample_count?.toLocaleString() ?? "—"}
                   </td>
                 </tr>

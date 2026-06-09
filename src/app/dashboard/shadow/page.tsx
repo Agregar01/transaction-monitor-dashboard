@@ -136,20 +136,20 @@ export default function ShadowStatsPage() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 dark:bg-navy-800 text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">
                 <tr>
-                  <th className="px-4 py-3 text-left">Rule</th>
-                  <th className="px-4 py-3 text-right">Legacy fires</th>
-                  <th className="px-4 py-3 text-right">EzRules fires</th>
-                  <th className="px-4 py-3 text-right">Δ</th>
+                  <th className="px-4 py-2 text-left">Rule</th>
+                  <th className="px-4 py-2 text-right">Legacy fires</th>
+                  <th className="px-4 py-2 text-right">EzRules fires</th>
+                  <th className="px-4 py-2 text-right">Δ</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-navy-600">
                 {data.per_rule_stats.map((d) => (
                   <tr key={d.rule_id} className="hover:bg-gray-50 dark:hover:bg-navy-600">
-                    <td className="px-4 py-3 font-mono text-xs">{d.rule_id}</td>
-                    <td className="px-4 py-3 text-right font-mono text-xs">{d.legacy_trigger_count}</td>
-                    <td className="px-4 py-3 text-right font-mono text-xs">{d.ez_trigger_count}</td>
+                    <td className="px-4 py-2 font-mono text-xs">{d.rule_id}</td>
+                    <td className="px-4 py-2 text-right font-mono text-xs">{d.legacy_trigger_count}</td>
+                    <td className="px-4 py-2 text-right font-mono text-xs">{d.ez_trigger_count}</td>
                     <td
-                      className={`px-4 py-3 text-right font-mono text-xs ${
+                      className={`px-4 py-2 text-right font-mono text-xs ${
                         Math.abs(d.delta) > 5
                           ? "text-red-600 font-semibold"
                           : Math.abs(d.delta) > 1

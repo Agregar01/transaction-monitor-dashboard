@@ -99,19 +99,19 @@ export default function RulesPage() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 dark:bg-navy-800 text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">
               <tr>
-                <th className="px-4 py-3 text-left">ID</th>
-                <th className="px-4 py-3 text-left">Name</th>
-                <th className="px-4 py-3 text-left">Category</th>
-                <th className="px-4 py-3 text-left">Severity</th>
-                <th className="px-4 py-3 text-left">Risk</th>
-                <th className="px-4 py-3 text-left">Version</th>
-                <th className="px-4 py-3 text-left">Enabled</th>
+                <th className="px-4 py-2 text-left">ID</th>
+                <th className="px-4 py-2 text-left">Name</th>
+                <th className="px-4 py-2 text-left">Category</th>
+                <th className="px-4 py-2 text-left">Severity</th>
+                <th className="px-4 py-2 text-left">Risk</th>
+                <th className="px-4 py-2 text-left">Version</th>
+                <th className="px-4 py-2 text-left">Enabled</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-navy-600">
               {data.map((r) => (
                 <tr key={r.rule_id} className="hover:bg-gray-50 dark:hover:bg-navy-600 transition-colors">
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-2">
                     <Link
                       href={`/dashboard/rules/${r.rule_id}`}
                       className="font-mono text-xs text-primary hover:underline"
@@ -119,14 +119,14 @@ export default function RulesPage() {
                       {r.rule_id}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-gray-900 dark:text-white">{r.rule_name}</td>
-                  <td className="px-4 py-3 text-xs">{r.rule_category}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-2 text-gray-900 dark:text-white">{r.rule_name}</td>
+                  <td className="px-4 py-2 text-xs">{r.rule_category}</td>
+                  <td className="px-4 py-2">
                     <ActionBadge action={r.severity} />
                   </td>
-                  <td className="px-4 py-3 font-mono text-xs">{r.risk_contribution}</td>
-                  <td className="px-4 py-3 text-xs">v{r.version}</td>
-                  <td className="px-4 py-3 text-xs">
+                  <td className="px-4 py-2 font-mono text-xs">{r.risk_contribution}</td>
+                  <td className="px-4 py-2 text-xs">v{r.version}</td>
+                  <td className="px-4 py-2 text-xs">
                     {r.enabled ? (
                       <span className="text-green-600">●</span>
                     ) : (

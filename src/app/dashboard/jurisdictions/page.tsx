@@ -75,39 +75,39 @@ export default function JurisdictionsPage() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 dark:bg-navy-800 text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">
               <tr>
-                <th className="px-4 py-3 text-left">Code</th>
-                <th className="px-4 py-3 text-left">Name</th>
-                <th className="px-4 py-3 text-right">CTR cash</th>
-                <th className="px-4 py-3 text-right">CTR non-cash</th>
-                <th className="px-4 py-3 text-left">Currency</th>
-                <th className="px-4 py-3 text-right">STR deadline</th>
-                <th className="px-4 py-3 text-left">Regulator</th>
-                <th className="px-4 py-3 text-left">Active</th>
+                <th className="px-4 py-2 text-left">Code</th>
+                <th className="px-4 py-2 text-left">Name</th>
+                <th className="px-4 py-2 text-right">CTR cash</th>
+                <th className="px-4 py-2 text-right">CTR non-cash</th>
+                <th className="px-4 py-2 text-left">Currency</th>
+                <th className="px-4 py-2 text-right">STR deadline</th>
+                <th className="px-4 py-2 text-left">Regulator</th>
+                <th className="px-4 py-2 text-left">Active</th>
                 <th />
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-navy-600">
               {data.map((j) => (
                 <tr key={j.code} className="hover:bg-gray-50 dark:hover:bg-navy-600">
-                  <td className="px-4 py-3 font-mono text-xs">{j.code}</td>
-                  <td className="px-4 py-3">{j.name}</td>
-                  <td className="px-4 py-3 text-right font-mono text-xs">
+                  <td className="px-4 py-2 font-mono text-xs">{j.code}</td>
+                  <td className="px-4 py-2">{j.name}</td>
+                  <td className="px-4 py-2 text-right font-mono text-xs">
                     {Number(j.ctr_threshold_cash).toLocaleString()}
                   </td>
-                  <td className="px-4 py-3 text-right font-mono text-xs">
+                  <td className="px-4 py-2 text-right font-mono text-xs">
                     {Number(j.ctr_threshold_non_cash).toLocaleString()}
                   </td>
-                  <td className="px-4 py-3 text-xs">{j.currency_code}</td>
-                  <td className="px-4 py-3 text-right text-xs">{j.str_deadline_hours}h</td>
-                  <td className="px-4 py-3 text-xs">{j.regulator_name}</td>
-                  <td className="px-4 py-3 text-xs">
+                  <td className="px-4 py-2 text-xs">{j.currency_code}</td>
+                  <td className="px-4 py-2 text-right text-xs">{j.str_deadline_hours}h</td>
+                  <td className="px-4 py-2 text-xs">{j.regulator_name}</td>
+                  <td className="px-4 py-2 text-xs">
                     {j.is_active ? (
                       <span className="text-green-600">●</span>
                     ) : (
                       <span className="text-gray-400">○</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-4 py-2 text-right">
                     <button
                       onClick={() => startEdit(j)}
                       className="text-xs font-medium text-primary hover:underline"

@@ -232,20 +232,20 @@ function CasesListInner() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 dark:bg-navy-800 text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">
               <tr>
-                <th className="px-4 py-3 text-left">ID</th>
-                <th className="px-4 py-3 text-left">Title</th>
-                <th className="px-4 py-3 text-left">Type</th>
-                <th className="px-4 py-3 text-left">Status</th>
-                <th className="px-4 py-3 text-left">Priority</th>
-                <th className="px-4 py-3 text-left">Assigned</th>
-                <th className="px-4 py-3 text-left">Due</th>
-                <th className="px-4 py-3 text-left">Created</th>
+                <th className="px-4 py-2 text-left">ID</th>
+                <th className="px-4 py-2 text-left">Title</th>
+                <th className="px-4 py-2 text-left">Type</th>
+                <th className="px-4 py-2 text-left">Status</th>
+                <th className="px-4 py-2 text-left">Priority</th>
+                <th className="px-4 py-2 text-left">Assigned</th>
+                <th className="px-4 py-2 text-left">Due</th>
+                <th className="px-4 py-2 text-left">Created</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-navy-600">
               {data.items.map((c) => (
                 <tr key={c.id} className="hover:bg-gray-50 dark:hover:bg-navy-600 transition-colors">
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-2">
                     <Link
                       href={`/dashboard/cases/${c.id}`}
                       className="font-mono text-xs text-primary hover:underline"
@@ -253,23 +253,23 @@ function CasesListInner() {
                       {c.id.slice(0, 8)}…
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-gray-900 dark:text-white">{c.title}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-2 text-gray-900 dark:text-white">{c.title}</td>
+                  <td className="px-4 py-2">
                     <ActionBadge action={c.case_type} />
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-2">
                     <ActionBadge action={c.status} />
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-2">
                     <ActionBadge action={c.priority} />
                   </td>
-                  <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-300">
+                  <td className="px-4 py-2 text-xs text-gray-600 dark:text-gray-300">
                     {c.assigned_to ?? "—"}
                   </td>
-                  <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
+                  <td className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">
                     {c.due_date ? new Date(c.due_date).toLocaleDateString() : "—"}
                   </td>
-                  <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
+                  <td className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">
                     {new Date(c.created_at).toLocaleDateString()}
                   </td>
                 </tr>

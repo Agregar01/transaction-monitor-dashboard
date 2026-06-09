@@ -75,7 +75,7 @@ function RuleRow({ rule }: { rule: Rule }) {
 
   return (
     <tr className="hover:bg-gray-50 dark:hover:bg-navy-800 transition-colors">
-      <td className="px-4 py-3">
+      <td className="px-4 py-2">
         <button
           onClick={toggleEnabled}
           disabled={enabling || disabling}
@@ -91,18 +91,18 @@ function RuleRow({ rule }: { rule: Rule }) {
           />
         </button>
       </td>
-      <td className="px-4 py-3 font-mono text-xs text-primary">{rule.rule_id}</td>
-      <td className="px-4 py-3 text-sm text-gray-900 dark:text-white max-w-[200px] truncate">
+      <td className="px-4 py-2 font-mono text-xs text-primary">{rule.rule_id}</td>
+      <td className="px-4 py-2 text-sm text-gray-900 dark:text-white max-w-[200px] truncate">
         {rule.rule_name}
       </td>
-      <td className="px-4 py-3">
+      <td className="px-4 py-2">
         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${catCls}`}>
           {rule.rule_category}
         </span>
       </td>
-      <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">{rule.severity}</td>
-      <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">{rule.status}</td>
-      <td className="px-4 py-3">
+      <td className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">{rule.severity}</td>
+      <td className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">{rule.status}</td>
+      <td className="px-4 py-2">
         {editingContrib ? (
           <div className="flex items-center gap-1">
             <input
@@ -270,13 +270,13 @@ export default function AdminPage() {
                 <table className="w-full text-sm">
                   <thead className="bg-gray-50 dark:bg-navy-800 text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">
                     <tr>
-                      <th className="px-4 py-3 text-left w-12">On</th>
-                      <th className="px-4 py-3 text-left">ID</th>
-                      <th className="px-4 py-3 text-left">Name</th>
-                      <th className="px-4 py-3 text-left">Category</th>
-                      <th className="px-4 py-3 text-left">Severity</th>
-                      <th className="px-4 py-3 text-left">Status</th>
-                      <th className="px-4 py-3 text-left">Risk contrib</th>
+                      <th className="px-4 py-2 text-left w-12">On</th>
+                      <th className="px-4 py-2 text-left">ID</th>
+                      <th className="px-4 py-2 text-left">Name</th>
+                      <th className="px-4 py-2 text-left">Category</th>
+                      <th className="px-4 py-2 text-left">Severity</th>
+                      <th className="px-4 py-2 text-left">Status</th>
+                      <th className="px-4 py-2 text-left">Risk contrib</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-navy-600">
@@ -322,41 +322,41 @@ export default function AdminPage() {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 dark:bg-navy-800 text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">
                   <tr>
-                    <th className="px-4 py-3 text-left">Code</th>
-                    <th className="px-4 py-3 text-left">Name</th>
-                    <th className="px-4 py-3 text-right">CTR cash</th>
-                    <th className="px-4 py-3 text-right">CTR non-cash</th>
-                    <th className="px-4 py-3 text-right">STR min</th>
-                    <th className="px-4 py-3 text-right">SLA (hours)</th>
-                    <th className="px-4 py-3 text-left">Currency</th>
-                    <th className="px-4 py-3 text-left">Active</th>
+                    <th className="px-4 py-2 text-left">Code</th>
+                    <th className="px-4 py-2 text-left">Name</th>
+                    <th className="px-4 py-2 text-right">CTR cash</th>
+                    <th className="px-4 py-2 text-right">CTR non-cash</th>
+                    <th className="px-4 py-2 text-right">STR min</th>
+                    <th className="px-4 py-2 text-right">SLA (hours)</th>
+                    <th className="px-4 py-2 text-left">Currency</th>
+                    <th className="px-4 py-2 text-left">Active</th>
                     <th />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-navy-600">
                   {jurisdictions.map((j) => (
                     <tr key={j.code} className="hover:bg-gray-50 dark:hover:bg-navy-800">
-                      <td className="px-4 py-3 font-mono text-xs font-medium">{j.code}</td>
-                      <td className="px-4 py-3 text-sm">{j.name}</td>
-                      <td className="px-4 py-3 text-right font-mono text-xs">
+                      <td className="px-4 py-2 font-mono text-xs font-medium">{j.code}</td>
+                      <td className="px-4 py-2 text-sm">{j.name}</td>
+                      <td className="px-4 py-2 text-right font-mono text-xs">
                         {Number(j.ctr_threshold_cash).toLocaleString()}
                       </td>
-                      <td className="px-4 py-3 text-right font-mono text-xs">
+                      <td className="px-4 py-2 text-right font-mono text-xs">
                         {Number(j.ctr_threshold_non_cash).toLocaleString()}
                       </td>
-                      <td className="px-4 py-3 text-right font-mono text-xs">
+                      <td className="px-4 py-2 text-right font-mono text-xs">
                         {Number(j.str_min_amount).toLocaleString()}
                       </td>
-                      <td className="px-4 py-3 text-right font-mono text-xs">{j.str_deadline_hours}</td>
-                      <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">{j.currency_code}</td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-2 text-right font-mono text-xs">{j.str_deadline_hours}</td>
+                      <td className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">{j.currency_code}</td>
+                      <td className="px-4 py-2">
                         {j.is_active ? (
                           <span className="text-emerald-500 text-xs">● Active</span>
                         ) : (
                           <span className="text-gray-400 text-xs">○ Inactive</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-right">
+                      <td className="px-4 py-2 text-right">
                         <Link
                           href="/dashboard/jurisdictions"
                           className="text-xs font-medium text-primary hover:underline"
