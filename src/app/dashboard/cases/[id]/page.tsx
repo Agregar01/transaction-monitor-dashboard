@@ -62,6 +62,12 @@ export default function CaseDetailPage() {
   const caseId = params.id;
 
   const currentUserId = useAppSelector((s) => s.auth.userId);
+  const roles = useAppSelector((s) => s.auth.roles);
+  // Assigning an investigator is a supervisory action (mirrors the backend
+  // assign_cases permission: SYSTEM_ADMIN / SENIOR_ANALYST / COMPLIANCE_OFFICER).
+  const canAssign = roles.some((r) =>
+    ["SYSTEM_ADMIN", "SENIOR_ANALYST", "COMPLIANCE_OFFICER"].includes(r),
+  );
 
   const { data: kase, isLoading, error } = useGetCaseQuery(caseId);
   const { data: users } = useListUsersQuery();
@@ -528,7 +534,7 @@ export default function CaseDetailPage() {
           </section>
 
           {/* Assignment (F13) */}
-          {kase.status !== "CLOSED" && (
+          {canAssign && kase.status !== "CLOSED" && (
             <section className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-6 space-y-3">
               <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                 Assign investigator
