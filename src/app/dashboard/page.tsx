@@ -18,6 +18,7 @@ import StatCard from "@/components/StatCard";
 import { SkeletonStats } from "@/components/Skeleton";
 import RiskBadge from "@/components/RiskBadge";
 import ActionBadge from "@/components/ActionBadge";
+import DonutCard from "@/components/DonutCard";
 import { alertPriorityColors, riskBand, riskBandColors, type RiskBand } from "@/config/constants";
 import { useVisiblePolling } from "@/hooks/useVisiblePolling";
 import {
@@ -404,47 +405,13 @@ export default function DashboardOverviewPage() {
           />
         </div>
 
-        <div className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 shadow-sm p-6">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-            Risk band distribution
-          </h2>
-          <p className="text-xs text-gray-400 mb-4 mt-0.5">{riskBreakdown.caption}</p>
-          {riskBreakdown.total === 0 ? (
-            <div className="py-16 text-center text-sm text-gray-400">
-              No alerts in the last 14 days.
-            </div>
-          ) : (
-            <Chart
-              options={{
-                chart: { type: "donut", fontFamily: "var(--font-geist-sans), sans-serif" },
-                labels: riskBreakdown.labels,
-                colors: riskBreakdown.colors,
-                legend: { position: "bottom", labels: { colors: "#94a3b8" } },
-                dataLabels: { enabled: false },
-                stroke: { width: 0 },
-                tooltip: { theme: "dark" },
-                plotOptions: {
-                  pie: {
-                    donut: {
-                      labels: {
-                        show: true,
-                        total: {
-                          show: true,
-                          label: "Total",
-                          color: "#94a3b8",
-                          formatter: () => String(riskBreakdown.total),
-                        },
-                      },
-                    },
-                  },
-                },
-              }}
-              series={riskBreakdown.series}
-              type="donut"
-              height={280}
-            />
-          )}
-        </div>
+        <DonutCard
+          title="Risk band distribution"
+          subtitle={riskBreakdown.caption}
+          labels={riskBreakdown.labels}
+          series={riskBreakdown.series}
+          colors={riskBreakdown.colors}
+        />
       </div>
 
       {isMl ? (

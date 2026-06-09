@@ -5,6 +5,7 @@ import { useListCTRQuery, useExemptCTRMutation, ctrXmlUrl } from "@/redux/slices
 import { API_V1 } from "@/config/api";
 import { SkeletonTable } from "@/components/Skeleton";
 import ActionBadge from "@/components/ActionBadge";
+import Pagination from "@/components/Pagination";
 import { showToast } from "@/components/Toast";
 import { errorMessage } from "@/lib/errors";
 import type { CTRStatus } from "@/types/api";
@@ -153,27 +154,13 @@ export default function CTRListPage() {
             </tbody>
           </table>
 
-          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 dark:border-navy-600 text-xs text-gray-500 dark:text-gray-400">
-            <span>
-              {data.total} total · page {page} of {totalPages}
-            </span>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="px-3 py-1 rounded border border-gray-200 dark:border-navy-500 disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-navy-600"
-              >
-                Prev
-              </button>
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page >= totalPages}
-                className="px-3 py-1 rounded border border-gray-200 dark:border-navy-500 disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-navy-600"
-              >
-                Next
-              </button>
-            </div>
-          </div>
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            total={data.total}
+            noun="CTR reports"
+            onPageChange={setPage}
+          />
         </div>
       )}
 
