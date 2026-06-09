@@ -18,9 +18,9 @@ import StatCard from "@/components/StatCard";
 import { SkeletonStats } from "@/components/Skeleton";
 import RiskBadge from "@/components/RiskBadge";
 import ActionBadge from "@/components/ActionBadge";
-import DonutCard from "@/components/DonutCard";
+import SeverityLadder from "@/components/SeverityLadder";
 import HeroActionBand, { type ActionItem } from "@/components/HeroActionBand";
-import { alertPriorityColors, riskBand, riskBandColors, type RiskBand } from "@/config/constants";
+import { alertPriorityColors, riskBand, type RiskBand } from "@/config/constants";
 import { useVisiblePolling } from "@/hooks/useVisiblePolling";
 import {
   BellAlertIcon,
@@ -289,14 +289,12 @@ export default function DashboardOverviewPage() {
     };
   }, [alertsLast14d]);
 
-  // Alert distribution across the four risk bands. Prefer the real population
-  // from /analytics/summary; fall back to bucketing the 14-day sample.
+  // Risk-band breakdown for the severity ladder. ALLOW (~99%, zero triage
+  // value) is split out as a context "cleared" number so the actionable bands
+  // (FLAG/STEP_UP/HOLD/BLOCK) get the chart's full scale. Prefer the real
+  // population from /analytics/summary; fall back to the 14-day alert sample.
   const riskBreakdown = useMemo(() => {
-    const order: RiskBand[] = ["ALLOW", "FLAG", "STEP_UP", "HOLD", "BLOCK"];
-    // /analytics/summary computes risk_distribution over ALL transactions
-    // (combined_risk_score), so every decision band — including ALLOW — appears.
-    // Render only the bands that carry volume so empty slices don't clutter.
-    const present = (counts: Record<RiskBand, number>) => order.filter((b) => counts[b] > 0);
+    const actionable: RiskBand[] = ["FLAG", "STEP_UP", "HOLD", "BLOCK"];
     const dist = analytics?.risk_distribution;
     const fromAnalytics: Record<RiskBand, number> = {
       ALLOW: dist?.ALLOW ?? 0,
@@ -305,14 +303,14 @@ export default function DashboardOverviewPage() {
       HOLD: dist?.HOLD ?? 0,
       BLOCK: dist?.BLOCK ?? 0,
     };
-    const analyticsTotal = order.reduce((sum, b) => sum + fromAnalytics[b], 0);
+    const analyticsTotal = (Object.keys(fromAnalytics) as RiskBand[]).reduce(
+      (sum, b) => sum + fromAnalytics[b],
+      0,
+    );
     if (analyticsTotal > 0) {
-      const bands = present(fromAnalytics);
       return {
-        labels: bands,
-        series: bands.map((b) => fromAnalytics[b]),
-        colors: bands.map((b) => riskBandColors[b]),
-        total: analyticsTotal,
+        bands: actionable.map((band) => ({ band, count: fromAnalytics[band] })),
+        cleared: fromAnalytics.ALLOW,
         caption: "all transactions · last 30 days",
       };
     }
@@ -321,12 +319,9 @@ export default function DashboardOverviewPage() {
     for (const a of alertsLast14d?.items ?? []) {
       counts[riskBand(a.risk_score)] += 1;
     }
-    const bands = present(counts);
     return {
-      labels: bands,
-      series: bands.map((b) => counts[b]),
-      colors: bands.map((b) => riskBandColors[b]),
-      total: order.reduce((sum, b) => sum + counts[b], 0),
+      bands: actionable.map((band) => ({ band, count: counts[band] })),
+      cleared: counts.ALLOW,
       caption: "recent alerts · last 14 days",
     };
   }, [analytics, alertsLast14d]);
@@ -484,12 +479,11 @@ export default function DashboardOverviewPage() {
           />
         </div>
 
-        <DonutCard
-          title="Risk band distribution"
+        <SeverityLadder
+          title="Decisions needing action"
           subtitle={riskBreakdown.caption}
-          labels={riskBreakdown.labels}
-          series={riskBreakdown.series}
-          colors={riskBreakdown.colors}
+          bands={riskBreakdown.bands}
+          clearedCount={riskBreakdown.cleared}
         />
       </div>
 
