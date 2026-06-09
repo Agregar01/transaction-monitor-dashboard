@@ -106,7 +106,7 @@ const PERMISSION_NAV_MAP: Record<string, string[]> = {
   "/dashboard/audit":         ["view_audit_trail", "access_audit_trail"],
   "/dashboard/privacy":       ["view_dsar", "manage_dsar", "erase_pii"],
   "/dashboard/users":         ["view_users"],
-  "/dashboard/admin":         ["create_rule", "configure_thresholds", "view_analytics"],  // any-of
+  "/dashboard/admin":         ["create_rule", "configure_thresholds"],  // admin functions only — not view_analytics (analysts have that)
   "/dashboard/jurisdictions": ["configure_thresholds"],
   "/dashboard/health":        ["manage_api_keys"],
   "/dashboard/settings":      [],                                                         // any authenticated user

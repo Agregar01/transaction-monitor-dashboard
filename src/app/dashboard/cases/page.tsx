@@ -12,6 +12,7 @@ import ActionBadge from "@/components/ActionBadge";
 import DonutCard from "@/components/DonutCard";
 import Pagination from "@/components/Pagination";
 import UserPicker from "@/components/UserPicker";
+import { useListAssignableUsersQuery } from "@/redux/slices/api/authApi";
 import type { CaseStatus, CaseType, CasePriority } from "@/types/api";
 import { PlusIcon } from "@heroicons/react/24/outline";
 
@@ -54,6 +55,15 @@ function CasesListInner() {
   });
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.page_size)) : 1;
+
+  // Resolve assignee user_id -> readable name for the table (falls back to a
+  // short id if the roster isn't available to this role).
+  const { data: roster } = useListAssignableUsersQuery();
+  const nameFor = (id: string | null | undefined) => {
+    if (!id) return "—";
+    const u = roster?.find((r) => r.user_id === id);
+    return u ? (u.full_name ?? u.email) : `${id.slice(0, 8)}…`;
+  };
 
   // Breakdowns: status from the real population (analytics case_breakdown),
   // type from a recent sample (not available in the analytics summary).
@@ -266,7 +276,7 @@ function CasesListInner() {
                     <ActionBadge action={c.priority} />
                   </td>
                   <td className="px-4 py-2 text-xs text-gray-600 dark:text-gray-300">
-                    {c.assigned_to ?? "—"}
+                    {nameFor(c.assigned_to)}
                   </td>
                   <td className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">
                     {c.due_date ? new Date(c.due_date).toLocaleDateString() : "—"}
