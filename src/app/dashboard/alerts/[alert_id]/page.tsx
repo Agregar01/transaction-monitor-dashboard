@@ -9,9 +9,11 @@ import {
   useAddAlertNoteMutation,
   useResolveAlertMutation,
 } from "@/redux/slices/api/alertsApi";
+import { useListUsersQuery } from "@/redux/slices/api/authApi";
 import { SkeletonCard } from "@/components/Skeleton";
 import RiskBadge from "@/components/RiskBadge";
 import ActionBadge from "@/components/ActionBadge";
+import UserPicker from "@/components/UserPicker";
 import { showToast } from "@/components/Toast";
 import type { AlertResolution, TriggeredRuleDetail } from "@/types/api";
 import { errorMessage } from "@/lib/errors";
@@ -33,6 +35,7 @@ export default function AlertDetailPage() {
   const alertId = params.alert_id;
 
   const { data: alert, isLoading, error } = useGetAlertQuery(alertId);
+  const { data: users } = useListUsersQuery();
 
   const [assignAlert, { isLoading: assigning }] = useAssignAlertMutation();
   const [addNote, { isLoading: addingNote }] = useAddAlertNoteMutation();
@@ -105,6 +108,17 @@ export default function AlertDetailPage() {
           <h1 className="font-mono text-lg text-gray-900 dark:text-white">{alertId}</h1>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
             {new Date(alert.alert_timestamp).toLocaleString()}
+          </p>
+          <p className="text-xs mt-1">
+            <span className="text-gray-500 dark:text-gray-400">Assigned to: </span>
+            {alert.assigned_to ? (
+              <span className="font-medium text-gray-900 dark:text-white">
+                {users?.find((u) => u.email === alert.assigned_to || u.user_id === alert.assigned_to)?.full_name
+                  ?? alert.assigned_to}
+              </span>
+            ) : (
+              <span className="text-gray-400">Unassigned</span>
+            )}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -257,13 +271,12 @@ export default function AlertDetailPage() {
             <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
               Assign
             </h3>
-            <input
-              type="email"
-              aria-label="Assign to analyst email"
-              placeholder="analyst@autheo.test"
+            <UserPicker
+              valueField="email"
               value={assignTo}
-              onChange={(e) => setAssignTo(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-800 text-gray-900 dark:text-white"
+              onChange={setAssignTo}
+              ariaLabel="Assign to analyst"
+              placeholder="Select an analyst…"
             />
             <button
               onClick={onAssign}

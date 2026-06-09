@@ -5,6 +5,7 @@ import { useState, useMemo, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useListAlertsQuery } from "@/redux/slices/api/alertsApi";
 import { useGetAnalyticsSummaryQuery } from "@/redux/slices/api/analyticsApi";
+import { useAppSelector } from "@/redux/store";
 import ExportButton from "@/components/ExportButton";
 import { API_V1 } from "@/config/api";
 import { SkeletonTable } from "@/components/Skeleton";
@@ -13,6 +14,7 @@ import ActionBadge from "@/components/ActionBadge";
 import DonutCard from "@/components/DonutCard";
 import RiskComposition from "@/components/RiskComposition";
 import Pagination from "@/components/Pagination";
+import UserPicker from "@/components/UserPicker";
 import { useVisiblePolling } from "@/hooks/useVisiblePolling";
 import { type RiskBand } from "@/config/constants";
 import type { AlertPriority, AlertStatus } from "@/types/api";
@@ -34,10 +36,26 @@ function AlertsListInner() {
   const initialStatus = (params.get("status") as AlertStatus | null) ?? "OPEN";
   const initialPriority = (params.get("priority") as AlertPriority | null) ?? "";
 
+  const myEmail = useAppSelector((s) => s.auth.email);
+
   const [page, setPage] = useState(1);
   const [priority, setPriority] = useState<AlertPriority | "">(initialPriority);
   const [status, setStatus] = useState<AlertStatus | "">(initialStatus);
   const [assignedTo, setAssignedTo] = useState("");
+
+  // "Assigned to me" filters to the current user AND clears the status filter —
+  // assigning an alert moves it to INVESTIGATING, so the default OPEN view would
+  // otherwise hide the analyst's own queue.
+  const mine = !!myEmail && assignedTo === myEmail;
+  const toggleMine = () => {
+    setPage(1);
+    if (mine) {
+      setAssignedTo("");
+    } else {
+      setAssignedTo(myEmail ?? "");
+      setStatus("");
+    }
+  };
 
   const pollingInterval = useVisiblePolling(10000);
   const { data, isLoading, isFetching, error } = useListAlertsQuery(
@@ -152,19 +170,35 @@ function AlertsListInner() {
         </div>
         <div className="md:col-span-2">
           <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-            Assigned to (email)
+            Assigned to
           </label>
-          <input
-            type="text"
-            aria-label="Filter by assigned analyst email"
-            value={assignedTo}
-            onChange={(e) => {
-              setPage(1);
-              setAssignedTo(e.target.value);
-            }}
-            placeholder="analyst@autheo.test"
-            className="mt-1 w-full px-3 py-2 text-sm border border-gray-200 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-800 text-gray-900 dark:text-white"
-          />
+          <div className="mt-1 flex gap-2">
+            <UserPicker
+              valueField="email"
+              value={assignedTo}
+              onChange={(v) => {
+                setPage(1);
+                setAssignedTo(v);
+              }}
+              ariaLabel="Filter by assigned analyst"
+              placeholder="Anyone"
+              className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-800 text-gray-900 dark:text-white"
+            />
+            {myEmail && (
+              <button
+                type="button"
+                onClick={toggleMine}
+                aria-pressed={mine}
+                className={`shrink-0 px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${
+                  mine
+                    ? "bg-primary text-white border-primary"
+                    : "border-gray-200 dark:border-navy-500 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-navy-800"
+                }`}
+              >
+                {mine ? "✓ Mine" : "Assigned to me"}
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

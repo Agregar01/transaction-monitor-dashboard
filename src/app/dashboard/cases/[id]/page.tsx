@@ -17,9 +17,11 @@ import {
   useGetCaseTransactionChainQuery,
 } from "@/redux/slices/api/casesApi";
 import { useListAttachmentsQuery } from "@/redux/slices/api/attachmentsApi";
+import { useListUsersQuery } from "@/redux/slices/api/authApi";
 import { useAppSelector } from "@/redux/store";
 import { SkeletonCard } from "@/components/Skeleton";
 import ActionBadge from "@/components/ActionBadge";
+import UserPicker from "@/components/UserPicker";
 import CaseTimeline from "@/components/CaseTimeline";
 import { showToast } from "@/components/Toast";
 import { errorMessage } from "@/lib/errors";
@@ -62,6 +64,7 @@ export default function CaseDetailPage() {
   const currentUserId = useAppSelector((s) => s.auth.userId);
 
   const { data: kase, isLoading, error } = useGetCaseQuery(caseId);
+  const { data: users } = useListUsersQuery();
   const { data: alerts } = useGetCaseAlertsQuery(caseId);
   const { data: history } = useGetCaseHistoryQuery(caseId);
   const { data: notes } = useGetCaseNotesQuery(caseId);
@@ -530,13 +533,12 @@ export default function CaseDetailPage() {
               <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                 Assign investigator
               </h3>
-              <input
-                type="text"
-                aria-label="Assign investigator"
+              <UserPicker
+                valueField="user_id"
                 value={assignTo}
-                onChange={(e) => setAssignTo(e.target.value)}
-                placeholder="User UUID or email"
-                className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-800 text-gray-900 dark:text-white"
+                onChange={setAssignTo}
+                ariaLabel="Assign investigator"
+                placeholder="Select an investigator…"
               />
               <button
                 onClick={onAssign}
@@ -575,8 +577,12 @@ export default function CaseDetailPage() {
               </div>
               <div className="flex justify-between">
                 <dt className="text-gray-500 dark:text-gray-400">Assigned to</dt>
-                <dd className="text-gray-900 dark:text-white font-mono text-xs">
-                  {kase.assigned_to ? `${kase.assigned_to.slice(0, 8)}…` : "—"}
+                <dd className="text-gray-900 dark:text-white text-xs">
+                  {kase.assigned_to
+                    ? (users?.find((u) => u.user_id === kase.assigned_to)?.full_name
+                        ?? users?.find((u) => u.user_id === kase.assigned_to)?.email
+                        ?? `${kase.assigned_to.slice(0, 8)}…`)
+                    : "—"}
                 </dd>
               </div>
               <div className="flex justify-between items-start">
