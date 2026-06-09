@@ -10,8 +10,10 @@ import {
 } from "@/redux/slices/api/analyticsApi";
 import { SkeletonStats } from "@/components/Skeleton";
 import StatCard from "@/components/StatCard";
+import SeverityLadder from "@/components/SeverityLadder";
 import { useAppSelector } from "@/redux/store";
 import { currencyForJurisdiction, formatMoney } from "@/lib/currency";
+import { type RiskBand } from "@/config/constants";
 import {
   BellAlertIcon,
   InboxStackIcon,
@@ -22,14 +24,6 @@ const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
 
 const PERIODS = [7, 14, 30, 90] as const;
 type Period = (typeof PERIODS)[number];
-
-const RISK_COLORS: Record<string, string> = {
-  ALLOW:   "#22c55e",
-  FLAG:    "#eab308",
-  STEP_UP: "#f59e0b",
-  HOLD:    "#f97316",
-  BLOCK:   "#ef4444",
-};
 
 const RECO_META: Record<string, { label: string; cls: string }> = {
   increase_threshold: { label: "Raise threshold", cls: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300" },
@@ -65,15 +59,14 @@ export default function ReportsPage() {
 
   const riskDist = useMemo(() => {
     const dist = data?.risk_distribution ?? { ALLOW: 0, FLAG: 0, STEP_UP: 0, HOLD: 0, BLOCK: 0 };
-    const order = ["ALLOW", "FLAG", "STEP_UP", "HOLD", "BLOCK"] as const;
-    // Computed over all transactions (combined_risk_score); show only the bands
-    // that actually carry volume rather than rendering empty slices.
-    const present = order.filter((k) => (dist[k] ?? 0) > 0);
+    const actionable: RiskBand[] = ["FLAG", "STEP_UP", "HOLD", "BLOCK"];
+    // Computed over all transactions (combined_risk_score). ALLOW (~99%, zero
+    // triage value) is split out as a context number so the actionable bands
+    // get the chart's full scale.
     return {
-      labels: present,
-      series: present.map((k) => dist[k]),
-      colors: present.map((k) => RISK_COLORS[k]),
-      total: order.reduce((s, k) => s + (dist[k] ?? 0), 0),
+      bands: actionable.map((band) => ({ band, count: dist[band] ?? 0 })),
+      cleared: dist.ALLOW ?? 0,
+      total: actionable.reduce((s, b) => s + (dist[b] ?? 0), 0) + (dist.ALLOW ?? 0),
     };
   }, [data]);
 
@@ -210,47 +203,12 @@ export default function ReportsPage() {
           )}
         </div>
 
-        <div className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 shadow-sm p-6">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-            Risk distribution
-          </h2>
-          <p className="text-xs text-gray-400 mb-4 mt-0.5">
-            all transactions by decision band · last {period} days
-          </p>
-          {riskDist.total === 0 ? (
-            <div className="py-16 text-center text-sm text-gray-400">No data.</div>
-          ) : (
-            <Chart
-              options={{
-                chart: { type: "donut", fontFamily: "var(--font-geist-sans), sans-serif" },
-                labels: riskDist.labels,
-                colors: riskDist.colors,
-                legend: { position: "bottom", labels: { colors: "#94a3b8" } },
-                dataLabels: { enabled: false },
-                stroke: { width: 0 },
-                tooltip: { theme: "dark" },
-                plotOptions: {
-                  pie: {
-                    donut: {
-                      labels: {
-                        show: true,
-                        total: {
-                          show: true,
-                          label: "Total",
-                          color: "#94a3b8",
-                          formatter: () => String(riskDist.total),
-                        },
-                      },
-                    },
-                  },
-                },
-              }}
-              series={riskDist.series}
-              type="donut"
-              height={260}
-            />
-          )}
-        </div>
+        <SeverityLadder
+          title="Risk distribution"
+          subtitle={`all transactions by decision band · last ${period} days`}
+          bands={riskDist.bands}
+          clearedCount={riskDist.cleared}
+        />
       </div>
 
       {/* Case breakdown + Top rules */}

@@ -8,8 +8,9 @@ import { API_V1 } from "@/config/api";
 import { SkeletonTable } from "@/components/Skeleton";
 import RiskBadge from "@/components/RiskBadge";
 import DonutCard from "@/components/DonutCard";
+import SeverityLadder from "@/components/SeverityLadder";
 import Pagination from "@/components/Pagination";
-import { riskBand, riskBandColors, type RiskBand, TRANSACTION_TYPES, CHANNELS } from "@/config/constants";
+import { riskBand, type RiskBand, TRANSACTION_TYPES, CHANNELS } from "@/config/constants";
 
 // Distinct, non-semantic palette for categorical breakdowns (channels).
 const CATEGORY_PALETTE = ["#14b8a6", "#2563eb", "#f59e0b", "#7c3aed", "#ec4899", "#0ea5e9", "#84cc16"];
@@ -48,10 +49,10 @@ export default function TransactionsListPage() {
   }, [sample]);
 
   const riskBreakdown = useMemo(() => {
-    const order: RiskBand[] = ["ALLOW", "FLAG", "STEP_UP", "HOLD", "BLOCK"];
+    const actionable: RiskBand[] = ["FLAG", "STEP_UP", "HOLD", "BLOCK"];
     const counts: Record<RiskBand, number> = { ALLOW: 0, FLAG: 0, STEP_UP: 0, HOLD: 0, BLOCK: 0 };
     for (const t of sample?.items ?? []) counts[riskBand(t.combined_risk_score)] += 1;
-    return { labels: order, series: order.map((b) => counts[b]), colors: order.map((b) => riskBandColors[b]) };
+    return { bands: actionable.map((band) => ({ band, count: counts[band] })), cleared: counts.ALLOW };
   }, [sample]);
 
   const sampleSize = sample?.items.length ?? 0;
@@ -145,12 +146,11 @@ export default function TransactionsListPage() {
             series={channelBreakdown.series}
             colors={channelBreakdown.colors}
           />
-          <DonutCard
+          <SeverityLadder
             title="By risk band"
             subtitle={`Recent ${sampleSize} transactions`}
-            labels={riskBreakdown.labels}
-            series={riskBreakdown.series}
-            colors={riskBreakdown.colors}
+            bands={riskBreakdown.bands}
+            clearedCount={riskBreakdown.cleared}
           />
         </div>
       )}

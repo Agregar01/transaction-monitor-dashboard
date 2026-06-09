@@ -10,9 +10,10 @@ import { SkeletonTable } from "@/components/Skeleton";
 import RiskBadge from "@/components/RiskBadge";
 import ActionBadge from "@/components/ActionBadge";
 import DonutCard from "@/components/DonutCard";
+import SeverityLadder from "@/components/SeverityLadder";
 import Pagination from "@/components/Pagination";
 import { useVisiblePolling } from "@/hooks/useVisiblePolling";
-import { riskBandColors, type RiskBand } from "@/config/constants";
+import { type RiskBand } from "@/config/constants";
 import type { AlertPriority, AlertStatus } from "@/types/api";
 
 const PRIORITIES: AlertPriority[] = ["IMMEDIATE", "BATCH", "REVIEW"];
@@ -52,14 +53,13 @@ export default function AlertsListPage() {
   const { data: sample } = useListAlertsQuery({ page_size: 100 });
 
   const riskBreakdown = useMemo(() => {
-    const order: RiskBand[] = ["ALLOW", "FLAG", "STEP_UP", "HOLD", "BLOCK"];
+    const actionable: RiskBand[] = ["FLAG", "STEP_UP", "HOLD", "BLOCK"];
+    const all: RiskBand[] = ["ALLOW", "FLAG", "STEP_UP", "HOLD", "BLOCK"];
     const dist = analytics?.risk_distribution;
-    const series = order.map((b) => dist?.[b] ?? 0);
     return {
-      labels: [...order],
-      series,
-      colors: order.map((b) => riskBandColors[b]),
-      total: series.reduce((a, b) => a + b, 0),
+      bands: actionable.map((band) => ({ band, count: dist?.[band] ?? 0 })),
+      cleared: dist?.ALLOW ?? 0,
+      total: all.reduce((sum, b) => sum + (dist?.[b] ?? 0), 0),
     };
   }, [analytics]);
 
@@ -162,12 +162,11 @@ export default function AlertsListPage() {
 
       {(riskBreakdown.total > 0 || sampleSize > 0) && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <DonutCard
+          <SeverityLadder
             title="By risk band"
-            subtitle="All alerts · last 90 days"
-            labels={riskBreakdown.labels}
-            series={riskBreakdown.series}
-            colors={riskBreakdown.colors}
+            subtitle="all transactions · last 90 days"
+            bands={riskBreakdown.bands}
+            clearedCount={riskBreakdown.cleared}
           />
           <DonutCard
             title="By priority"
