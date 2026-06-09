@@ -94,6 +94,11 @@ export default function DashboardOverviewPage() {
   const persona = useMemo(() => pickPersona(roles), [roles]);
   const meta = PERSONA_META[persona];
   const primaryRole = roles[0] ?? "READONLY";
+  // Plain analysts get a scoped overview — population-level analytics (risk
+  // distribution, 14-day priority chart) are hidden, as on Reports/Geo.
+  const scopedAnalyst =
+    roles.includes("ANALYST") &&
+    !["SYSTEM_ADMIN", "SENIOR_ANALYST", "COMPLIANCE_OFFICER"].some((r) => roles.includes(r));
 
   // Pull a generous window of recent alerts for KPI math + the 14-day chart.
   const fourteenDaysAgo = useMemo(() => {
@@ -451,6 +456,7 @@ export default function DashboardOverviewPage() {
         </div>
       )}
 
+      {!scopedAnalyst && (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 shadow-sm p-6">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-4">
@@ -485,6 +491,7 @@ export default function DashboardOverviewPage() {
           clearedCount={riskBreakdown.cleared}
         />
       </div>
+      )}
 
       {isMl ? (
         <div className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 shadow-sm">
