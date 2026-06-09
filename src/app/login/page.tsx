@@ -173,7 +173,7 @@ export default function LoginPage() {
         </form>
 
         <p className="text-center text-xs text-gray-500 dark:text-navy-300">
-          Autheo Transaction Monitoring System
+          Transaction Monitoring System
         </p>
       </div>
     </div>

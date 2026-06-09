@@ -15,8 +15,8 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Autheo Transaction Monitor",
-  description: "AML/CFT transaction monitoring console for the Autheo TMS backend",
+  title: "Transaction Monitor",
+  description: "AML/CFT transaction monitoring console",
 };
 
 export default function RootLayout({
