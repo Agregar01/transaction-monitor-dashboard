@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Image from "next/image";
 import { useAppDispatch } from "@/redux/store";
 import { setCredentials } from "@/redux/slices/authSlice";
 import { API_V1 } from "@/config/api";
@@ -95,14 +94,6 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-navy-700 px-4 py-12">
       <div className="w-full max-w-md bg-white dark:bg-navy-600 rounded-2xl shadow-xl p-8 space-y-6">
         <div className="text-center space-y-2">
-          <Image
-            src="/images/Autheo_this.png"
-            alt="Autheo"
-            width={160}
-            height={42}
-            priority
-            className="mx-auto"
-          />
           <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
             Transaction Monitor
           </h1>

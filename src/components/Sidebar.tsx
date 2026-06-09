@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { useAppDispatch, useAppSelector } from "@/redux/store";
@@ -200,11 +199,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
 
   return (
     <>
-      <div className="flex items-center gap-3 px-6 py-5 border-b border-navy-600">
-        <Image src="/images/Autheo_white.png" alt="Autheo TMS" width={120} height={32} />
-      </div>
-
-      <div className="px-6 py-3">
+      <div className="px-6 py-5 border-b border-navy-600">
         <p className="text-primary-300 text-xs font-semibold uppercase tracking-wider">
           {jurisdictionCode ?? "—"} · Transaction Monitor
         </p>
