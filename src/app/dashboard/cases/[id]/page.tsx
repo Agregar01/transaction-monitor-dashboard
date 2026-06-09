@@ -11,6 +11,7 @@ import {
   useAddCaseNoteMutation,
   useDeleteCaseNoteMutation,
   useUpdateCaseMutation,
+  useReassignCaseMutation,
   useRequestSarFilingMutation,
   useLinkAlertToCaseMutation,
   useGetCaseDeviceHistoryQuery,
@@ -79,6 +80,7 @@ export default function CaseDetailPage() {
   const { data: txnChain } = useGetCaseTransactionChainQuery({ case_id: caseId });
 
   const [updateCase, { isLoading: transitioning }] = useUpdateCaseMutation();
+  const [reassignCase, { isLoading: assigning }] = useReassignCaseMutation();
   const [requestSarFiling, { isLoading: filingSar }] = useRequestSarFilingMutation();
   const [linkAlert, { isLoading: linking }] = useLinkAlertToCaseMutation();
   const [addNote, { isLoading: addingNote }] = useAddCaseNoteMutation();
@@ -130,11 +132,8 @@ export default function CaseDetailPage() {
   const onAssign = async () => {
     if (!assignTo.trim()) return;
     try {
-      await updateCase({
-        id: caseId,
-        to_status: kase.status,
-        assigned_to: assignTo.trim(),
-      }).unwrap();
+      // Assignment uses the dedicated /assign endpoint, NOT a status transition.
+      await reassignCase({ id: caseId, assigned_to: assignTo.trim() }).unwrap();
       showToast({ type: "success", title: "Assigned", message: assignTo.trim() });
     } catch (e) {
       showToast({ type: "error", title: "Assign failed", message: errorMessage(e) });
@@ -548,7 +547,7 @@ export default function CaseDetailPage() {
               />
               <button
                 onClick={onAssign}
-                disabled={transitioning || !assignTo.trim()}
+                disabled={assigning || !assignTo.trim()}
                 className="w-full px-3 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-600 disabled:opacity-50"
               >
                 Assign

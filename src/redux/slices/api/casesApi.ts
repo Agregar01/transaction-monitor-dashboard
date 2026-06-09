@@ -55,6 +55,21 @@ export const casesApi = baseApi.injectEndpoints({
         "Analytics",
       ],
     }),
+    // Assignment is NOT a status transition — use the dedicated /assign endpoint.
+    // (Routing it through /status with to_status=current fails as an OPEN->OPEN
+    // "transition".) Pass assigned_to: null to unassign.
+    reassignCase: b.mutation<Case, { id: string; assigned_to: string | null }>({
+      query: ({ id, assigned_to }) => ({
+        url: `/cases/${id}/assign`,
+        method: "PATCH",
+        body: { assigned_to },
+      }),
+      invalidatesTags: (_r, _e, { id }) => [
+        { type: "Case", id },
+        { type: "CaseHistory", id },
+        { type: "Case", id: "LIST" },
+      ],
+    }),
     requestSarFiling: b.mutation<MutationResponse, { case_id: string }>({
       query: ({ case_id }) => ({ url: `/cases/${case_id}/sar-filing`, method: "POST" }),
       invalidatesTags: (_r, _e, { case_id }) => [
@@ -115,6 +130,7 @@ export const {
   useGetCaseQuery,
   useCreateCaseMutation,
   useUpdateCaseMutation,
+  useReassignCaseMutation,
   useRequestSarFilingMutation,
   useLinkAlertToCaseMutation,
   useGetCaseAlertsQuery,
