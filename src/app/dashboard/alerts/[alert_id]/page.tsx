@@ -18,14 +18,35 @@ import { showToast } from "@/components/Toast";
 import type { AlertResolution, TriggeredRuleDetail } from "@/types/api";
 import { errorMessage } from "@/lib/errors";
 
-function TriggeredRulePill({ rule }: { rule: TriggeredRuleDetail }) {
+function TriggeredRuleRow({ rule }: { rule: TriggeredRuleDetail }) {
+  // Show the explanation only when it adds information beyond the rule name —
+  // many are boilerplate like "Python-backed rule: <name>" that just repeats it.
+  const expl = rule.explanation?.trim();
+  const redundant =
+    !expl ||
+    expl === rule.rule_name ||
+    expl.toLowerCase() === `python-backed rule: ${rule.rule_name}`.toLowerCase();
+
   return (
-    <span className="inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg bg-gray-100 dark:bg-navy-600">
-      <span className="font-mono text-gray-500 dark:text-gray-400">{rule.rule_id}</span>
-      <span className="text-gray-900 dark:text-white">{rule.rule_name}</span>
-      <ActionBadge action={rule.severity} />
-      <span className="text-gray-500 dark:text-gray-400">+{rule.risk_contribution}</span>
-    </span>
+    <li className="flex items-baseline gap-3 py-2">
+      <span className="font-mono text-xs text-gray-400 dark:text-gray-500 w-16 shrink-0 tabular-nums">
+        {rule.rule_id}
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm text-gray-900 dark:text-white">{rule.rule_name}</span>
+          <ActionBadge action={rule.severity} />
+        </div>
+        {!redundant && (
+          <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{expl}</p>
+        )}
+      </div>
+      {rule.risk_contribution > 0 && (
+        <span className="text-xs font-semibold text-primary tabular-nums shrink-0">
+          +{rule.risk_contribution}
+        </span>
+      )}
+    </li>
   );
 }
 
@@ -137,22 +158,10 @@ export default function AlertDetailPage() {
             {alert.triggered_rules.length === 0 ? (
               <p className="text-sm text-gray-400">No rules recorded.</p>
             ) : (
-              <div className="flex flex-wrap gap-2">
+              <ul className="divide-y divide-gray-100 dark:divide-navy-600">
                 {alert.triggered_rules.map((r) => (
-                  <TriggeredRulePill key={r.rule_id} rule={r} />
+                  <TriggeredRuleRow key={r.rule_id} rule={r} />
                 ))}
-              </div>
-            )}
-            {alert.triggered_rules.some((r) => r.explanation) && (
-              <ul className="mt-4 space-y-1 text-xs text-gray-600 dark:text-gray-300">
-                {alert.triggered_rules
-                  .filter((r) => r.explanation)
-                  .map((r) => (
-                    <li key={`exp-${r.rule_id}`}>
-                      <span className="font-mono text-gray-500 dark:text-gray-400">{r.rule_id}</span>{" "}
-                      — {r.explanation}
-                    </li>
-                  ))}
               </ul>
             )}
           </section>
