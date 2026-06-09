@@ -10,6 +10,7 @@ import {
   useResolveAlertMutation,
 } from "@/redux/slices/api/alertsApi";
 import { useListUsersQuery } from "@/redux/slices/api/authApi";
+import { useAppSelector } from "@/redux/store";
 import { SkeletonCard } from "@/components/Skeleton";
 import RiskBadge from "@/components/RiskBadge";
 import ActionBadge from "@/components/ActionBadge";
@@ -17,6 +18,9 @@ import UserPicker from "@/components/UserPicker";
 import { showToast } from "@/components/Toast";
 import type { AlertResolution, TriggeredRuleDetail } from "@/types/api";
 import { errorMessage } from "@/lib/errors";
+
+// Assigning / reassigning an alert is a supervisory action.
+const CAN_ASSIGN_ROLES = ["SYSTEM_ADMIN", "SENIOR_ANALYST", "COMPLIANCE_OFFICER"];
 
 function TriggeredRuleRow({ rule }: { rule: TriggeredRuleDetail }) {
   // Show the explanation only when it adds information beyond the rule name —
@@ -57,12 +61,15 @@ export default function AlertDetailPage() {
 
   const { data: alert, isLoading, error } = useGetAlertQuery(alertId);
   const { data: users } = useListUsersQuery();
+  const roles = useAppSelector((s) => s.auth.roles);
+  const canAssign = roles.some((r) => CAN_ASSIGN_ROLES.includes(r));
 
   const [assignAlert, { isLoading: assigning }] = useAssignAlertMutation();
   const [addNote, { isLoading: addingNote }] = useAddAlertNoteMutation();
   const [resolveAlert, { isLoading: resolving }] = useResolveAlertMutation();
 
   const [assignTo, setAssignTo] = useState("");
+  const [showReassign, setShowReassign] = useState(false);
   const [note, setNote] = useState("");
   const [resolution, setResolution] = useState<AlertResolution>("FALSE_POSITIVE");
   const [resolutionNotes, setResolutionNotes] = useState("");
@@ -86,6 +93,7 @@ export default function AlertDetailPage() {
       await assignAlert({ alert_id: alertId, analyst_id: assignTo }).unwrap();
       showToast({ type: "success", title: "Assigned", message: `Alert assigned to ${assignTo}` });
       setAssignTo("");
+      setShowReassign(false);
     } catch (e) {
       showToast({ type: "error", title: "Assign failed", message: errorMessage(e) });
     }
@@ -276,25 +284,48 @@ export default function AlertDetailPage() {
             </dl>
           </section>
 
-          <section className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-6 space-y-3">
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-              Assign
-            </h3>
-            <UserPicker
-              valueField="email"
-              value={assignTo}
-              onChange={setAssignTo}
-              ariaLabel="Assign to analyst"
-              placeholder="Select an analyst…"
-            />
+          {canAssign && (!alert.assigned_to || showReassign) && (
+            <section className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-6 space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                  {alert.assigned_to ? "Reassign" : "Assign"}
+                </h3>
+                {showReassign && (
+                  <button
+                    onClick={() => {
+                      setShowReassign(false);
+                      setAssignTo("");
+                    }}
+                    className="text-xs text-gray-500 dark:text-gray-400 hover:underline"
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
+              <UserPicker
+                valueField="email"
+                value={assignTo}
+                onChange={setAssignTo}
+                ariaLabel="Assign to analyst"
+                placeholder="Select an analyst…"
+              />
+              <button
+                onClick={onAssign}
+                disabled={assigning || !assignTo}
+                className="w-full bg-primary text-white py-2 rounded-lg text-sm font-medium hover:bg-primary-600 disabled:opacity-50"
+              >
+                {assigning ? "Assigning…" : alert.assigned_to ? "Reassign" : "Assign"}
+              </button>
+            </section>
+          )}
+          {canAssign && alert.assigned_to && !showReassign && alert.status !== "CLOSED" && (
             <button
-              onClick={onAssign}
-              disabled={assigning || !assignTo}
-              className="w-full bg-primary text-white py-2 rounded-lg text-sm font-medium hover:bg-primary-600 disabled:opacity-50"
+              onClick={() => setShowReassign(true)}
+              className="w-full text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:underline py-1"
             >
-              {assigning ? "Assigning…" : "Assign"}
+              Reassign this alert
             </button>
-          </section>
+          )}
 
           <section className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-6 space-y-3">
             <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">

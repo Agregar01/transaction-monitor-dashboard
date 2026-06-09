@@ -179,6 +179,10 @@ function AlertsListInner() {
               onChange={(v) => {
                 setPage(1);
                 setAssignedTo(v);
+                // Assigned alerts are INVESTIGATING, not OPEN — clear the status
+                // filter when picking an assignee so their queue isn't hidden by
+                // the default OPEN view.
+                if (v) setStatus("");
               }}
               ariaLabel="Filter by assigned analyst"
               placeholder="Anyone"
