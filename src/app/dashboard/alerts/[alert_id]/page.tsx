@@ -9,7 +9,7 @@ import {
   useAddAlertNoteMutation,
   useResolveAlertMutation,
 } from "@/redux/slices/api/alertsApi";
-import { useListUsersQuery } from "@/redux/slices/api/authApi";
+import { useListAssignableUsersQuery } from "@/redux/slices/api/authApi";
 import { useAppSelector } from "@/redux/store";
 import { SkeletonCard } from "@/components/Skeleton";
 import RiskBadge from "@/components/RiskBadge";
@@ -60,7 +60,7 @@ export default function AlertDetailPage() {
   const alertId = params.alert_id;
 
   const { data: alert, isLoading, error } = useGetAlertQuery(alertId);
-  const { data: users } = useListUsersQuery();
+  const { data: users } = useListAssignableUsersQuery();
   const roles = useAppSelector((s) => s.auth.roles);
   const canAssign = roles.some((r) => CAN_ASSIGN_ROLES.includes(r));
 

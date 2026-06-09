@@ -11,6 +11,7 @@ import { SkeletonTable } from "@/components/Skeleton";
 import ActionBadge from "@/components/ActionBadge";
 import DonutCard from "@/components/DonutCard";
 import Pagination from "@/components/Pagination";
+import UserPicker from "@/components/UserPicker";
 import type { CaseStatus, CaseType, CasePriority } from "@/types/api";
 import { PlusIcon } from "@heroicons/react/24/outline";
 
@@ -182,17 +183,18 @@ function CasesListInner() {
           <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
             Assigned to
           </label>
-          <input
-            type="text"
-            aria-label="Filter by assigned to"
-            value={assignedTo}
-            onChange={(e) => {
-              setPage(1);
-              setAssignedTo(e.target.value);
-            }}
-            placeholder="analyst@autheo.test"
-            className="mt-1 w-full px-3 py-2 text-sm border border-gray-200 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-800 text-gray-900 dark:text-white"
-          />
+          <div className="mt-1">
+            <UserPicker
+              valueField="user_id"
+              value={assignedTo}
+              onChange={(v) => {
+                setPage(1);
+                setAssignedTo(v);
+              }}
+              ariaLabel="Filter by assigned investigator"
+              placeholder="Anyone"
+            />
+          </div>
         </div>
       </div>
 

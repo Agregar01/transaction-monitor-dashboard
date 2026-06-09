@@ -186,7 +186,7 @@ function AlertsListInner() {
               }}
               ariaLabel="Filter by assigned analyst"
               placeholder="Anyone"
-              className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-800 text-gray-900 dark:text-white"
+              wrapperClassName="flex-1"
             />
             {myEmail && (
               <button

@@ -17,7 +17,7 @@ import {
   useGetCaseTransactionChainQuery,
 } from "@/redux/slices/api/casesApi";
 import { useListAttachmentsQuery } from "@/redux/slices/api/attachmentsApi";
-import { useListUsersQuery } from "@/redux/slices/api/authApi";
+import { useListAssignableUsersQuery } from "@/redux/slices/api/authApi";
 import { useAppSelector } from "@/redux/store";
 import { SkeletonCard } from "@/components/Skeleton";
 import ActionBadge from "@/components/ActionBadge";
@@ -70,7 +70,7 @@ export default function CaseDetailPage() {
   );
 
   const { data: kase, isLoading, error } = useGetCaseQuery(caseId);
-  const { data: users } = useListUsersQuery();
+  const { data: users } = useListAssignableUsersQuery();
   const { data: alerts } = useGetCaseAlertsQuery(caseId);
   const { data: history } = useGetCaseHistoryQuery(caseId);
   const { data: notes } = useGetCaseNotesQuery(caseId);
