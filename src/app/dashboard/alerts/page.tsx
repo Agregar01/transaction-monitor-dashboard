@@ -11,7 +11,7 @@ import { SkeletonTable } from "@/components/Skeleton";
 import RiskBadge from "@/components/RiskBadge";
 import ActionBadge from "@/components/ActionBadge";
 import DonutCard from "@/components/DonutCard";
-import SeverityLadder from "@/components/SeverityLadder";
+import TriageFunnel from "@/components/TriageFunnel";
 import Pagination from "@/components/Pagination";
 import { useVisiblePolling } from "@/hooks/useVisiblePolling";
 import { type RiskBand } from "@/config/constants";
@@ -170,7 +170,7 @@ function AlertsListInner() {
 
       {(riskBreakdown.total > 0 || sampleSize > 0) && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <SeverityLadder
+          <TriageFunnel
             title="By risk band"
             subtitle="all transactions · last 90 days"
             bands={riskBreakdown.bands}

@@ -18,7 +18,7 @@ import StatCard from "@/components/StatCard";
 import { SkeletonStats } from "@/components/Skeleton";
 import RiskBadge from "@/components/RiskBadge";
 import ActionBadge from "@/components/ActionBadge";
-import SeverityLadder from "@/components/SeverityLadder";
+import TriageFunnel from "@/components/TriageFunnel";
 import HeroActionBand, { type ActionItem } from "@/components/HeroActionBand";
 import { alertPriorityColors, riskBand, type RiskBand } from "@/config/constants";
 import { useVisiblePolling } from "@/hooks/useVisiblePolling";
@@ -479,7 +479,7 @@ export default function DashboardOverviewPage() {
           />
         </div>
 
-        <SeverityLadder
+        <TriageFunnel
           title="Decisions needing action"
           subtitle={riskBreakdown.caption}
           bands={riskBreakdown.bands}

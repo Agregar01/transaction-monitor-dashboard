@@ -10,7 +10,7 @@ import {
 } from "@/redux/slices/api/analyticsApi";
 import { SkeletonStats } from "@/components/Skeleton";
 import StatCard from "@/components/StatCard";
-import SeverityLadder from "@/components/SeverityLadder";
+import TriageFunnel from "@/components/TriageFunnel";
 import { useAppSelector } from "@/redux/store";
 import { currencyForJurisdiction, formatMoney } from "@/lib/currency";
 import { type RiskBand } from "@/config/constants";
@@ -203,7 +203,7 @@ export default function ReportsPage() {
           )}
         </div>
 
-        <SeverityLadder
+        <TriageFunnel
           title="Risk distribution"
           subtitle={`all transactions by decision band · last ${period} days`}
           bands={riskDist.bands}
