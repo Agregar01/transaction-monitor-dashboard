@@ -175,7 +175,7 @@ export default function DashboardOverviewPage() {
       color: "text-amber-600",
       trend: alertActivity.trend,
       delta: alertActivity.delta,
-      href: "/dashboard/alerts",
+      href: "/dashboard/alerts?status=OPEN",
     };
     const immediateCard: Kpi = {
       title: "Immediate (today)",
@@ -183,7 +183,7 @@ export default function DashboardOverviewPage() {
       subtitle: "P0 priority alerts",
       icon: <BellAlertIcon className="h-8 w-8" />,
       color: "text-red-600",
-      href: "/dashboard/alerts",
+      href: "/dashboard/alerts?priority=IMMEDIATE",
     };
     const openCasesCard: Kpi = {
       title: "Open cases",
@@ -191,7 +191,7 @@ export default function DashboardOverviewPage() {
       subtitle: "active investigations",
       icon: <InboxStackIcon className="h-8 w-8" />,
       color: "text-blue-600",
-      href: "/dashboard/cases",
+      href: "/dashboard/cases?status=OPEN",
     };
     const approvalsCard: Kpi = {
       title: "Pending approvals",
@@ -207,7 +207,7 @@ export default function DashboardOverviewPage() {
       subtitle: "awaiting filing",
       icon: <DocumentTextIcon className="h-8 w-8" />,
       color: "text-emerald-600",
-      href: "/dashboard/str",
+      href: "/dashboard/str?status=DRAFT",
     };
 
     switch (persona) {
@@ -364,13 +364,13 @@ export default function DashboardOverviewPage() {
       case "analyst":
         return {
           items: [immediate, { count: openAlerts?.total ?? 0, label: "open alerts", sublabel: "in queue" }],
-          cta: { label: "Open triage queue", href: "/dashboard/alerts" },
+          cta: { label: "Open triage queue", href: "/dashboard/alerts?status=OPEN" },
         };
       case "admin":
       default:
         return {
           items: [immediate, approvals],
-          cta: { label: "Open alerts", href: "/dashboard/alerts" },
+          cta: { label: "Open alerts", href: "/dashboard/alerts?priority=IMMEDIATE" },
         };
     }
   }, [persona, immediateToday, pendingApprovals, draftSTR, openAlerts, latestDrift]);

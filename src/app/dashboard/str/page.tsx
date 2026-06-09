@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { useListSTRQuery } from "@/redux/slices/api/strApi";
 import { SkeletonTable } from "@/components/Skeleton";
 import ActionBadge from "@/components/ActionBadge";
@@ -10,9 +11,11 @@ import type { STRStatus } from "@/types/api";
 
 const STATUSES: STRStatus[] = ["DRAFT", "FILED", "WITHDRAWN"];
 
-export default function STRListPage() {
+function STRListInner() {
+  // Seed the status filter from the URL so Overview deep links land pre-filtered.
+  const params = useSearchParams();
   const [page, setPage] = useState(1);
-  const [status, setStatus] = useState<STRStatus | "">("");
+  const [status, setStatus] = useState<STRStatus | "">((params.get("status") as STRStatus | null) ?? "");
   const [jurisdictionId, setJurisdictionId] = useState("");
 
   const { data, isLoading, error } = useListSTRQuery({
@@ -135,5 +138,13 @@ export default function STRListPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function STRListPage() {
+  return (
+    <Suspense fallback={null}>
+      <STRListInner />
+    </Suspense>
   );
 }

@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useMemo } from "react";
+import { useState, useMemo, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { useListCasesQuery } from "@/redux/slices/api/casesApi";
 import { useGetAnalyticsSummaryQuery } from "@/redux/slices/api/analyticsApi";
 import ExportButton from "@/components/ExportButton";
@@ -33,9 +34,11 @@ const TYPE_COLORS: Record<string, string> = {
   SANCTIONS: "#f59e0b",
 };
 
-export default function CasesListPage() {
+function CasesListInner() {
+  // Seed the status filter from the URL so Overview deep links land pre-filtered.
+  const params = useSearchParams();
   const [page, setPage] = useState(1);
-  const [status, setStatus] = useState<CaseStatus | "">("");
+  const [status, setStatus] = useState<CaseStatus | "">((params.get("status") as CaseStatus | null) ?? "");
   const [caseType, setCaseType] = useState<CaseType | "">("");
   const [priority, setPriority] = useState<CasePriority | "">("");
   const [assignedTo, setAssignedTo] = useState("");
@@ -284,5 +287,13 @@ export default function CasesListPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function CasesListPage() {
+  return (
+    <Suspense fallback={null}>
+      <CasesListInner />
+    </Suspense>
   );
 }

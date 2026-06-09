@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useMemo } from "react";
+import { useState, useMemo, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { useListAlertsQuery } from "@/redux/slices/api/alertsApi";
 import { useGetAnalyticsSummaryQuery } from "@/redux/slices/api/analyticsApi";
 import ExportButton from "@/components/ExportButton";
@@ -25,10 +26,17 @@ const PRIORITY_COLORS: Record<AlertPriority, string> = {
   REVIEW: "#f59e0b",
 };
 
-export default function AlertsListPage() {
+function AlertsListInner() {
+  // Seed filters from the URL so deep links (e.g. /dashboard/alerts?priority=
+  // IMMEDIATE from the Overview cards) land pre-filtered. Falls back to the
+  // OPEN-status default when no param is present.
+  const params = useSearchParams();
+  const initialStatus = (params.get("status") as AlertStatus | null) ?? "OPEN";
+  const initialPriority = (params.get("priority") as AlertPriority | null) ?? "";
+
   const [page, setPage] = useState(1);
-  const [priority, setPriority] = useState<AlertPriority | "">("");
-  const [status, setStatus] = useState<AlertStatus | "">("OPEN");
+  const [priority, setPriority] = useState<AlertPriority | "">(initialPriority);
+  const [status, setStatus] = useState<AlertStatus | "">(initialStatus);
   const [assignedTo, setAssignedTo] = useState("");
 
   const pollingInterval = useVisiblePolling(10000);
@@ -257,5 +265,15 @@ export default function AlertsListPage() {
         </div>
       )}
     </div>
+  );
+}
+
+// useSearchParams() must sit under a Suspense boundary (the page is otherwise
+// statically prerendered).
+export default function AlertsListPage() {
+  return (
+    <Suspense fallback={null}>
+      <AlertsListInner />
+    </Suspense>
   );
 }

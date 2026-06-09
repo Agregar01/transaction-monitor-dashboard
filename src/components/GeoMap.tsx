@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { MapContainer, TileLayer, CircleMarker, Marker, Tooltip, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -39,6 +39,21 @@ function txnRadius(count: number, max: number): number {
   return Math.max(base, Math.min(scaled, 40));
 }
 
+/** Tracks the app's dark-mode class so the basemap matches the theme and
+ *  updates live when the user toggles. */
+function useIsDark(): boolean {
+  const [dark, setDark] = useState(false);
+  useEffect(() => {
+    const el = document.documentElement;
+    const read = () => setDark(el.classList.contains("dark"));
+    read();
+    const obs = new MutationObserver(read);
+    obs.observe(el, { attributes: true, attributeFilter: ["class"] });
+    return () => obs.disconnect();
+  }, []);
+  return dark;
+}
+
 function FitBounds() {
   const map = useMap();
   useEffect(() => {
@@ -59,7 +74,14 @@ interface Props {
 }
 
 export default function GeoMap({ countryStats, clusters }: Props) {
+  const isDark = useIsDark();
   const maxTxn = Math.max(...countryStats.map((c) => c.transaction_count), 1);
+
+  // Muted CARTO basemaps (monochrome) instead of full-colour OSM, so the
+  // green→red fraud circles read clearly and the map matches the theme.
+  const tileUrl = isDark
+    ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+    : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
 
   // Deduplicate clusters by country so we don't stack markers
   const clustersByCountry = new Map<string, GeoCluster>();
@@ -78,8 +100,9 @@ export default function GeoMap({ countryStats, clusters }: Props) {
       scrollWheelZoom={false}
     >
       <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        key={isDark ? "dark" : "light"}
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+        url={tileUrl}
       />
       <FitBounds />
 
