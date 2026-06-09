@@ -54,7 +54,7 @@ export default function CasesListPage() {
   // Breakdowns: status from the real population (analytics case_breakdown),
   // type from a recent sample (not available in the analytics summary).
   const { data: analytics } = useGetAnalyticsSummaryQuery({ period_days: 90 });
-  const { data: sample } = useListCasesQuery({ page_size: 200 });
+  const { data: sample } = useListCasesQuery({ page_size: 100 });
 
   const statusBreakdown = useMemo(() => {
     const bd = analytics?.case_breakdown ?? {};

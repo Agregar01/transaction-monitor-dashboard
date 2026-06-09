@@ -19,6 +19,7 @@ import { SkeletonStats } from "@/components/Skeleton";
 import RiskBadge from "@/components/RiskBadge";
 import ActionBadge from "@/components/ActionBadge";
 import DonutCard from "@/components/DonutCard";
+import HeroActionBand, { type ActionItem } from "@/components/HeroActionBand";
 import { alertPriorityColors, riskBand, riskBandColors, type RiskBand } from "@/config/constants";
 import { useVisiblePolling } from "@/hooks/useVisiblePolling";
 import {
@@ -66,6 +67,9 @@ type Kpi = {
   subtitle: string;
   icon: ReactNode;
   color: string;
+  delta?: { pct: number; goodWhen: "up" | "down"; label?: string };
+  trend?: number[];
+  href?: string;
 };
 
 function startOfDay(d: Date): Date {
@@ -110,7 +114,7 @@ export default function DashboardOverviewPage() {
   );
 
   const { data: alertsLast14d } = useListAlertsQuery(
-    { start_date: fourteenDaysAgo, page_size: 500 },
+    { start_date: fourteenDaysAgo, page_size: 100 },
     { pollingInterval: slowPoll },
   );
 
@@ -148,6 +152,19 @@ export default function DashboardOverviewPage() {
     { pollingInterval: fastPoll, skip: isMl },
   );
 
+  // Daily alert volume over the 14-day window → sparkline + a 7d-vs-prior-7d
+  // delta. Derived from the same sample the chart uses (honest, no extra fetch).
+  const alertActivity = useMemo(() => {
+    const dates = daysBack(14);
+    const perDay = dates.map(
+      (d) => (alertsLast14d?.items ?? []).filter((a) => a.alert_timestamp.slice(0, 10) === d).length,
+    );
+    const prev7 = perDay.slice(0, 7).reduce((a, b) => a + b, 0);
+    const last7 = perDay.slice(7).reduce((a, b) => a + b, 0);
+    const pct = prev7 === 0 ? (last7 > 0 ? 100 : 0) : Math.round(((last7 - prev7) / prev7) * 100);
+    return { trend: perDay, delta: { pct, goodWhen: "down" as const, label: "vs prev 7d" } };
+  }, [alertsLast14d]);
+
   // Role-tailored KPI row.
   const kpis = useMemo<Kpi[]>(() => {
     const openAlertsCard: Kpi = {
@@ -156,6 +173,9 @@ export default function DashboardOverviewPage() {
       subtitle: "awaiting triage",
       icon: <BellAlertIcon className="h-8 w-8" />,
       color: "text-amber-600",
+      trend: alertActivity.trend,
+      delta: alertActivity.delta,
+      href: "/dashboard/alerts",
     };
     const immediateCard: Kpi = {
       title: "Immediate (today)",
@@ -163,6 +183,7 @@ export default function DashboardOverviewPage() {
       subtitle: "P0 priority alerts",
       icon: <BellAlertIcon className="h-8 w-8" />,
       color: "text-red-600",
+      href: "/dashboard/alerts",
     };
     const openCasesCard: Kpi = {
       title: "Open cases",
@@ -170,6 +191,7 @@ export default function DashboardOverviewPage() {
       subtitle: "active investigations",
       icon: <InboxStackIcon className="h-8 w-8" />,
       color: "text-blue-600",
+      href: "/dashboard/cases",
     };
     const approvalsCard: Kpi = {
       title: "Pending approvals",
@@ -177,6 +199,7 @@ export default function DashboardOverviewPage() {
       subtitle: "four-eyes queue",
       icon: <CheckBadgeIcon className="h-8 w-8" />,
       color: "text-purple-600",
+      href: "/dashboard/approvals",
     };
     const strCard: Kpi = {
       title: "STR drafts",
@@ -184,6 +207,7 @@ export default function DashboardOverviewPage() {
       subtitle: "awaiting filing",
       icon: <DocumentTextIcon className="h-8 w-8" />,
       color: "text-emerald-600",
+      href: "/dashboard/str",
     };
 
     switch (persona) {
@@ -237,6 +261,7 @@ export default function DashboardOverviewPage() {
     draftSTR,
     champions,
     latestDrift,
+    alertActivity,
   ]);
 
   // Group the 14-day alerts client-side into priority buckets per day.
@@ -306,6 +331,55 @@ export default function DashboardOverviewPage() {
     };
   }, [analytics, alertsLast14d]);
 
+  // Persona-aware "needs action" band — only the items that person acts on.
+  const hero = useMemo<{ items: ActionItem[]; cta: { label: string; href: string }; clear?: string }>(() => {
+    const immediate: ActionItem = {
+      count: immediateToday?.total ?? 0,
+      label: "IMMEDIATE alerts",
+      sublabel: "untriaged today",
+    };
+    const approvals: ActionItem = {
+      count: pendingApprovals?.length ?? 0,
+      label: "approvals",
+      sublabel: "waiting on you",
+    };
+    const strDrafts: ActionItem = {
+      count: draftSTR?.total ?? 0,
+      label: "STR drafts",
+      sublabel: "awaiting filing",
+    };
+    switch (persona) {
+      case "compliance":
+        return {
+          items: [approvals, strDrafts, immediate],
+          cta: { label: "Open approvals", href: "/dashboard/approvals" },
+        };
+      case "ml":
+        return {
+          items: [
+            {
+              count: latestDrift?.critical_features_drifted ?? 0,
+              label: "critical features",
+              sublabel: "drifted",
+            },
+          ],
+          cta: { label: "View drift", href: "/dashboard/drift" },
+          clear: "No critical drift — models stable.",
+        };
+      case "analyst":
+        return {
+          items: [immediate, { count: openAlerts?.total ?? 0, label: "open alerts", sublabel: "in queue" }],
+          cta: { label: "Open triage queue", href: "/dashboard/alerts" },
+        };
+      case "admin":
+      default:
+        return {
+          items: [immediate, approvals],
+          cta: { label: "Open alerts", href: "/dashboard/alerts" },
+        };
+    }
+  }, [persona, immediateToday, pendingApprovals, draftSTR, openAlerts, latestDrift]);
+
   const isLoading = !openAlerts && !alertsLast14d;
 
   return (
@@ -320,6 +394,8 @@ export default function DashboardOverviewPage() {
         </p>
       </div>
 
+      {!isLoading && <HeroActionBand items={hero.items} cta={hero.cta} clearMessage={hero.clear} />}
+
       {isLoading ? (
         <SkeletonStats count={4} />
       ) : (
@@ -332,6 +408,9 @@ export default function DashboardOverviewPage() {
               subtitle={k.subtitle}
               icon={k.icon}
               color={k.color}
+              delta={k.delta}
+              trend={k.trend}
+              href={k.href}
             />
           ))}
         </div>

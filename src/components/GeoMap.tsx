@@ -42,7 +42,13 @@ function txnRadius(count: number, max: number): number {
 function FitBounds() {
   const map = useMap();
   useEffect(() => {
+    // The map often mounts before its flex/grid parent has resolved a height,
+    // so Leaflet lays out zero tiles and only the markers show until a resize.
+    // Force a size recalculation on mount (and once more after layout settles).
+    map.invalidateSize();
     map.fitBounds([[-35, -20], [37, 55]], { padding: [20, 20] });
+    const t = setTimeout(() => map.invalidateSize(), 300);
+    return () => clearTimeout(t);
   }, [map]);
   return null;
 }

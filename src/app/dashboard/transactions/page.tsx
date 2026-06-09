@@ -34,7 +34,7 @@ export default function TransactionsListPage() {
 
   // Portfolio-level breakdowns from a larger recent sample (independent of the
   // table's page/filters) so the donuts stay meaningful as you browse.
-  const { data: sample } = useListTransactionsQuery({ page_size: 200 });
+  const { data: sample } = useListTransactionsQuery({ page_size: 100 });
 
   const channelBreakdown = useMemo(() => {
     const counts: Record<string, number> = {};

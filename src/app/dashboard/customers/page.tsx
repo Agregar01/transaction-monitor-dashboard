@@ -37,7 +37,7 @@ export default function CustomersListPage() {
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.page_size)) : 1;
 
   // Portfolio breakdowns from a larger recent sample, independent of filters.
-  const { data: sample } = useListCustomersQuery({ page_size: 200 });
+  const { data: sample } = useListCustomersQuery({ page_size: 100 });
 
   const riskLevelBreakdown = useMemo(() => {
     const counts = {} as Record<RiskLevel, number>;

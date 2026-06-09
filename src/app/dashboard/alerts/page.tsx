@@ -49,7 +49,7 @@ export default function AlertsListPage() {
   // Breakdowns: risk band from the real population (analytics), priority from a
   // recent sample (not available in the analytics summary).
   const { data: analytics } = useGetAnalyticsSummaryQuery({ period_days: 90 });
-  const { data: sample } = useListAlertsQuery({ page_size: 200 });
+  const { data: sample } = useListAlertsQuery({ page_size: 100 });
 
   const riskBreakdown = useMemo(() => {
     const order: RiskBand[] = ["ALLOW", "FLAG", "STEP_UP", "HOLD", "BLOCK"];
