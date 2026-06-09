@@ -45,8 +45,8 @@ export default function HeroActionBand({ items, clearMessage = "All clear — no
 
   // The right-side primary button points at the FIRST active item — the most
   // urgent non-zero queue for this persona. Because zero-count items are hidden,
-  // it can never strand the user on an empty page (the original bug), and the
-  // per-item chips still give every queue its own destination.
+  // it can never strand the user on an empty page (the original bug). The counts
+  // render as plain text (no clickable chips); the button is the single action.
   const primary = active[0];
 
   return (
@@ -56,18 +56,13 @@ export default function HeroActionBand({ items, clearMessage = "All clear — no
           <ExclamationTriangleIcon className="h-6 w-6 shrink-0 text-amber-600 dark:text-amber-400" />
           <div className="min-w-0">
             <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">Needs your attention</p>
-            <div className="mt-3 flex flex-wrap gap-2">
+            <div className="mt-2 flex flex-wrap gap-x-6 gap-y-2">
               {active.map((i) => (
-                <Link
-                  key={i.label}
-                  href={i.href}
-                  className="group inline-flex items-baseline gap-1.5 rounded-lg border border-amber-200 dark:border-amber-800/60 bg-white/70 dark:bg-amber-900/20 px-3 py-1.5 transition-colors hover:bg-white hover:border-amber-300 dark:hover:bg-amber-900/40"
-                >
+                <div key={i.label} className="flex items-baseline gap-1.5">
                   <span className="text-lg font-bold text-amber-900 dark:text-amber-100">{i.count}</span>
                   <span className="text-sm font-medium text-amber-800 dark:text-amber-200">{i.label}</span>
                   <span className="text-xs text-amber-700/80 dark:text-amber-300/70">{i.sublabel}</span>
-                  <ArrowRightIcon className="h-3.5 w-3.5 self-center text-amber-600/70 dark:text-amber-400/70 transition-transform group-hover:translate-x-0.5" />
-                </Link>
+                </div>
               ))}
             </div>
           </div>
