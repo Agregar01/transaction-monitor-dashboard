@@ -91,28 +91,3 @@ export function normalizeProxyPath(rawPath: string): string {
   }
   return collapsed;
 }
-
-/**
- * Backend collection roots registered with FastAPI's `redirect_slashes` OFF and
- * a *mandatory* trailing slash (the multi-tenant routers — institutions, team,
- * api-keys, filings). The rest of the API (and Next's own slash-stripping) is
- * no-slash, and `normalizeProxyPath` trims trailing slashes — so without this
- * the proxy would forward e.g. `/api/v1/institutions` and the backend 404s
- * (only `/api/v1/institutions/` exists).
- *
- * We re-append the slash for an EXACT match on a collection root only. Sub-paths
- * (`/institutions/{id}`, `/users/invite`, `/api-keys/{id}/revoke`,
- * `/filings/analytics`, …) are registered no-slash and must pass through
- * untouched.
- */
-const SLASH_REQUIRED_ROOTS = new Set([
-  "/api/v1/institutions",
-  "/api/v1/users",
-  "/api/v1/api-keys",
-  "/api/v1/filings",
-]);
-
-/** Re-add the mandatory trailing slash for the slash-only collection roots. */
-export function applyBackendSlash(path: string): string {
-  return SLASH_REQUIRED_ROOTS.has(path) ? path + "/" : path;
-}
