@@ -172,8 +172,11 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p className="text-center text-xs text-gray-500 dark:text-navy-300">
-          Transaction Monitoring System
+        <p className="text-center text-sm text-gray-500 dark:text-navy-300">
+          New institution?{" "}
+          <a href="/signup" className="text-primary hover:text-primary-600 font-medium">
+            Register for access
+          </a>
         </p>
       </div>
     </div>

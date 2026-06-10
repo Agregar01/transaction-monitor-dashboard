@@ -35,6 +35,10 @@ import "./slices/api/auditApi";
 import "./slices/api/shadowApi";
 import "./slices/api/healthApi";
 import "./slices/api/mlApi";
+import "./slices/api/institutionsApi";
+import "./slices/api/teamApi";
+import "./slices/api/apiKeysApi";
+import "./slices/api/filingsApi";
 
 const authPersistConfig = {
   key: "auth",

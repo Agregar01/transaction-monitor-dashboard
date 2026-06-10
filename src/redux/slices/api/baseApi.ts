@@ -79,6 +79,11 @@ export const baseApi = createApi({
     "Attachment",
     "Analytics",
     "Dsar",
+    // Multi-tenant + regulator
+    "Institution",
+    "TeamUser",
+    "ApiKey",
+    "Filing",
   ],
   endpoints: () => ({}),
 });

@@ -33,7 +33,12 @@ import {
   XMarkIcon,
   GlobeAltIcon,
   FingerPrintIcon,
+  BuildingOffice2Icon,
+  KeyIcon,
+  ScaleIcon,
+  DocumentCheckIcon,
 } from "@heroicons/react/24/outline";
+import { isAgregarAdmin, isRegulator } from "@/lib/roles";
 
 type NavItem = {
   name: string;
@@ -68,12 +73,25 @@ const ruleOpsNav: NavItem[] = [
 
 const adminNav: NavItem[] = [
   { name: "Admin Config", href: "/dashboard/admin", icon: AdjustmentsHorizontalIcon },
+  { name: "Team", href: "/dashboard/team", icon: UserGroupIcon },
+  { name: "API Keys", href: "/dashboard/api-keys", icon: KeyIcon },
   { name: "Users & Roles", href: "/dashboard/users", icon: UserGroupIcon },
   { name: "Jurisdictions", href: "/dashboard/jurisdictions", icon: BuildingLibraryIcon },
   { name: "Data Privacy", href: "/dashboard/privacy", icon: FingerPrintIcon },
   { name: "Audit Trail", href: "/dashboard/audit", icon: ClipboardDocumentListIcon },
   { name: "System Health", href: "/dashboard/health", icon: ServerIcon },
   { name: "Settings", href: "/dashboard/settings", icon: Cog6ToothIcon },
+];
+
+// Platform tier — Agregar staff only (AGREGAR_ADMIN / SYSTEM_ADMIN).
+const platformNav: NavItem[] = [
+  { name: "Institutions", href: "/dashboard/institutions", icon: BuildingOffice2Icon },
+];
+
+// Regulator tier — EOCO / FIC officials (REGULATOR_VIEWER). Read-only.
+const regulatorNav: NavItem[] = [
+  { name: "Regulator Dashboard", href: "/dashboard/regulator", icon: ScaleIcon },
+  { name: "Filed Reports", href: "/dashboard/regulator/filings", icon: DocumentCheckIcon },
 ];
 
 /**
@@ -110,6 +128,12 @@ const PERMISSION_NAV_MAP: Record<string, string[]> = {
   "/dashboard/jurisdictions": ["configure_thresholds"],
   "/dashboard/health":        ["manage_api_keys"],
   "/dashboard/settings":      [],                                                         // any authenticated user
+  // Multi-tenant + regulator
+  "/dashboard/institutions":  ["manage_institutions", "view_institutions"],
+  "/dashboard/team":          ["manage_institution_users", "view_users"],
+  "/dashboard/api-keys":      ["manage_api_keys"],
+  "/dashboard/regulator":          ["view_regulator_filings"],
+  "/dashboard/regulator/filings":  ["view_regulator_filings"],
 };
 
 export function filterNavByPermissions(items: NavItem[], permissions: string[]): NavItem[] {
@@ -205,40 +229,63 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
       (item) => !(scopedAnalyst && ANALYST_HIDDEN.includes(item.href)),
     );
 
+  // Tier-based rendering. A regulator (and not a platform admin) gets a
+  // focused, read-only nav — none of the institution AML operations.
+  const agregarAdmin = isAgregarAdmin(roles);
+  const regulatorOnly = isRegulator(roles) && !agregarAdmin;
+  const tierLabel = agregarAdmin ? "Platform" : regulatorOnly ? "Regulator" : (jurisdictionCode ?? "—");
+
   return (
     <>
       <div className="px-6 py-5 border-b border-navy-600">
         <p className="text-primary-300 text-xs font-semibold uppercase tracking-wider">
-          {jurisdictionCode ?? "—"} · Transaction Monitor
+          {tierLabel} · Transaction Monitor
         </p>
         {email && <p className="text-navy-300 text-xs mt-1 truncate">{email}</p>}
       </div>
 
       <nav className="flex-1 px-3 py-0 space-y-0.5 overflow-y-auto">
-        <NavSection
-          label="Monitor"
-          items={navFor(monitorNav)}
-          pathname={pathname}
-          onNav={onNav}
-        />
-        <NavSection
-          label="Compliance"
-          items={navFor(complianceNav)}
-          pathname={pathname}
-          onNav={onNav}
-        />
-        <NavSection
-          label="Rule & ML Ops"
-          items={navFor(ruleOpsNav)}
-          pathname={pathname}
-          onNav={onNav}
-        />
-        <NavSection
-          label="Admin"
-          items={navFor(adminNav)}
-          pathname={pathname}
-          onNav={onNav}
-        />
+        {regulatorOnly ? (
+          <>
+            <NavSection label="Oversight" items={regulatorNav} pathname={pathname} onNav={onNav} />
+            <NavSection
+              label="Account"
+              items={navFor([{ name: "Settings", href: "/dashboard/settings", icon: Cog6ToothIcon }])}
+              pathname={pathname}
+              onNav={onNav}
+            />
+          </>
+        ) : (
+          <>
+            {agregarAdmin && (
+              <NavSection label="Platform" items={navFor(platformNav)} pathname={pathname} onNav={onNav} />
+            )}
+            <NavSection
+              label="Monitor"
+              items={navFor(monitorNav)}
+              pathname={pathname}
+              onNav={onNav}
+            />
+            <NavSection
+              label="Compliance"
+              items={navFor(complianceNav)}
+              pathname={pathname}
+              onNav={onNav}
+            />
+            <NavSection
+              label="Rule & ML Ops"
+              items={navFor(ruleOpsNav)}
+              pathname={pathname}
+              onNav={onNav}
+            />
+            <NavSection
+              label="Admin"
+              items={navFor(adminNav)}
+              pathname={pathname}
+              onNav={onNav}
+            />
+          </>
+        )}
       </nav>
 
       <div className="px-3 py-4 border-t border-navy-600 space-y-1">

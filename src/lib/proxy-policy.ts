@@ -42,11 +42,27 @@ export const ALLOWED_PREFIXES = [
   "/api/v1/attachments/",
   "/api/v1/privacy/",
   "/api/v1/export/",
+  // Multi-tenant + regulator (Phases 3–6). Institution onboarding, team
+  // management, institution-scoped API keys, and the regulator filings store.
+  "/api/v1/institutions/",
+  "/api/v1/users/",
+  "/api/v1/api-keys/",
+  "/api/v1/filings/",
 ] as const;
 
 export const CSRF_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
-const CSRF_EXEMPT_SUBSTRINGS = ["/auth/login", "/auth/refresh", "/auth/logout"];
+// Public, session-less flows: protected by passwords or one-time email tokens,
+// not by a session cookie — so there is no CSRF cookie to double-submit.
+// `/institutions/signup` also covers `/institutions/signup/resend-verification`.
+const CSRF_EXEMPT_SUBSTRINGS = [
+  "/auth/login",
+  "/auth/refresh",
+  "/auth/logout",
+  "/auth/accept-invite",
+  "/institutions/signup",
+  "/institutions/verify-email",
+];
 
 export const REFRESH_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 export const ACCESS_MAX_AGE = 60 * 30; // 30 minutes
