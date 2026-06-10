@@ -43,14 +43,14 @@ export interface ApiKeyUsage {
 export const apiKeysApi = baseApi.injectEndpoints({
   endpoints: (b) => ({
     listApiKeys: b.query<ApiKey[], void>({
-      query: () => "/api-keys/",
+      query: () => "/api-keys",
       providesTags: (result) => [
         { type: "ApiKey", id: "LIST" },
         ...(result ?? []).map((k) => ({ type: "ApiKey" as const, id: k.id })),
       ],
     }),
     createApiKey: b.mutation<ApiKeyCreated, { label: string }>({
-      query: (body) => ({ url: "/api-keys/", method: "POST", body }),
+      query: (body) => ({ url: "/api-keys", method: "POST", body }),
       invalidatesTags: [{ type: "ApiKey", id: "LIST" }],
     }),
     revokeApiKey: b.mutation<{ id: string; label: string; message: string }, string>({

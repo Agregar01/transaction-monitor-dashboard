@@ -4,6 +4,7 @@ import {
   isCsrfExempt,
   requiresCsrf,
   normalizeProxyPath,
+  applyBackendSlash,
 } from "@/lib/proxy-policy";
 
 describe("isAllowedPath — SSRF guard", () => {
@@ -81,5 +82,30 @@ describe("normalizeProxyPath", () => {
 
   it("preserves a root '/'", () => {
     expect(normalizeProxyPath("/api/proxy/")).toBe("/");
+  });
+});
+
+describe("applyBackendSlash — slash-only collection roots", () => {
+  it("re-adds the trailing slash for the four multi-tenant collection roots", () => {
+    expect(applyBackendSlash("/api/v1/institutions")).toBe("/api/v1/institutions/");
+    expect(applyBackendSlash("/api/v1/users")).toBe("/api/v1/users/");
+    expect(applyBackendSlash("/api/v1/api-keys")).toBe("/api/v1/api-keys/");
+    expect(applyBackendSlash("/api/v1/filings")).toBe("/api/v1/filings/");
+  });
+
+  it("leaves sub-paths untouched (registered no-slash)", () => {
+    expect(applyBackendSlash("/api/v1/institutions/signup")).toBe("/api/v1/institutions/signup");
+    expect(applyBackendSlash("/api/v1/institutions/abc-123/approve")).toBe(
+      "/api/v1/institutions/abc-123/approve",
+    );
+    expect(applyBackendSlash("/api/v1/users/invite")).toBe("/api/v1/users/invite");
+    expect(applyBackendSlash("/api/v1/api-keys/k1/revoke")).toBe("/api/v1/api-keys/k1/revoke");
+    expect(applyBackendSlash("/api/v1/filings/analytics")).toBe("/api/v1/filings/analytics");
+  });
+
+  it("leaves unrelated (no-slash) endpoints untouched", () => {
+    expect(applyBackendSlash("/api/v1/cases")).toBe("/api/v1/cases");
+    expect(applyBackendSlash("/api/v1/alerts")).toBe("/api/v1/alerts");
+    expect(applyBackendSlash("/api/v1/auth/users")).toBe("/api/v1/auth/users");
   });
 });

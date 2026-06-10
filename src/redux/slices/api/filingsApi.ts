@@ -54,7 +54,7 @@ export const filingsApi = baseApi.injectEndpoints({
       providesTags: [{ type: "Filing", id: "ANALYTICS" }],
     }),
     listFilings: b.query<FilingListResponse, ListFilingsParams>({
-      query: (params) => ({ url: "/filings/", params }),
+      query: (params) => ({ url: "/filings", params }),
       providesTags: (result) => [
         { type: "Filing", id: "LIST" },
         ...(result?.items ?? []).map((f) => ({ type: "Filing" as const, id: f.id })),

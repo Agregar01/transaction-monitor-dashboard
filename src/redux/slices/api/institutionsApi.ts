@@ -50,7 +50,7 @@ interface ActionResponse {
 export const institutionsApi = baseApi.injectEndpoints({
   endpoints: (b) => ({
     listInstitutions: b.query<InstitutionListResponse, ListInstitutionsParams>({
-      query: (params) => ({ url: "/institutions/", params }),
+      query: (params) => ({ url: "/institutions", params }),
       providesTags: (result) => [
         { type: "Institution", id: "LIST" },
         ...(result?.items ?? []).map((i) => ({ type: "Institution" as const, id: i.id })),

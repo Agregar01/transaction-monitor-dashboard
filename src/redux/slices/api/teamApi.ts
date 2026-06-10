@@ -48,7 +48,7 @@ interface UserStateResponse {
 export const teamApi = baseApi.injectEndpoints({
   endpoints: (b) => ({
     listTeam: b.query<TeamMember[], { include_inactive?: boolean } | void>({
-      query: (params) => ({ url: "/users/", params: params || undefined }),
+      query: (params) => ({ url: "/users", params: params || undefined }),
       providesTags: (result) => [
         { type: "TeamUser", id: "LIST" },
         ...(result ?? []).map((u) => ({ type: "TeamUser" as const, id: u.id })),

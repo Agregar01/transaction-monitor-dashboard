@@ -8,6 +8,7 @@ import {
   SESSION_MARKER,
   ACCESS_MAX_AGE,
   REFRESH_MAX_AGE,
+  applyBackendSlash,
   isAllowedPath,
   isCsrfExempt,
   normalizeProxyPath,
@@ -218,7 +219,10 @@ async function proxyRequest(req: NextRequest) {
   }
 
   const url = new URL(req.url);
-  const path = normalizeProxyPath(url.pathname);
+  // Re-add the mandatory trailing slash for the slash-only multi-tenant
+  // collection roots (institutions/users/api-keys/filings) that normalizeProxyPath
+  // would otherwise strip, leaving the backend to 404.
+  const path = applyBackendSlash(normalizeProxyPath(url.pathname));
 
   if (!isAllowedPath(path)) {
     return NextResponse.json({ detail: "Not allowed" }, { status: 403 });
