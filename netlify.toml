@@ -1,0 +1,20 @@
+# Netlify build config for the Next.js (App Router) dashboard.
+#
+# This site uses SSR, middleware, and the BFF proxy under /api/proxy/* — it is
+# NOT a static export. The official @netlify/plugin-nextjs adapter runs the full
+# Next runtime (server routes, middleware, dynamic routes) on Netlify Functions.
+#
+# Pinning the command + plugin here makes deploys deterministic instead of
+# relying on Netlify's framework auto-detection, which is what let newly-added
+# routes 404 on a stale build.
+#
+# Required environment variable (set in Site config → Environment variables):
+#   BACKEND_URL = https://monitor.agregartech.com   (the FastAPI origin the
+#   proxy forwards to; without it every /api/proxy call returns 503)
+
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
