@@ -39,7 +39,6 @@ import {
   DocumentCheckIcon,
 } from "@heroicons/react/24/outline";
 import { effectivePersona, PERSONA_META, type Persona } from "@/lib/personas";
-import PersonaSwitcher from "@/components/PersonaSwitcher";
 
 type NavItem = {
   name: string;
@@ -259,9 +258,8 @@ function NavSection({
 function SidebarContent({ onNav }: { onNav?: () => void }) {
   const pathname = usePathname();
   const dispatch = useAppDispatch();
-  const { permissions, roles, jurisdictionCode, email, features, activePersona } = useAppSelector(
-    (s) => s.auth,
-  );
+  const { permissions, roles, jurisdictionCode, email, features, activePersona, institutionName } =
+    useAppSelector((s) => s.auth);
   const persona = effectivePersona(roles, activePersona);
   const sections = PERSONA_SECTIONS[persona];
 
@@ -271,17 +269,24 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
     filterNavByFeatures(filterNavByPermissions(items, permissions), features);
 
   const tierLabel = PERSONA_META[persona].label;
+  // Org line: real institution name for tenant users; platform users belong to
+  // no institution (they see all), so label that explicitly.
+  const orgName = institutionName ?? (persona === "platform" ? "Agregar Platform" : "Transaction Monitor");
 
   return (
     <>
       <div className="px-6 py-5 border-b border-navy-600">
-        <p className="text-primary-300 text-xs font-semibold uppercase tracking-wider">
+        <div className="flex items-center gap-2">
+          <BuildingOffice2Icon className="h-5 w-5 text-primary-300 shrink-0" aria-hidden="true" />
+          <p className="text-sm font-semibold text-white truncate" title={orgName}>
+            {orgName}
+          </p>
+        </div>
+        <p className="text-primary-300 text-[10px] font-semibold uppercase tracking-wider mt-1">
           {tierLabel} · {jurisdictionCode ?? "TMS"}
         </p>
         {email && <p className="text-navy-300 text-xs mt-1 truncate">{email}</p>}
       </div>
-
-      <PersonaSwitcher />
 
       <nav className="flex-1 px-3 py-0 space-y-0.5 overflow-y-auto">
         {sections.map((s) => (

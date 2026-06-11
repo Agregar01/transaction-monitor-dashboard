@@ -25,6 +25,8 @@ interface LoginResponse {
   jurisdiction_code: string | null;
   jurisdiction_display_name: string | null;
   features: { ctr: boolean; str: boolean; sanctions: boolean; ml: boolean } | null;
+  institution_id: string | null;
+  institution_name: string | null;
 }
 
 export default function LoginPage() {
@@ -79,6 +81,8 @@ export default function LoginPage() {
           jurisdictionCode: data.jurisdiction_code,
           jurisdictionDisplayName: data.jurisdiction_display_name,
           features: data.features,
+          institutionId: data.institution_id,
+          institutionName: data.institution_name,
         }),
       );
 

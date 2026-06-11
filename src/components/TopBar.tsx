@@ -3,13 +3,21 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAppSelector, useAppDispatch } from "@/redux/store";
-import { logout } from "@/redux/slices/authSlice";
+import { logout, setActivePersona } from "@/redux/slices/authSlice";
 import { baseApi } from "@/redux/slices/api/baseApi";
+import {
+  effectivePersona,
+  personasForRoles,
+  PERSONA_META,
+  type Persona,
+} from "@/lib/personas";
 import {
   UserCircleIcon,
   ArrowRightOnRectangleIcon,
   Cog6ToothIcon,
   ChevronDownIcon,
+  CheckIcon,
+  BuildingOffice2Icon,
 } from "@heroicons/react/24/outline";
 
 function ApiStatusDot() {
@@ -53,6 +61,23 @@ function ApiStatusDot() {
   );
 }
 
+function InstitutionBadge() {
+  const { institutionName, roles, activePersona } = useAppSelector((s) => s.auth);
+  const persona = effectivePersona(roles, activePersona);
+  // Platform users belong to no institution (they oversee all tenants).
+  const label = institutionName ?? (persona === "platform" ? "Agregar Platform" : null);
+  if (!label) return null;
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-gray-100 dark:bg-navy-700 text-gray-700 dark:text-gray-200 max-w-[220px]"
+      title={label}
+    >
+      <BuildingOffice2Icon className="h-4 w-4 text-primary shrink-0" aria-hidden="true" />
+      <span className="truncate">{label}</span>
+    </span>
+  );
+}
+
 function JurisdictionBadge() {
   const { jurisdictionCode, jurisdictionDisplayName } = useAppSelector((s) => s.auth);
   if (!jurisdictionCode) return null;
@@ -74,9 +99,18 @@ function JurisdictionBadge() {
 function ProfileDropdown() {
   const dispatch = useAppDispatch();
   const router = useRouter();
-  const { email, fullName, roles } = useAppSelector((s) => s.auth);
+  const { email, fullName, roles, activePersona } = useAppSelector((s) => s.auth);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+
+  const persona = effectivePersona(roles, activePersona);
+  const personaOptions = personasForRoles(roles);
+  const switchPersona = (p: Persona) => {
+    setOpen(false);
+    if (p === persona) return;
+    dispatch(setActivePersona(p));
+    router.push("/dashboard");
+  };
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -94,7 +128,6 @@ function ProfileDropdown() {
   }, []);
 
   const displayName = fullName || email || "User";
-  const primaryRole = roles[0] ?? "READONLY";
 
   return (
     <div ref={ref} className="relative">
@@ -111,7 +144,7 @@ function ProfileDropdown() {
             {displayName}
           </p>
           <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-            {primaryRole}
+            {PERSONA_META[persona].label}
           </p>
         </div>
         <ChevronDownIcon className="h-3.5 w-3.5 text-gray-400 hidden sm:block" />
@@ -135,6 +168,28 @@ function ProfileDropdown() {
               ))}
             </div>
           </div>
+
+          {personaOptions.length > 1 && (
+            <div className="py-1 border-b border-gray-100 dark:border-navy-600">
+              <p className="px-4 pt-1 pb-1 text-[10px] uppercase tracking-wider text-gray-400">
+                Viewing as
+              </p>
+              {personaOptions.map((p) => (
+                <button
+                  key={p}
+                  onClick={() => switchPersona(p)}
+                  className="w-full flex items-center justify-between gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-navy-600 transition-colors"
+                >
+                  <span className="min-w-0">
+                    <span className="block font-medium truncate">{PERSONA_META[p].label}</span>
+                    <span className="block text-[11px] text-gray-400 truncate">{PERSONA_META[p].blurb}</span>
+                  </span>
+                  {p === persona && <CheckIcon className="h-4 w-4 text-primary shrink-0" />}
+                </button>
+              ))}
+            </div>
+          )}
+
           <div className="py-1">
             <button
               onClick={() => {
@@ -166,7 +221,8 @@ function ProfileDropdown() {
 
 export default function TopBar() {
   return (
-    <header className="h-14 bg-white dark:bg-navy-800 border-b border-gray-200 dark:border-navy-600 flex items-center justify-end gap-4 px-4 lg:px-6">
+    <header className="h-14 bg-white dark:bg-navy-800 border-b border-gray-200 dark:border-navy-600 flex items-center justify-end gap-3 px-4 lg:px-6">
+      <InstitutionBadge />
       <JurisdictionBadge />
       <ApiStatusDot />
       <ProfileDropdown />

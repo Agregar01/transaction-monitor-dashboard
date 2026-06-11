@@ -105,6 +105,8 @@ async function fetchMe(accessToken: string) {
       full_name: string | null;
       roles: string[];
       permissions: string[];
+      institution_id?: string | null;
+      institution_name?: string | null;
     };
   } catch {
     return null;
@@ -328,6 +330,8 @@ async function proxyRequest(req: NextRequest) {
       jurisdiction_code: tenant?.jurisdiction_code ?? null,
       jurisdiction_display_name: tenant?.display_name ?? null,
       features: tenant?.features ?? null,
+      institution_id: me.institution_id ?? null,
+      institution_name: me.institution_name ?? null,
     });
 
     response.cookies.set(ACCESS_COOKIE, tokenPair.access_token, { ...base, maxAge: ACCESS_MAX_AGE });

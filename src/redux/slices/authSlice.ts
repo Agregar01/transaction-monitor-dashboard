@@ -28,6 +28,10 @@ export interface AuthState {
   /** Persona the user switched to (a `Persona` value). null = use the default
    *  resolved from roles. Validated against current roles by effectivePersona(). */
   activePersona: string | null;
+  /** Institution the user belongs to (from /auth/me). null for platform users
+   *  (Agregar admins), who belong to no institution and see all tenants. */
+  institutionId: string | null;
+  institutionName: string | null;
 }
 
 const initialState: AuthState = {
@@ -42,6 +46,8 @@ const initialState: AuthState = {
   jurisdictionDisplayName: null,
   features: null,
   activePersona: null,
+  institutionId: null,
+  institutionName: null,
 };
 
 interface SetCredentialsPayload {
@@ -54,6 +60,8 @@ interface SetCredentialsPayload {
   jurisdictionCode?: string | null;
   jurisdictionDisplayName?: string | null;
   features?: TenantFeatures | null;
+  institutionId?: string | null;
+  institutionName?: string | null;
 }
 
 const authSlice = createSlice({
@@ -71,6 +79,8 @@ const authSlice = createSlice({
       state.jurisdictionCode = action.payload.jurisdictionCode ?? null;
       state.jurisdictionDisplayName = action.payload.jurisdictionDisplayName ?? null;
       state.features = action.payload.features ?? null;
+      state.institutionId = action.payload.institutionId ?? null;
+      state.institutionName = action.payload.institutionName ?? null;
       // Reset persona on a fresh login so it re-resolves from the new roles.
       state.activePersona = null;
     },
@@ -89,6 +99,8 @@ const authSlice = createSlice({
       state.jurisdictionDisplayName = null;
       state.features = null;
       state.activePersona = null;
+      state.institutionId = null;
+      state.institutionName = null;
     },
   },
 });
