@@ -89,8 +89,9 @@ type NavSectionDef = { label: string; items: NavItem[] };
 const PERSONA_SECTIONS: Record<Persona, NavSectionDef[]> = {
   platform: [
     { label: "Platform", items: [NAV.overview, NAV.institutions] },
-    { label: "Configuration", items: [NAV.jurisdictions, NAV.models, NAV.drift, NAV.shadow] },
-    { label: "System", items: [NAV.audit, NAV.health, NAV.settings] },
+    // Rules + ML ops are Agregar-owned (platform assets), not exposed to tenants.
+    { label: "Rules & ML", items: [NAV.adminConfig, NAV.rules, NAV.models, NAV.drift, NAV.shadow] },
+    { label: "System", items: [NAV.jurisdictions, NAV.audit, NAV.health, NAV.settings] },
   ],
   regulator: [
     { label: "Oversight", items: [NAV.regulator, NAV.filings] },
@@ -99,8 +100,8 @@ const PERSONA_SECTIONS: Record<Persona, NavSectionDef[]> = {
   client_admin: [
     { label: "Monitor", items: [NAV.overview, NAV.alerts, NAV.cases, NAV.transactions, NAV.customers] },
     { label: "Compliance", items: [NAV.str, NAV.ctr, NAV.approvals, NAV.reports, NAV.geo, NAV.watchlists, NAV.sanctions] },
-    { label: "Rule & ML Ops", items: [NAV.rules, NAV.shadow, NAV.models, NAV.drift] },
-    { label: "Admin", items: [NAV.adminConfig, NAV.team, NAV.apiKeys, NAV.users, NAV.privacy, NAV.audit, NAV.health, NAV.settings] },
+    // Rule & ML Ops (rules/shadow/models/drift) intentionally omitted — Agregar-only for now.
+    { label: "Admin", items: [NAV.team, NAV.apiKeys, NAV.users, NAV.privacy, NAV.audit, NAV.health, NAV.settings] },
   ],
   compliance: [
     { label: "Monitor", items: [NAV.overview, NAV.alerts, NAV.cases] },
@@ -110,7 +111,7 @@ const PERSONA_SECTIONS: Record<Persona, NavSectionDef[]> = {
   supervisor: [
     { label: "Team", items: [NAV.overview, NAV.alerts, NAV.cases, NAV.transactions, NAV.customers] },
     { label: "Analytics", items: [NAV.reports, NAV.geo] },
-    { label: "Account", items: [NAV.rules, NAV.settings] },
+    { label: "Account", items: [NAV.settings] },
   ],
   ml: [
     { label: "Model Ops", items: [NAV.overview, NAV.models, NAV.drift, NAV.shadow, NAV.rules] },
@@ -121,7 +122,7 @@ const PERSONA_SECTIONS: Record<Persona, NavSectionDef[]> = {
     { label: "Account", items: [NAV.audit, NAV.settings] },
   ],
   auditor: [
-    { label: "Review", items: [NAV.overview, NAV.audit, NAV.rules, NAV.reports] },
+    { label: "Review", items: [NAV.overview, NAV.audit, NAV.reports] },
     { label: "Casework (read-only)", items: [NAV.alerts, NAV.cases] },
     { label: "Account", items: [NAV.settings] },
   ],
