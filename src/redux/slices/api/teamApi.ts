@@ -16,14 +16,15 @@ export interface TeamMember {
   created_at: string;
 }
 
-/** Roles a CLIENT_ADMIN may assign when inviting (AGREGAR/SYSTEM admin blocked). */
+/** Roles a CLIENT_ADMIN may assign when inviting (AGREGAR/SYSTEM admin blocked).
+ *  ML_ENGINEER is intentionally excluded — ML/rules ops are Agregar-owned, so
+ *  institutions can't create ML engineers. */
 export const INVITABLE_ROLES = [
   "ANALYST",
   "SENIOR_ANALYST",
   "COMPLIANCE_OFFICER",
   "DPO",
   "AUDITOR",
-  "ML_ENGINEER",
   "OPERATIONS",
   "READONLY",
   "CLIENT_ADMIN",
