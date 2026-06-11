@@ -25,6 +25,9 @@ export interface AuthState {
   jurisdictionDisplayName: string | null;
   /** Jurisdiction feature flags from /tenant/info. null until loaded. */
   features: TenantFeatures | null;
+  /** Persona the user switched to (a `Persona` value). null = use the default
+   *  resolved from roles. Validated against current roles by effectivePersona(). */
+  activePersona: string | null;
 }
 
 const initialState: AuthState = {
@@ -38,6 +41,7 @@ const initialState: AuthState = {
   jurisdictionCode: null,
   jurisdictionDisplayName: null,
   features: null,
+  activePersona: null,
 };
 
 interface SetCredentialsPayload {
@@ -67,6 +71,11 @@ const authSlice = createSlice({
       state.jurisdictionCode = action.payload.jurisdictionCode ?? null;
       state.jurisdictionDisplayName = action.payload.jurisdictionDisplayName ?? null;
       state.features = action.payload.features ?? null;
+      // Reset persona on a fresh login so it re-resolves from the new roles.
+      state.activePersona = null;
+    },
+    setActivePersona(state, action: PayloadAction<string | null>) {
+      state.activePersona = action.payload;
     },
     logout(state) {
       state.userId = null;
@@ -79,9 +88,10 @@ const authSlice = createSlice({
       state.jurisdictionCode = null;
       state.jurisdictionDisplayName = null;
       state.features = null;
+      state.activePersona = null;
     },
   },
 });
 
-export const { setCredentials, logout } = authSlice.actions;
+export const { setCredentials, setActivePersona, logout } = authSlice.actions;
 export default authSlice.reducer;

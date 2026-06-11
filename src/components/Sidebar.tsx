@@ -38,7 +38,8 @@ import {
   ScaleIcon,
   DocumentCheckIcon,
 } from "@heroicons/react/24/outline";
-import { isAgregarAdmin, isRegulator } from "@/lib/roles";
+import { effectivePersona, PERSONA_META, type Persona } from "@/lib/personas";
+import PersonaSwitcher from "@/components/PersonaSwitcher";
 
 type NavItem = {
   name: string;
@@ -46,53 +47,94 @@ type NavItem = {
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
 };
 
-const monitorNav: NavItem[] = [
-  { name: "Overview", href: "/dashboard", icon: HomeIcon },
-  { name: "Alerts", href: "/dashboard/alerts", icon: BellAlertIcon },
-  { name: "Cases", href: "/dashboard/cases", icon: InboxStackIcon },
-  { name: "Transactions", href: "/dashboard/transactions", icon: BanknotesIcon },
-  { name: "Customers", href: "/dashboard/customers", icon: UsersIcon },
-];
+// Single registry of every nav link. Personas below compose these into the
+// sections each role actually sees, so e.g. a platform admin never gets the
+// single-tenant casework links and a scoped analyst never gets population
+// analytics. Permission + feature filters still apply on top (graceful hiding).
+const NAV = {
+  overview: { name: "Overview", href: "/dashboard", icon: HomeIcon },
+  alerts: { name: "Alerts", href: "/dashboard/alerts", icon: BellAlertIcon },
+  cases: { name: "Cases", href: "/dashboard/cases", icon: InboxStackIcon },
+  transactions: { name: "Transactions", href: "/dashboard/transactions", icon: BanknotesIcon },
+  customers: { name: "Customers", href: "/dashboard/customers", icon: UsersIcon },
+  str: { name: "STR Reports", href: "/dashboard/str", icon: DocumentTextIcon },
+  ctr: { name: "CTR Reports", href: "/dashboard/ctr", icon: DocumentDuplicateIcon },
+  approvals: { name: "Approvals", href: "/dashboard/approvals", icon: CheckBadgeIcon },
+  reports: { name: "Reports", href: "/dashboard/reports", icon: ChartBarIcon },
+  geo: { name: "Geo Heatmap", href: "/dashboard/geo", icon: GlobeAltIcon },
+  watchlists: { name: "Watchlists", href: "/dashboard/watchlists", icon: ShieldExclamationIcon },
+  sanctions: { name: "Sanctions Check", href: "/dashboard/sanctions", icon: NoSymbolIcon },
+  rules: { name: "Rules", href: "/dashboard/rules", icon: AdjustmentsHorizontalIcon },
+  shadow: { name: "Shadow Stats", href: "/dashboard/shadow", icon: ChartPieIcon },
+  models: { name: "ML Models", href: "/dashboard/models", icon: CpuChipIcon },
+  drift: { name: "Drift Monitoring", href: "/dashboard/drift", icon: ExclamationTriangleIcon },
+  adminConfig: { name: "Admin Config", href: "/dashboard/admin", icon: AdjustmentsHorizontalIcon },
+  team: { name: "Team", href: "/dashboard/team", icon: UserGroupIcon },
+  apiKeys: { name: "API Keys", href: "/dashboard/api-keys", icon: KeyIcon },
+  users: { name: "Users & Roles", href: "/dashboard/users", icon: UserGroupIcon },
+  jurisdictions: { name: "Jurisdictions", href: "/dashboard/jurisdictions", icon: BuildingLibraryIcon },
+  privacy: { name: "Data Privacy", href: "/dashboard/privacy", icon: FingerPrintIcon },
+  audit: { name: "Audit Trail", href: "/dashboard/audit", icon: ClipboardDocumentListIcon },
+  health: { name: "System Health", href: "/dashboard/health", icon: ServerIcon },
+  settings: { name: "Settings", href: "/dashboard/settings", icon: Cog6ToothIcon },
+  institutions: { name: "Institutions", href: "/dashboard/institutions", icon: BuildingOffice2Icon },
+  usage: { name: "Usage", href: "/dashboard/api-keys", icon: ChartBarIcon },
+  regulator: { name: "Regulator Dashboard", href: "/dashboard/regulator", icon: ScaleIcon },
+  filings: { name: "Filed Reports", href: "/dashboard/regulator/filings", icon: DocumentCheckIcon },
+} satisfies Record<string, NavItem>;
 
-const complianceNav: NavItem[] = [
-  { name: "STR Reports", href: "/dashboard/str", icon: DocumentTextIcon },
-  { name: "CTR Reports", href: "/dashboard/ctr", icon: DocumentDuplicateIcon },
-  { name: "Approvals", href: "/dashboard/approvals", icon: CheckBadgeIcon },
-  { name: "Reports", href: "/dashboard/reports", icon: ChartBarIcon },
-  { name: "Geo Heatmap", href: "/dashboard/geo", icon: GlobeAltIcon },
-  { name: "Watchlists", href: "/dashboard/watchlists", icon: ShieldExclamationIcon },
-  { name: "Sanctions Check", href: "/dashboard/sanctions", icon: NoSymbolIcon },
-];
+type NavSectionDef = { label: string; items: NavItem[] };
 
-const ruleOpsNav: NavItem[] = [
-  { name: "Rules", href: "/dashboard/rules", icon: AdjustmentsHorizontalIcon },
-  { name: "Shadow Stats", href: "/dashboard/shadow", icon: ChartPieIcon },
-  { name: "ML Models", href: "/dashboard/models", icon: CpuChipIcon },
-  { name: "Drift Monitoring", href: "/dashboard/drift", icon: ExclamationTriangleIcon },
-];
-
-const adminNav: NavItem[] = [
-  { name: "Admin Config", href: "/dashboard/admin", icon: AdjustmentsHorizontalIcon },
-  { name: "Team", href: "/dashboard/team", icon: UserGroupIcon },
-  { name: "API Keys", href: "/dashboard/api-keys", icon: KeyIcon },
-  { name: "Users & Roles", href: "/dashboard/users", icon: UserGroupIcon },
-  { name: "Jurisdictions", href: "/dashboard/jurisdictions", icon: BuildingLibraryIcon },
-  { name: "Data Privacy", href: "/dashboard/privacy", icon: FingerPrintIcon },
-  { name: "Audit Trail", href: "/dashboard/audit", icon: ClipboardDocumentListIcon },
-  { name: "System Health", href: "/dashboard/health", icon: ServerIcon },
-  { name: "Settings", href: "/dashboard/settings", icon: Cog6ToothIcon },
-];
-
-// Platform tier — Agregar staff only (AGREGAR_ADMIN / SYSTEM_ADMIN).
-const platformNav: NavItem[] = [
-  { name: "Institutions", href: "/dashboard/institutions", icon: BuildingOffice2Icon },
-];
-
-// Regulator tier — EOCO / FIC officials (REGULATOR_VIEWER). Read-only.
-const regulatorNav: NavItem[] = [
-  { name: "Regulator Dashboard", href: "/dashboard/regulator", icon: ScaleIcon },
-  { name: "Filed Reports", href: "/dashboard/regulator/filings", icon: DocumentCheckIcon },
-];
+// Each persona's nav, in render order. Backend RLS still scopes the data;
+// this just shapes what each persona is offered.
+const PERSONA_SECTIONS: Record<Persona, NavSectionDef[]> = {
+  platform: [
+    { label: "Platform", items: [NAV.overview, NAV.institutions] },
+    { label: "Configuration", items: [NAV.jurisdictions, NAV.models, NAV.drift, NAV.shadow] },
+    { label: "System", items: [NAV.audit, NAV.health, NAV.settings] },
+  ],
+  regulator: [
+    { label: "Oversight", items: [NAV.regulator, NAV.filings] },
+    { label: "Account", items: [NAV.settings] },
+  ],
+  client_admin: [
+    { label: "Monitor", items: [NAV.overview, NAV.alerts, NAV.cases, NAV.transactions, NAV.customers] },
+    { label: "Compliance", items: [NAV.str, NAV.ctr, NAV.approvals, NAV.reports, NAV.geo, NAV.watchlists, NAV.sanctions] },
+    { label: "Rule & ML Ops", items: [NAV.rules, NAV.shadow, NAV.models, NAV.drift] },
+    { label: "Admin", items: [NAV.adminConfig, NAV.team, NAV.apiKeys, NAV.users, NAV.privacy, NAV.audit, NAV.health, NAV.settings] },
+  ],
+  compliance: [
+    { label: "Monitor", items: [NAV.overview, NAV.alerts, NAV.cases] },
+    { label: "Compliance", items: [NAV.str, NAV.ctr, NAV.approvals, NAV.reports, NAV.watchlists, NAV.sanctions] },
+    { label: "Account", items: [NAV.audit, NAV.settings] },
+  ],
+  supervisor: [
+    { label: "Team", items: [NAV.overview, NAV.alerts, NAV.cases, NAV.transactions, NAV.customers] },
+    { label: "Analytics", items: [NAV.reports, NAV.geo] },
+    { label: "Account", items: [NAV.rules, NAV.settings] },
+  ],
+  ml: [
+    { label: "Model Ops", items: [NAV.overview, NAV.models, NAV.drift, NAV.shadow, NAV.rules] },
+    { label: "Account", items: [NAV.settings] },
+  ],
+  dpo: [
+    { label: "Data Protection", items: [NAV.overview, NAV.privacy] },
+    { label: "Account", items: [NAV.audit, NAV.settings] },
+  ],
+  auditor: [
+    { label: "Review", items: [NAV.overview, NAV.audit, NAV.rules, NAV.reports] },
+    { label: "Casework (read-only)", items: [NAV.alerts, NAV.cases] },
+    { label: "Account", items: [NAV.settings] },
+  ],
+  analyst: [
+    { label: "My Work", items: [NAV.overview, NAV.alerts, NAV.cases, NAV.transactions, NAV.customers] },
+    { label: "Account", items: [NAV.settings] },
+  ],
+  default: [
+    { label: "Monitor", items: [NAV.overview, NAV.alerts, NAV.cases] },
+    { label: "Account", items: [NAV.audit, NAV.settings] },
+  ],
+};
 
 /**
  * Permission → allowed-routes mapping.
@@ -217,75 +259,40 @@ function NavSection({
 function SidebarContent({ onNav }: { onNav?: () => void }) {
   const pathname = usePathname();
   const dispatch = useAppDispatch();
-  const { permissions, roles, jurisdictionCode, email, features } = useAppSelector((s) => s.auth);
-  // Plain analysts get a scoped view: population-level analytics (Reports, Geo)
-  // are hidden for them, while SENIOR_ANALYST+ keep them.
-  const SEE_ALL_ROLES = ["SYSTEM_ADMIN", "SENIOR_ANALYST", "COMPLIANCE_OFFICER"];
-  const scopedAnalyst =
-    roles.includes("ANALYST") && !roles.some((r) => SEE_ALL_ROLES.includes(r));
-  const ANALYST_HIDDEN = ["/dashboard/reports", "/dashboard/geo"];
-  const navFor = (items: NavItem[]) =>
-    filterNavByFeatures(filterNavByPermissions(items, permissions), features).filter(
-      (item) => !(scopedAnalyst && ANALYST_HIDDEN.includes(item.href)),
-    );
+  const { permissions, roles, jurisdictionCode, email, features, activePersona } = useAppSelector(
+    (s) => s.auth,
+  );
+  const persona = effectivePersona(roles, activePersona);
+  const sections = PERSONA_SECTIONS[persona];
 
-  // Tier-based rendering. A regulator (and not a platform admin) gets a
-  // focused, read-only nav — none of the institution AML operations.
-  const agregarAdmin = isAgregarAdmin(roles);
-  const regulatorOnly = isRegulator(roles) && !agregarAdmin;
-  const tierLabel = agregarAdmin ? "Platform" : regulatorOnly ? "Regulator" : (jurisdictionCode ?? "—");
+  // Permission + feature filtering still applies on top of the persona's
+  // section list — a persona offers a link, the user's grants decide if it shows.
+  const navFor = (items: NavItem[]) =>
+    filterNavByFeatures(filterNavByPermissions(items, permissions), features);
+
+  const tierLabel = PERSONA_META[persona].label;
 
   return (
     <>
       <div className="px-6 py-5 border-b border-navy-600">
         <p className="text-primary-300 text-xs font-semibold uppercase tracking-wider">
-          {tierLabel} · Transaction Monitor
+          {tierLabel} · {jurisdictionCode ?? "TMS"}
         </p>
         {email && <p className="text-navy-300 text-xs mt-1 truncate">{email}</p>}
       </div>
 
+      <PersonaSwitcher />
+
       <nav className="flex-1 px-3 py-0 space-y-0.5 overflow-y-auto">
-        {regulatorOnly ? (
-          <>
-            <NavSection label="Oversight" items={regulatorNav} pathname={pathname} onNav={onNav} />
-            <NavSection
-              label="Account"
-              items={navFor([{ name: "Settings", href: "/dashboard/settings", icon: Cog6ToothIcon }])}
-              pathname={pathname}
-              onNav={onNav}
-            />
-          </>
-        ) : (
-          <>
-            {agregarAdmin && (
-              <NavSection label="Platform" items={navFor(platformNav)} pathname={pathname} onNav={onNav} />
-            )}
-            <NavSection
-              label="Monitor"
-              items={navFor(monitorNav)}
-              pathname={pathname}
-              onNav={onNav}
-            />
-            <NavSection
-              label="Compliance"
-              items={navFor(complianceNav)}
-              pathname={pathname}
-              onNav={onNav}
-            />
-            <NavSection
-              label="Rule & ML Ops"
-              items={navFor(ruleOpsNav)}
-              pathname={pathname}
-              onNav={onNav}
-            />
-            <NavSection
-              label="Admin"
-              items={navFor(adminNav)}
-              pathname={pathname}
-              onNav={onNav}
-            />
-          </>
-        )}
+        {sections.map((s) => (
+          <NavSection
+            key={s.label}
+            label={s.label}
+            items={navFor(s.items)}
+            pathname={pathname}
+            onNav={onNav}
+          />
+        ))}
       </nav>
 
       <div className="px-3 py-4 border-t border-navy-600 space-y-1">

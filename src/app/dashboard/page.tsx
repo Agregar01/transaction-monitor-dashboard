@@ -2,8 +2,15 @@
 
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { useMemo, type ReactNode } from "react";
+import { useEffect, useMemo, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { useAppSelector } from "@/redux/store";
+import {
+  effectivePersona,
+  PERSONA_META as SHARED_META,
+  type Persona as RealPersona,
+} from "@/lib/personas";
+import PlatformOverview from "@/components/overviews/PlatformOverview";
 import { useListAlertsQuery } from "@/redux/slices/api/alertsApi";
 import { useListCasesQuery } from "@/redux/slices/api/casesApi";
 import { useListSTRQuery } from "@/redux/slices/api/strApi";
@@ -35,31 +42,41 @@ import {
 // ApexCharts is client-only.
 const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
 
-// Which landing variant a user sees, derived from their RBAC roles. A user may
-// hold several roles; we pick the most operationally-specific one (first match).
-type Persona = "admin" | "compliance" | "ml" | "analyst" | "default";
+// Legacy landing-variant union that drives the KPI/hero composition below.
+// The rich Persona (lib/personas) maps onto these; platform + regulator get
+// dedicated handling in the selector.
+type Variant = "admin" | "compliance" | "ml" | "analyst" | "default";
 
-function pickPersona(roles: string[]): Persona {
-  const order: [string, Persona][] = [
-    ["SYSTEM_ADMIN", "admin"],
-    ["COMPLIANCE_OFFICER", "compliance"],
-    ["ML_ENGINEER", "ml"],
-    ["SENIOR_ANALYST", "analyst"],
-    ["ANALYST", "analyst"],
-  ];
-  for (const [role, persona] of order) {
-    if (roles.includes(role)) return persona;
-  }
-  return "default";
-}
-
-const PERSONA_META: Record<Persona, { title: string; blurb: string }> = {
-  admin: { title: "System Overview", blurb: "Platform-wide monitoring" },
-  compliance: { title: "Compliance Overview", blurb: "Approvals, STR filing & case oversight" },
-  ml: { title: "Model Operations", blurb: "Risk-scoring model health & drift" },
-  analyst: { title: "My Triage Queue", blurb: "Alerts and cases needing review" },
-  default: { title: "Overview", blurb: "Transaction monitoring console" },
+const LEGACY_VARIANT: Record<RealPersona, Variant> = {
+  platform: "admin",
+  regulator: "default",
+  client_admin: "admin",
+  compliance: "compliance",
+  supervisor: "admin",
+  ml: "ml",
+  dpo: "default",
+  auditor: "default",
+  analyst: "analyst",
+  default: "default",
 };
+
+/** Thin selector: route the landing by the user's active persona. */
+export default function DashboardOverviewPage() {
+  const { roles, activePersona, fullName, email } = useAppSelector((s) => s.auth);
+  const router = useRouter();
+  const persona = effectivePersona(roles, activePersona);
+
+  useEffect(() => {
+    if (persona === "regulator") router.replace("/dashboard/regulator");
+  }, [persona, router]);
+
+  if (persona === "platform") {
+    return <PlatformOverview displayName={fullName || email || "Admin"} />;
+  }
+  if (persona === "regulator") return null; // redirecting
+
+  return <InstitutionOverview persona={persona} />;
+}
 
 type Kpi = {
   title: string;
@@ -87,12 +104,15 @@ function daysBack(n: number): string[] {
   });
 }
 
-export default function DashboardOverviewPage() {
+function InstitutionOverview({ persona: realPersona }: { persona: RealPersona }) {
   const { fullName, email, roles, jurisdictionCode, jurisdictionDisplayName } =
     useAppSelector((s) => s.auth);
   const displayName = fullName || email || "Analyst";
-  const persona = useMemo(() => pickPersona(roles), [roles]);
-  const meta = PERSONA_META[persona];
+  // Map the rich persona onto the legacy KPI/hero variant; title/blurb come from
+  // the shared persona meta so each role gets its own framing.
+  const persona = LEGACY_VARIANT[realPersona];
+  const meta = SHARED_META[realPersona];
+  const readOnly = realPersona === "auditor";
   const primaryRole = roles[0] ?? "READONLY";
   // Plain analysts get a scoped overview — population-level analytics (risk
   // distribution, 14-day priority chart) are hidden, as on Reports/Geo.
@@ -393,7 +413,7 @@ export default function DashboardOverviewPage() {
         </p>
       </div>
 
-      {!isLoading && <HeroActionBand items={hero.items} clearMessage={hero.clear} />}
+      {!isLoading && !readOnly && <HeroActionBand items={hero.items} clearMessage={hero.clear} />}
 
       {isLoading ? (
         <SkeletonStats count={4} />

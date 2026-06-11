@@ -57,6 +57,9 @@ const authPersistConfig = {
     "csrfToken",
     "jurisdictionCode",
     "jurisdictionDisplayName",
+    // Persisted so a switched persona survives reloads (validated against roles
+    // on read via effectivePersona).
+    "activePersona",
   ],
 };
 
