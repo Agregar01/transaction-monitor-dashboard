@@ -11,10 +11,29 @@ import {
 import { SkeletonTable } from "@/components/Skeleton";
 import { showToast } from "@/components/Toast";
 import { errorMessage } from "@/lib/errors";
-import type { User } from "@/types/api";
+import { useAppSelector } from "@/redux/store";
+import { effectivePersona } from "@/lib/personas";
+import type { User, Role } from "@/types/api";
+
+// Deprecated — SYSTEM_ADMIN was split into AGREGAR_ADMIN (platform) +
+// CLIENT_ADMIN (institution). Never offer it for new assignments, for anyone.
+const HIDDEN_ROLES = new Set(["SYSTEM_ADMIN"]);
+// Assignable only from the platform persona (Agregar staff).
+const PLATFORM_ONLY_ROLES = new Set(["AGREGAR_ADMIN", "ML_ENGINEER"]);
+
+/** Role options to offer in the create/edit forms. SYSTEM_ADMIN is hidden from
+ *  everyone; AGREGAR_ADMIN / ML_ENGINEER show only in the platform persona. */
+function useAssignableRoles(allRoles: Role[] | undefined): Role[] {
+  const { roles, activePersona } = useAppSelector((s) => s.auth);
+  const isPlatform = effectivePersona(roles, activePersona) === "platform";
+  return (allRoles ?? []).filter(
+    (r) => !HIDDEN_ROLES.has(r.name) && (isPlatform || !PLATFORM_ONLY_ROLES.has(r.name)),
+  );
+}
 
 function CreateUserModal({ onClose }: { onClose: () => void }) {
   const { data: allRoles } = useListRolesQuery();
+  const roleOptions = useAssignableRoles(allRoles);
   const [createUser, { isLoading }] = useCreateUserMutation();
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
@@ -75,13 +94,13 @@ function CreateUserModal({ onClose }: { onClose: () => void }) {
           onChange={(e) => setPassword(e.target.value)}
           className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-800 text-gray-900 dark:text-white"
         />
-        {allRoles && allRoles.length > 0 && (
+        {roleOptions.length > 0 && (
           <div>
             <p className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">
               Roles
             </p>
             <div className="flex flex-wrap gap-2">
-              {allRoles.map((r) => (
+              {roleOptions.map((r) => (
                 <button
                   key={r.name}
                   type="button"
@@ -121,6 +140,7 @@ function CreateUserModal({ onClose }: { onClose: () => void }) {
 
 function EditUserModal({ user, onClose }: { user: User; onClose: () => void }) {
   const { data: allRoles } = useListRolesQuery();
+  const roleOptions = useAssignableRoles(allRoles);
   const [updateUser, { isLoading: saving }] = useUpdateUserMutation();
   const [updateRoles, { isLoading: savingRoles }] = useUpdateUserRolesMutation();
 
@@ -177,13 +197,13 @@ function EditUserModal({ user, onClose }: { user: User; onClose: () => void }) {
           <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} />
           Active
         </label>
-        {allRoles && allRoles.length > 0 && (
+        {roleOptions.length > 0 && (
           <div>
             <p className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">
               Roles
             </p>
             <div className="flex flex-wrap gap-2">
-              {allRoles.map((r) => (
+              {roleOptions.map((r) => (
                 <button
                   key={r.name}
                   type="button"
