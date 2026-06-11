@@ -4,11 +4,15 @@ import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { API_V1 } from "@/config/api";
+import { useAppDispatch } from "@/redux/store";
+import { logout } from "@/redux/slices/authSlice";
+import { baseApi } from "@/redux/slices/api/baseApi";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 
 function AcceptInviteInner() {
   const params = useSearchParams();
   const router = useRouter();
+  const dispatch = useAppDispatch();
   const token = params.get("token");
 
   const [password, setPassword] = useState("");
@@ -48,8 +52,18 @@ function AcceptInviteInner() {
         setError(data?.detail || "This invite is invalid or has expired.");
         return;
       }
-      // Account activated. The session is cookie-based and established at login,
-      // so send the user to sign in with their brand-new password.
+      // Account activated. Clear ANY pre-existing session in this browser first
+      // — e.g. an admin who invited the user and clicked the link in the same
+      // browser. Otherwise the middleware bounces /login → that stale session's
+      // dashboard, landing the new user on the wrong account. Then send them to
+      // a clean login to sign in with their brand-new password.
+      try {
+        await fetch("/api/auth/logout", { method: "POST" });
+      } catch {
+        /* best-effort cookie clear */
+      }
+      dispatch(baseApi.util.resetApiState());
+      dispatch(logout());
       setDone(true);
       setTimeout(() => router.replace("/login"), 1800);
     } catch {
