@@ -140,6 +140,66 @@ function clearAuthCookies(res: NextResponse) {
 }
 
 /**
+ * Establish a browser session from a backend access/refresh token pair: fetch
+ * the user profile + tenant info, mint a CSRF token, set the httpOnly cookies,
+ * and return the login-shaped JSON so the client can populate Redux in one shot.
+ * Shared by the login path and the accept-invite path (which also hands back a
+ * token pair, so a newly-activated user lands straight on their own dashboard).
+ */
+async function buildSessionResponse(tokenPair: {
+  access_token: string;
+  refresh_token: string;
+}): Promise<NextResponse> {
+  const [me, tenant] = await Promise.all([
+    fetchMe(tokenPair.access_token),
+    fetchTenant(tokenPair.access_token),
+  ]);
+  if (!me) {
+    return NextResponse.json(
+      { detail: "Authentication succeeded but /auth/me failed" },
+      { status: 502 },
+    );
+  }
+
+  const csrfToken = randomBytes(32).toString("hex");
+  const isProduction = process.env.NODE_ENV === "production";
+  const base = cookieOpts(isProduction);
+
+  const response = NextResponse.json({
+    user_id: me.user_id,
+    email: me.email,
+    full_name: me.full_name,
+    roles: me.roles,
+    permissions: me.permissions ?? [],
+    csrf_token: csrfToken,
+    jurisdiction_code: tenant?.jurisdiction_code ?? null,
+    jurisdiction_display_name: tenant?.display_name ?? null,
+    features: tenant?.features ?? null,
+    institution_id: me.institution_id ?? null,
+    institution_name: me.institution_name ?? null,
+  });
+
+  response.cookies.set(ACCESS_COOKIE, tokenPair.access_token, { ...base, maxAge: ACCESS_MAX_AGE });
+  response.cookies.set(REFRESH_COOKIE, tokenPair.refresh_token, { ...base, maxAge: REFRESH_MAX_AGE });
+  response.cookies.set(
+    USER_COOKIE,
+    JSON.stringify({
+      user_id: me.user_id,
+      email: me.email,
+      full_name: me.full_name,
+      roles: me.roles,
+      permissions: me.permissions ?? [],
+    }),
+    { ...base, maxAge: REFRESH_MAX_AGE },
+  );
+  // CSRF cookie readable by client JS (double-submit) → httpOnly: false
+  response.cookies.set(CSRF_COOKIE, csrfToken, { ...base, httpOnly: false, maxAge: REFRESH_MAX_AGE });
+  response.cookies.set(SESSION_MARKER, "1", { ...base, maxAge: REFRESH_MAX_AGE });
+
+  return response;
+}
+
+/**
  * Pass-through allowlist for upstream → browser response headers. We forward
  * the small set that matters for clients (content type, location for
  * redirects, content-disposition for downloads, rate-limit hints) and drop
@@ -227,6 +287,7 @@ async function proxyRequest(req: NextRequest) {
   }
 
   const isLogin = req.method === "POST" && path === "/api/v1/auth/login";
+  const isAcceptInvite = req.method === "POST" && path === "/api/v1/auth/accept-invite";
 
   const accessCookie = req.cookies.get(ACCESS_COOKIE)?.value ?? null;
   const refreshCookie = req.cookies.get(REFRESH_COOKIE)?.value ?? null;
@@ -304,54 +365,42 @@ async function proxyRequest(req: NextRequest) {
       return NextResponse.json({ detail: "Invalid backend login response" }, { status: 502 });
     }
 
-    // Enrich the response so the client can populate Redux without a second round-trip.
-    const [me, tenant] = await Promise.all([
-      fetchMe(tokenPair.access_token),
-      fetchTenant(tokenPair.access_token),
-    ]);
-    if (!me) {
-      return NextResponse.json(
-        { detail: "Login succeeded but /auth/me failed" },
-        { status: 502 },
-      );
+    // Enrich + set the session cookies so the client can populate Redux in one shot.
+    return buildSessionResponse(tokenPair);
+  }
+
+  // ── ACCEPT-INVITE: the backend returns a token pair on success, so mint the
+  // session right here (set cookies + enriched profile) and the newly-activated
+  // user lands straight on their own dashboard — no manual re-login. ──
+  if (isAcceptInvite) {
+    let upstream: Response;
+    try {
+      upstream = await callBackend("/api/v1/auth/accept-invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: bodyText,
+      });
+    } catch {
+      return NextResponse.json({ detail: "Backend unreachable" }, { status: 502 });
     }
 
-    const csrfToken = randomBytes(32).toString("hex");
-    const isProduction = process.env.NODE_ENV === "production";
-    const base = cookieOpts(isProduction);
+    const upstreamText = await upstream.text();
+    if (!upstream.ok) {
+      // Surface the backend's error (expired/used token, weak password, …) verbatim.
+      return new NextResponse(upstreamText, {
+        status: upstream.status,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
 
-    const response = NextResponse.json({
-      user_id: me.user_id,
-      email: me.email,
-      full_name: me.full_name,
-      roles: me.roles,
-      permissions: me.permissions ?? [],
-      csrf_token: csrfToken,
-      jurisdiction_code: tenant?.jurisdiction_code ?? null,
-      jurisdiction_display_name: tenant?.display_name ?? null,
-      features: tenant?.features ?? null,
-      institution_id: me.institution_id ?? null,
-      institution_name: me.institution_name ?? null,
-    });
+    let tokenPair: { access_token: string; refresh_token: string };
+    try {
+      tokenPair = JSON.parse(upstreamText);
+    } catch {
+      return NextResponse.json({ detail: "Invalid accept-invite response" }, { status: 502 });
+    }
 
-    response.cookies.set(ACCESS_COOKIE, tokenPair.access_token, { ...base, maxAge: ACCESS_MAX_AGE });
-    response.cookies.set(REFRESH_COOKIE, tokenPair.refresh_token, { ...base, maxAge: REFRESH_MAX_AGE });
-    response.cookies.set(
-      USER_COOKIE,
-      JSON.stringify({
-        user_id: me.user_id,
-        email: me.email,
-        full_name: me.full_name,
-        roles: me.roles,
-        permissions: me.permissions ?? [],
-      }),
-      { ...base, maxAge: REFRESH_MAX_AGE },
-    );
-    // CSRF cookie readable by client JS (double-submit) → httpOnly: false
-    response.cookies.set(CSRF_COOKIE, csrfToken, { ...base, httpOnly: false, maxAge: REFRESH_MAX_AGE });
-    response.cookies.set(SESSION_MARKER, "1", { ...base, maxAge: REFRESH_MAX_AGE });
-
-    return response;
+    return buildSessionResponse(tokenPair);
   }
 
   // Logout has its own route at `/api/auth/logout` so it can clear cookies

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { API_V1 } from "@/config/api";
 import { useAppDispatch } from "@/redux/store";
-import { logout } from "@/redux/slices/authSlice";
+import { setCredentials } from "@/redux/slices/authSlice";
 import { baseApi } from "@/redux/slices/api/baseApi";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 
@@ -52,20 +52,29 @@ function AcceptInviteInner() {
         setError(data?.detail || "This invite is invalid or has expired.");
         return;
       }
-      // Account activated. Clear ANY pre-existing session in this browser first
-      // — e.g. an admin who invited the user and clicked the link in the same
-      // browser. Otherwise the middleware bounces /login → that stale session's
-      // dashboard, landing the new user on the wrong account. Then send them to
-      // a clean login to sign in with their brand-new password.
-      try {
-        await fetch("/api/auth/logout", { method: "POST" });
-      } catch {
-        /* best-effort cookie clear */
-      }
+      // The BFF set this new user's session cookies on the accept-invite
+      // response (overwriting any prior session in the browser) and returned the
+      // login-shaped profile. Drop stale cached queries, populate Redux for THIS
+      // user, and land them straight on their own dashboard — no manual sign-in.
+      const data = await res.json();
       dispatch(baseApi.util.resetApiState());
-      dispatch(logout());
+      dispatch(
+        setCredentials({
+          userId: data.user_id,
+          email: data.email,
+          fullName: data.full_name,
+          roles: data.roles,
+          permissions: data.permissions,
+          csrfToken: data.csrf_token,
+          jurisdictionCode: data.jurisdiction_code,
+          jurisdictionDisplayName: data.jurisdiction_display_name,
+          features: data.features,
+          institutionId: data.institution_id,
+          institutionName: data.institution_name,
+        }),
+      );
       setDone(true);
-      setTimeout(() => router.replace("/login"), 1800);
+      setTimeout(() => router.replace("/dashboard"), 1200);
     } catch {
       setError("Could not reach the server. Please try again later.");
     } finally {
@@ -79,7 +88,7 @@ function AcceptInviteInner() {
         <div className="w-full max-w-md bg-white dark:bg-navy-700 rounded-2xl shadow-xl p-8 text-center space-y-4">
           <div className="text-green-500 text-5xl">&#10003;</div>
           <h1 className="text-lg font-semibold text-gray-900 dark:text-white">Account activated</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Redirecting you to sign in…</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Taking you to your dashboard…</p>
         </div>
       </div>
     );
