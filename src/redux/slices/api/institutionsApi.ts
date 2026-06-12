@@ -99,6 +99,15 @@ export const institutionsApi = baseApi.injectEndpoints({
         { type: "Institution", id: "LIST" },
       ],
     }),
+    // Re-sends the email-verification link to a REGISTERED institution's contact.
+    // Backend returns a generic 200 regardless (no email enumeration).
+    resendVerification: b.mutation<{ message?: string }, { contact_email: string }>({
+      query: (body) => ({
+        url: "/institutions/signup/resend-verification",
+        method: "POST",
+        body,
+      }),
+    }),
   }),
 });
 
@@ -109,4 +118,5 @@ export const {
   useRejectInstitutionMutation,
   useSuspendInstitutionMutation,
   useReactivateInstitutionMutation,
+  useResendVerificationMutation,
 } = institutionsApi;

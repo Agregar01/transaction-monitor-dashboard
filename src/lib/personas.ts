@@ -44,10 +44,24 @@ export const PERSONA_PRECEDENCE: Persona[] = [
   "default",
 ];
 
+// The super admin can "view as" any persona — useful for oversight and QA of
+// what each role sees. Their default is still `platform` (precedence), but the
+// switcher lets them drop into a client-admin / compliance / analyst view, etc.
+const SUPER_ADMIN_PERSONAS: Persona[] = [
+  "platform",
+  "client_admin",
+  "compliance",
+  "supervisor",
+  "ml",
+  "dpo",
+  "auditor",
+  "analyst",
+];
+
 /** Which personas each RBAC role entitles a user to. */
 const ROLE_PERSONAS: Record<string, Persona[]> = {
-  AGREGAR_ADMIN: ["platform"],
-  SYSTEM_ADMIN: ["platform"],
+  AGREGAR_ADMIN: SUPER_ADMIN_PERSONAS,
+  SYSTEM_ADMIN: SUPER_ADMIN_PERSONAS,
   REGULATOR_VIEWER: ["regulator"],
   CLIENT_ADMIN: ["client_admin"],
   COMPLIANCE_OFFICER: ["compliance"],

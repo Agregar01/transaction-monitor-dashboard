@@ -34,13 +34,13 @@ export default function PlatformOverview({ displayName }: { displayName: string 
       count: pendingCount,
       label: "institutions",
       sublabel: "awaiting approval",
-      href: "/dashboard/institutions",
+      href: "/dashboard/institutions?status=PENDING_APPROVAL",
     },
     {
       count: registered.data?.total ?? 0,
       label: "awaiting email",
       sublabel: "unverified signups",
-      href: "/dashboard/institutions",
+      href: "/dashboard/institutions?status=REGISTERED",
     },
   ];
 
@@ -68,7 +68,7 @@ export default function PlatformOverview({ displayName }: { displayName: string 
             subtitle="live tenants"
             icon={<BuildingOffice2Icon className="h-8 w-8" />}
             color="text-emerald-600"
-            href="/dashboard/institutions"
+            href="/dashboard/institutions?status=ACTIVE"
           />
           <StatCard
             title="Pending approval"
@@ -76,7 +76,7 @@ export default function PlatformOverview({ displayName }: { displayName: string 
             subtitle="need your review"
             icon={<ClockIcon className="h-8 w-8" />}
             color="text-amber-600"
-            href="/dashboard/institutions"
+            href="/dashboard/institutions?status=PENDING_APPROVAL"
           />
           <StatCard
             title="Suspended"
@@ -84,7 +84,7 @@ export default function PlatformOverview({ displayName }: { displayName: string 
             subtitle="access blocked"
             icon={<NoSymbolIcon className="h-8 w-8" />}
             color="text-red-600"
-            href="/dashboard/institutions"
+            href="/dashboard/institutions?status=SUSPENDED"
           />
           <StatCard
             title="Awaiting email"
@@ -92,7 +92,7 @@ export default function PlatformOverview({ displayName }: { displayName: string 
             subtitle="unverified signups"
             icon={<CheckBadgeIcon className="h-8 w-8" />}
             color="text-gray-500"
-            href="/dashboard/institutions"
+            href="/dashboard/institutions?status=REGISTERED"
           />
         </div>
       )}

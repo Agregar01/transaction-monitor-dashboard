@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   useListInstitutionsQuery,
   useApproveInstitutionMutation,
   useRejectInstitutionMutation,
   useSuspendInstitutionMutation,
   useReactivateInstitutionMutation,
+  useResendVerificationMutation,
   type Institution,
   type InstitutionStatus,
 } from "@/redux/slices/api/institutionsApi";
@@ -44,12 +46,22 @@ const TYPE_LABEL: Record<string, string> = {
   REGULATOR: "Regulator",
 };
 
-export default function InstitutionsPage() {
+const VALID_TABS = STATUS_TABS.map((t) => t.key);
+
+function InstitutionsInner() {
   useEffect(() => {
     document.title = "Institutions | Transaction Monitor";
   }, []);
 
-  const [tab, setTab] = useState<"ALL" | InstitutionStatus>("PENDING_APPROVAL");
+  // Deep-link support: PlatformOverview cards link with ?status=… so a card
+  // click lands on the matching tab (not always Pending approval).
+  const params = useSearchParams();
+  const initialTab = (() => {
+    const s = params.get("status");
+    return s && VALID_TABS.includes(s as never) ? (s as "ALL" | InstitutionStatus) : "PENDING_APPROVAL";
+  })();
+
+  const [tab, setTab] = useState<"ALL" | InstitutionStatus>(initialTab);
   const [page, setPage] = useState(1);
   const [approveTarget, setApproveTarget] = useState<Institution | null>(null);
   const [rejectTarget, setRejectTarget] = useState<Institution | null>(null);
@@ -66,6 +78,20 @@ export default function InstitutionsPage() {
   const [reject, rejectState] = useRejectInstitutionMutation();
   const [suspend] = useSuspendInstitutionMutation();
   const [reactivate] = useReactivateInstitutionMutation();
+  const [resend, resendState] = useResendVerificationMutation();
+
+  const doResend = async (inst: Institution) => {
+    try {
+      await resend({ contact_email: inst.contact_email }).unwrap();
+      showToast({
+        type: "success",
+        title: "Verification email sent",
+        message: `A fresh link was sent to ${inst.contact_email}.`,
+      });
+    } catch (e) {
+      showToast({ type: "error", title: "Resend failed", message: errorMessage(e) });
+    }
+  };
 
   const items = data?.items ?? [];
   const totalPages = Math.max(1, Math.ceil((data?.total ?? 0) / PAGE_SIZE));
@@ -207,7 +233,17 @@ export default function InstitutionsPage() {
                               Reactivate
                             </button>
                           )}
-                          {(inst.status === "REGISTERED" || inst.status === "REJECTED") && (
+                          {inst.status === "REGISTERED" && (
+                            <button
+                              onClick={() => doResend(inst)}
+                              disabled={resendState.isLoading}
+                              title="They must verify their email before you can approve them"
+                              className="px-3 py-1 rounded-lg text-xs font-medium border border-gray-200 dark:border-navy-500 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-navy-600 disabled:opacity-50"
+                            >
+                              Resend email
+                            </button>
+                          )}
+                          {inst.status === "REJECTED" && (
                             <span className="text-xs text-gray-400">—</span>
                           )}
                         </div>
@@ -292,6 +328,15 @@ export default function InstitutionsPage() {
         onCancel={() => setReactivateTarget(null)}
       />
     </AgregarAdminGuard>
+  );
+}
+
+// useSearchParams (for ?status= deep-links) must sit under a Suspense boundary.
+export default function InstitutionsPage() {
+  return (
+    <Suspense fallback={null}>
+      <InstitutionsInner />
+    </Suspense>
   );
 }
 
