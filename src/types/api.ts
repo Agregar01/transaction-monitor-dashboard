@@ -798,6 +798,27 @@ export interface BatchIngestResponse {
   errors: { index: number; error: string }[];
 }
 
+// POST /ingestion/upload — multipart file upload (CSV / JSON / JSONL / xlsx).
+export interface FileUploadResponse {
+  batch_id: string;
+  total_submitted: number;
+  successful: number;
+  failed: number;
+  failed_items: Record<string, unknown>[];
+  message: string;
+}
+
+// GET /ingestion/batch/{id}/status
+export interface BatchStatusResponse {
+  batch_id: string;
+  status: string; // pending | processing | completed | failed
+  progress: { total: number; processed: number; successful: number; failed: number };
+  started_at: string | null;
+  completed_at: string | null;
+  source_system: string | null;
+  file_name: string | null;
+}
+
 // ─── Analytics / Reports ────────────────────────────────────────────────────
 
 export interface AlertTrendPoint {

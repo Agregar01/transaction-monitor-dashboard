@@ -8,6 +8,7 @@ import type {
   AlertStatus,
   AlertResolution,
   MutationResponse,
+  Case,
 } from "@/types/api";
 
 export interface ListAlertsParams {
@@ -88,6 +89,24 @@ export const alertsApi = baseApi.injectEndpoints({
         "Analytics",
       ],
     }),
+    // Atomic: creates a case, links the alert, OPEN→INVESTIGATING→ESCALATED in
+    // one commit. Idempotent on the backend. Returns the (created/existing) case.
+    escalateAlert: b.mutation<
+      Case,
+      { alert_id: string; reason: string; assignee_id?: string }
+    >({
+      query: ({ alert_id, ...body }) => ({
+        url: `/alerts/${alert_id}/escalate`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: (_r, _e, { alert_id }) => [
+        { type: "Alert", id: alert_id },
+        { type: "Alert", id: "LIST" },
+        { type: "Case", id: "LIST" },
+        "Analytics",
+      ],
+    }),
   }),
 });
 
@@ -98,4 +117,5 @@ export const {
   useAssignAlertMutation,
   useAddAlertNoteMutation,
   useResolveAlertMutation,
+  useEscalateAlertMutation,
 } = alertsApi;

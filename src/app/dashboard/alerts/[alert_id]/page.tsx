@@ -8,13 +8,8 @@ import {
   useAssignAlertMutation,
   useAddAlertNoteMutation,
   useResolveAlertMutation,
+  useEscalateAlertMutation,
 } from "@/redux/slices/api/alertsApi";
-import {
-  useCreateCaseMutation,
-  useLinkAlertToCaseMutation,
-  useUpdateCaseMutation,
-} from "@/redux/slices/api/casesApi";
-import { useGetTenantInfoQuery } from "@/redux/slices/api/tenantApi";
 import { useListAssignableUsersQuery } from "@/redux/slices/api/authApi";
 import { useAppSelector } from "@/redux/store";
 import { SkeletonCard } from "@/components/Skeleton";
@@ -22,20 +17,8 @@ import RiskBadge from "@/components/RiskBadge";
 import ActionBadge from "@/components/ActionBadge";
 import UserPicker from "@/components/UserPicker";
 import { showToast } from "@/components/Toast";
-import type {
-  AlertResolution,
-  AlertPriority,
-  CasePriority,
-  TriggeredRuleDetail,
-} from "@/types/api";
+import type { AlertResolution, TriggeredRuleDetail } from "@/types/api";
 import { errorMessage } from "@/lib/errors";
-
-// Alert priority → case priority when escalating an alert into a case.
-const ALERT_TO_CASE_PRIORITY: Record<AlertPriority, CasePriority> = {
-  IMMEDIATE: "HIGH",
-  REVIEW: "MEDIUM",
-  BATCH: "LOW",
-};
 
 // Assigning / reassigning an alert is a supervisory action.
 const CAN_ASSIGN_ROLES = ["SYSTEM_ADMIN", "SENIOR_ANALYST", "COMPLIANCE_OFFICER"];
@@ -79,10 +62,8 @@ export default function AlertDetailPage() {
 
   const { data: alert, isLoading, error } = useGetAlertQuery(alertId);
   const { data: users } = useListAssignableUsersQuery();
-  const { data: tenant } = useGetTenantInfoQuery();
   const roles = useAppSelector((s) => s.auth.roles);
   const permissions = useAppSelector((s) => s.auth.permissions);
-  const jurisdictionCode = useAppSelector((s) => s.auth.jurisdictionCode);
   const canAssign = roles.some((r) => CAN_ASSIGN_ROLES.includes(r));
   // L1 analysts (and above) hold close_alerts — they may escalate to a supervisor.
   const canEscalate = permissions.includes("close_alerts");
@@ -90,9 +71,7 @@ export default function AlertDetailPage() {
   const [assignAlert, { isLoading: assigning }] = useAssignAlertMutation();
   const [addNote, { isLoading: addingNote }] = useAddAlertNoteMutation();
   const [resolveAlert, { isLoading: resolving }] = useResolveAlertMutation();
-  const [createCase] = useCreateCaseMutation();
-  const [linkAlertToCase] = useLinkAlertToCaseMutation();
-  const [transitionCase] = useUpdateCaseMutation();
+  const [escalateAlert] = useEscalateAlertMutation();
 
   const [assignTo, setAssignTo] = useState("");
   const [showReassign, setShowReassign] = useState(false);
@@ -122,47 +101,21 @@ export default function AlertDetailPage() {
     new Set((alert.investigation_notes ?? []).map((n) => n.analyst).filter(Boolean)),
   );
 
-  // Escalate to a Level 2 supervisor: open a case, link this alert, and move it
-  // to ESCALATED (OPEN → INVESTIGATING → ESCALATED — no direct OPEN→ESCALATED).
-  // The case lands in the supervisor's ESCALATED queue.
+  // Escalate to a Level 2 supervisor via the backend's atomic endpoint: it
+  // creates a case, links this alert, and drives OPEN → INVESTIGATING →
+  // ESCALATED in a single commit (idempotent), then returns the case.
   const onEscalate = async () => {
     if (!escalateReason.trim()) {
       showToast({ type: "warning", title: "Reason required", message: "Add a reason before escalating." });
       return;
     }
     setEscalating(true);
-    let createdCaseId: string | null = null;
     try {
-      const jurisdiction = jurisdictionCode ?? tenant?.jurisdiction_code ?? "GHA";
-      const newCase = await createCase({
-        case_type: "AML",
-        title: `Escalated from alert ${alertId}`,
-        priority: ALERT_TO_CASE_PRIORITY[alert.priority] ?? "MEDIUM",
-        jurisdiction_id: jurisdiction,
-      }).unwrap();
-      createdCaseId = newCase.id;
-      await linkAlertToCase({ case_id: newCase.id, alert_id: alertId }).unwrap();
-      await transitionCase({ id: newCase.id, to_status: "INVESTIGATING", notes: escalateReason }).unwrap();
-      await transitionCase({ id: newCase.id, to_status: "ESCALATED", notes: escalateReason }).unwrap();
-      // Record the escalation on the alert so the activity log shows who escalated.
-      await addNote({
-        alert_id: alertId,
-        note: `Escalated to supervisor: ${escalateReason.trim()}`,
-        note_type: "escalation",
-      }).unwrap();
+      const kase = await escalateAlert({ alert_id: alertId, reason: escalateReason.trim() }).unwrap();
       showToast({ type: "success", title: "Escalated", message: "Case opened for supervisor review." });
-      router.push(`/dashboard/cases/${newCase.id}`);
+      router.push(`/dashboard/cases/${kase.id}`);
     } catch (e) {
-      if (createdCaseId) {
-        showToast({
-          type: "warning",
-          title: "Escalation incomplete",
-          message: "Case was created but the escalation didn't finish — opening it so you can complete it.",
-        });
-        router.push(`/dashboard/cases/${createdCaseId}`);
-      } else {
-        showToast({ type: "error", title: "Escalation failed", message: errorMessage(e) });
-      }
+      showToast({ type: "error", title: "Escalation failed", message: errorMessage(e) });
     } finally {
       setEscalating(false);
     }

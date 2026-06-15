@@ -37,6 +37,7 @@ import {
   KeyIcon,
   ScaleIcon,
   DocumentCheckIcon,
+  CloudArrowUpIcon,
 } from "@heroicons/react/24/outline";
 import { effectivePersona, PERSONA_META, type Persona } from "@/lib/personas";
 
@@ -55,6 +56,7 @@ const NAV = {
   alerts: { name: "Alerts", href: "/dashboard/alerts", icon: BellAlertIcon },
   cases: { name: "Cases", href: "/dashboard/cases", icon: InboxStackIcon },
   transactions: { name: "Transactions", href: "/dashboard/transactions", icon: BanknotesIcon },
+  ingestion: { name: "Batch Upload", href: "/dashboard/ingestion", icon: CloudArrowUpIcon },
   customers: { name: "Customers", href: "/dashboard/customers", icon: UsersIcon },
   str: { name: "STR Reports", href: "/dashboard/str", icon: DocumentTextIcon },
   ctr: { name: "CTR Reports", href: "/dashboard/ctr", icon: DocumentDuplicateIcon },
@@ -101,7 +103,7 @@ const PERSONA_SECTIONS: Record<Persona, NavSectionDef[]> = {
     { label: "Monitor", items: [NAV.overview, NAV.alerts, NAV.cases, NAV.transactions, NAV.customers] },
     { label: "Compliance", items: [NAV.str, NAV.ctr, NAV.approvals, NAV.reports, NAV.geo, NAV.watchlists, NAV.sanctions] },
     // Rule & ML Ops (rules/shadow/models/drift) intentionally omitted — Agregar-only for now.
-    { label: "Admin", items: [NAV.team, NAV.apiKeys, NAV.users, NAV.privacy, NAV.audit, NAV.health, NAV.settings] },
+    { label: "Admin", items: [NAV.ingestion, NAV.team, NAV.apiKeys, NAV.users, NAV.privacy, NAV.audit, NAV.health, NAV.settings] },
   ],
   compliance: [
     { label: "Monitor", items: [NAV.overview, NAV.alerts, NAV.cases] },

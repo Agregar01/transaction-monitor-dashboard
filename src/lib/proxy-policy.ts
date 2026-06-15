@@ -21,6 +21,7 @@ export const SESSION_MARKER = "__sid";
 export const ALLOWED_PREFIXES = [
   "/api/v1/auth/",
   "/api/v1/transactions/",
+  "/api/v1/ingestion/",
   "/api/v1/alerts/",
   "/api/v1/cases/",
   "/api/v1/rules/",
