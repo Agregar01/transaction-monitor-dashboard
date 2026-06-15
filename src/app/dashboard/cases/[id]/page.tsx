@@ -82,6 +82,8 @@ export default function CaseDetailPage() {
   // Both Level 1 (ANALYST) and Level 2 (SENIOR_ANALYST) hold UPLOAD_EVIDENCE;
   // backend POST /cases/{id}/attachments enforces it for real.
   const canUploadEvidence = permissions.includes("upload_evidence");
+  // L1 analysts (close_alerts) may escalate a case to a supervisor.
+  const canEscalate = permissions.includes("close_alerts");
 
   const { data: kase, isLoading, error } = useGetCaseQuery(caseId);
   const { data: users } = useListAssignableUsersQuery();
@@ -107,6 +109,18 @@ export default function CaseDetailPage() {
   const [assignTo, setAssignTo] = useState(kase?.assigned_to ?? "");
   const [evidenceFile, setEvidenceFile] = useState<File | null>(null);
   const [evidenceDesc, setEvidenceDesc] = useState("");
+  const [showEscalate, setShowEscalate] = useState(false);
+  const [escalateReason, setEscalateReason] = useState("");
+  const [escalating, setEscalating] = useState(false);
+
+  // "Who's working on it" — derived from case-note authors (activity log),
+  // resolved to display names via the assignable-users list.
+  const workedBy = Array.from(
+    new Set((notes ?? []).map((n) => n.author_id).filter((a): a is string => !!a)),
+  ).map(
+    (id) =>
+      users?.find((u) => u.user_id === id || u.email === id)?.full_name ?? id,
+  );
 
   if (isLoading) return <SkeletonCard />;
   if (error || !kase) {
@@ -142,6 +156,30 @@ export default function CaseDetailPage() {
       setTransitionNotes("");
     } catch (e) {
       showToast({ type: "error", title: "Transition failed", message: errorMessage(e) });
+    }
+  };
+
+  // Escalate to a Level 2 supervisor. ESCALATED is only reachable from
+  // INVESTIGATING / IN_REVIEW, so bridge through INVESTIGATING when the case is
+  // still OPEN or ASSIGNED. L1 analysts (close_alerts) are allowed this transition.
+  const onEscalate = async () => {
+    if (!escalateReason.trim()) {
+      showToast({ type: "warning", title: "Reason required", message: "Add a reason before escalating." });
+      return;
+    }
+    setEscalating(true);
+    try {
+      if (kase.status === "OPEN" || kase.status === "ASSIGNED") {
+        await updateCase({ id: caseId, to_status: "INVESTIGATING", notes: escalateReason }).unwrap();
+      }
+      await updateCase({ id: caseId, to_status: "ESCALATED", notes: escalateReason }).unwrap();
+      showToast({ type: "success", title: "Escalated", message: "Case routed to a supervisor for review." });
+      setShowEscalate(false);
+      setEscalateReason("");
+    } catch (e) {
+      showToast({ type: "error", title: "Escalation failed", message: errorMessage(e) });
+    } finally {
+      setEscalating(false);
     }
   };
 
@@ -604,6 +642,58 @@ export default function CaseDetailPage() {
             )}
           </section>
 
+          {/* Escalate to supervisor (L1 → L2) */}
+          {canEscalate &&
+            ["OPEN", "ASSIGNED", "IN_REVIEW", "INVESTIGATING"].includes(kase.status) && (
+              <section className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-6 space-y-3">
+                <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                  Escalate to supervisor
+                </h3>
+                {!showEscalate ? (
+                  <>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Routes this case to a Level 2 supervisor to close or file with the regulator.
+                    </p>
+                    <button
+                      onClick={() => setShowEscalate(true)}
+                      className="w-full bg-amber-500 text-white py-2 rounded-lg text-sm font-medium hover:bg-amber-600"
+                    >
+                      Escalate
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <textarea
+                      rows={3}
+                      value={escalateReason}
+                      onChange={(e) => setEscalateReason(e.target.value)}
+                      placeholder="Why are you escalating this? (required)"
+                      className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-800 text-gray-900 dark:text-white"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          setShowEscalate(false);
+                          setEscalateReason("");
+                        }}
+                        disabled={escalating}
+                        className="flex-1 py-2 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-navy-600"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={onEscalate}
+                        disabled={escalating || !escalateReason.trim()}
+                        className="flex-1 bg-amber-500 text-white py-2 rounded-lg text-sm font-medium hover:bg-amber-600 disabled:opacity-50"
+                      >
+                        {escalating ? "Escalating…" : "Confirm"}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </section>
+            )}
+
           {/* Assignment (F13) */}
           {canAssign && kase.status !== "CLOSED" && (
             <section className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-6 space-y-3">
@@ -662,6 +752,14 @@ export default function CaseDetailPage() {
                     : "—"}
                 </dd>
               </div>
+              {workedBy.length > 0 && (
+                <div className="flex justify-between items-start gap-2">
+                  <dt className="text-gray-500 dark:text-gray-400 shrink-0">Worked by</dt>
+                  <dd className="text-gray-900 dark:text-white text-xs text-right">
+                    {workedBy.join(", ")}
+                  </dd>
+                </div>
+              )}
               <div className="flex justify-between items-start">
                 <dt className="text-gray-500 dark:text-gray-400">SLA due</dt>
                 <dd className={`text-right text-xs ${slaCls}`}>

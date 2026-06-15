@@ -9,6 +9,12 @@ import {
   useAddAlertNoteMutation,
   useResolveAlertMutation,
 } from "@/redux/slices/api/alertsApi";
+import {
+  useCreateCaseMutation,
+  useLinkAlertToCaseMutation,
+  useUpdateCaseMutation,
+} from "@/redux/slices/api/casesApi";
+import { useGetTenantInfoQuery } from "@/redux/slices/api/tenantApi";
 import { useListAssignableUsersQuery } from "@/redux/slices/api/authApi";
 import { useAppSelector } from "@/redux/store";
 import { SkeletonCard } from "@/components/Skeleton";
@@ -16,8 +22,20 @@ import RiskBadge from "@/components/RiskBadge";
 import ActionBadge from "@/components/ActionBadge";
 import UserPicker from "@/components/UserPicker";
 import { showToast } from "@/components/Toast";
-import type { AlertResolution, TriggeredRuleDetail } from "@/types/api";
+import type {
+  AlertResolution,
+  AlertPriority,
+  CasePriority,
+  TriggeredRuleDetail,
+} from "@/types/api";
 import { errorMessage } from "@/lib/errors";
+
+// Alert priority → case priority when escalating an alert into a case.
+const ALERT_TO_CASE_PRIORITY: Record<AlertPriority, CasePriority> = {
+  IMMEDIATE: "HIGH",
+  REVIEW: "MEDIUM",
+  BATCH: "LOW",
+};
 
 // Assigning / reassigning an alert is a supervisory action.
 const CAN_ASSIGN_ROLES = ["SYSTEM_ADMIN", "SENIOR_ANALYST", "COMPLIANCE_OFFICER"];
@@ -61,12 +79,20 @@ export default function AlertDetailPage() {
 
   const { data: alert, isLoading, error } = useGetAlertQuery(alertId);
   const { data: users } = useListAssignableUsersQuery();
+  const { data: tenant } = useGetTenantInfoQuery();
   const roles = useAppSelector((s) => s.auth.roles);
+  const permissions = useAppSelector((s) => s.auth.permissions);
+  const jurisdictionCode = useAppSelector((s) => s.auth.jurisdictionCode);
   const canAssign = roles.some((r) => CAN_ASSIGN_ROLES.includes(r));
+  // L1 analysts (and above) hold close_alerts — they may escalate to a supervisor.
+  const canEscalate = permissions.includes("close_alerts");
 
   const [assignAlert, { isLoading: assigning }] = useAssignAlertMutation();
   const [addNote, { isLoading: addingNote }] = useAddAlertNoteMutation();
   const [resolveAlert, { isLoading: resolving }] = useResolveAlertMutation();
+  const [createCase] = useCreateCaseMutation();
+  const [linkAlertToCase] = useLinkAlertToCaseMutation();
+  const [transitionCase] = useUpdateCaseMutation();
 
   const [assignTo, setAssignTo] = useState("");
   const [showReassign, setShowReassign] = useState(false);
@@ -74,6 +100,9 @@ export default function AlertDetailPage() {
   const [resolution, setResolution] = useState<AlertResolution>("FALSE_POSITIVE");
   const [resolutionNotes, setResolutionNotes] = useState("");
   const [sarFiled, setSarFiled] = useState(false);
+  const [showEscalate, setShowEscalate] = useState(false);
+  const [escalateReason, setEscalateReason] = useState("");
+  const [escalating, setEscalating] = useState(false);
 
   if (isLoading) return <SkeletonCard />;
   if (error || !alert) {
@@ -86,6 +115,58 @@ export default function AlertDetailPage() {
 
   const customer = alert.customer_context;
   const transaction = alert.transaction_context;
+
+  // "Who's working on it" — derived from the analysts who've logged notes,
+  // since we record activity rather than auto-claiming the alert.
+  const workedBy = Array.from(
+    new Set((alert.investigation_notes ?? []).map((n) => n.analyst).filter(Boolean)),
+  );
+
+  // Escalate to a Level 2 supervisor: open a case, link this alert, and move it
+  // to ESCALATED (OPEN → INVESTIGATING → ESCALATED — no direct OPEN→ESCALATED).
+  // The case lands in the supervisor's ESCALATED queue.
+  const onEscalate = async () => {
+    if (!escalateReason.trim()) {
+      showToast({ type: "warning", title: "Reason required", message: "Add a reason before escalating." });
+      return;
+    }
+    setEscalating(true);
+    let createdCaseId: string | null = null;
+    try {
+      const jurisdiction = jurisdictionCode ?? tenant?.jurisdiction_code ?? "GHA";
+      const newCase = await createCase({
+        case_type: "AML",
+        title: `Escalated from alert ${alertId}`,
+        priority: ALERT_TO_CASE_PRIORITY[alert.priority] ?? "MEDIUM",
+        jurisdiction_id: jurisdiction,
+      }).unwrap();
+      createdCaseId = newCase.id;
+      await linkAlertToCase({ case_id: newCase.id, alert_id: alertId }).unwrap();
+      await transitionCase({ id: newCase.id, to_status: "INVESTIGATING", notes: escalateReason }).unwrap();
+      await transitionCase({ id: newCase.id, to_status: "ESCALATED", notes: escalateReason }).unwrap();
+      // Record the escalation on the alert so the activity log shows who escalated.
+      await addNote({
+        alert_id: alertId,
+        note: `Escalated to supervisor: ${escalateReason.trim()}`,
+        note_type: "escalation",
+      }).unwrap();
+      showToast({ type: "success", title: "Escalated", message: "Case opened for supervisor review." });
+      router.push(`/dashboard/cases/${newCase.id}`);
+    } catch (e) {
+      if (createdCaseId) {
+        showToast({
+          type: "warning",
+          title: "Escalation incomplete",
+          message: "Case was created but the escalation didn't finish — opening it so you can complete it.",
+        });
+        router.push(`/dashboard/cases/${createdCaseId}`);
+      } else {
+        showToast({ type: "error", title: "Escalation failed", message: errorMessage(e) });
+      }
+    } finally {
+      setEscalating(false);
+    }
+  };
 
   const onAssign = async () => {
     if (!assignTo) return;
@@ -149,6 +230,19 @@ export default function AlertDetailPage() {
               <span className="text-gray-400">Unassigned</span>
             )}
           </p>
+          {workedBy.length > 0 && (
+            <p className="text-xs mt-1">
+              <span className="text-gray-500 dark:text-gray-400">Worked by: </span>
+              <span className="font-medium text-gray-900 dark:text-white">
+                {workedBy
+                  .map(
+                    (a) =>
+                      users?.find((u) => u.email === a || u.user_id === a)?.full_name ?? a,
+                  )
+                  .join(", ")}
+              </span>
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <ActionBadge action={alert.priority} />
@@ -346,6 +440,56 @@ export default function AlertDetailPage() {
               {addingNote ? "Saving…" : "Save note"}
             </button>
           </section>
+
+          {canEscalate && alert.status !== "CLOSED" && (
+            <section className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-6 space-y-3">
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                Escalate to supervisor
+              </h3>
+              {!showEscalate ? (
+                <>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Opens an investigation case from this alert and routes it to a Level 2 supervisor.
+                  </p>
+                  <button
+                    onClick={() => setShowEscalate(true)}
+                    className="w-full bg-amber-500 text-white py-2 rounded-lg text-sm font-medium hover:bg-amber-600"
+                  >
+                    Escalate
+                  </button>
+                </>
+              ) : (
+                <>
+                  <textarea
+                    rows={3}
+                    value={escalateReason}
+                    onChange={(e) => setEscalateReason(e.target.value)}
+                    placeholder="Why are you escalating this? (required)"
+                    className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-800 text-gray-900 dark:text-white"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        setShowEscalate(false);
+                        setEscalateReason("");
+                      }}
+                      disabled={escalating}
+                      className="flex-1 py-2 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-navy-600"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={onEscalate}
+                      disabled={escalating || !escalateReason.trim()}
+                      className="flex-1 bg-amber-500 text-white py-2 rounded-lg text-sm font-medium hover:bg-amber-600 disabled:opacity-50"
+                    >
+                      {escalating ? "Escalating…" : "Confirm escalation"}
+                    </button>
+                  </div>
+                </>
+              )}
+            </section>
+          )}
 
           {alert.status !== "CLOSED" && (
             <section className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-6 space-y-3">
