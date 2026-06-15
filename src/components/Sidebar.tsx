@@ -110,6 +110,8 @@ const PERSONA_SECTIONS: Record<Persona, NavSectionDef[]> = {
   ],
   supervisor: [
     { label: "Team", items: [NAV.overview, NAV.alerts, NAV.cases, NAV.transactions, NAV.customers] },
+    // Supervisors review filed STR/CTR reports (read/file STR via FILE_STR; CTR read-only via VIEW_CASES).
+    { label: "Compliance", items: [NAV.str, NAV.ctr] },
     { label: "Analytics", items: [NAV.reports, NAV.geo] },
     { label: "Account", items: [NAV.settings] },
   ],
@@ -153,7 +155,7 @@ const PERMISSION_NAV_MAP: Record<string, string[]> = {
   "/dashboard/transactions":  ["view_cases", "access_audit_trail"],
   "/dashboard/customers":     ["view_cases", "access_audit_trail"],
   "/dashboard/str":           ["file_str"],
-  "/dashboard/ctr":           ["approve_action", "configure_thresholds"],
+  "/dashboard/ctr":           ["view_cases", "approve_action", "configure_thresholds"],  // backend GET requires only VIEW_CASES; filing actions are gated in-page
   "/dashboard/approvals":     ["approve_action"],
   "/dashboard/reports":       ["view_analytics"],
   "/dashboard/geo":           ["view_analytics"],
