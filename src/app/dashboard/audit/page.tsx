@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useAppSelector } from "@/redux/store";
 import { useListAuditChangesQuery } from "@/redux/slices/api/auditApi";
 import { useVerifyAuditChainQuery } from "@/redux/slices/api/analyticsApi";
 import { SkeletonTable } from "@/components/Skeleton";
@@ -113,6 +114,10 @@ function Row({ entry }: { entry: AuditEntry }) {
 }
 
 export default function AuditPage() {
+  // The hash chain is global (links across all institutions), so chain
+  // verification is platform-only. Tenant users (institutionId set) don't see
+  // the integrity banner — the backend 403s the endpoint for them anyway.
+  const isPlatform = !useAppSelector((s) => s.auth.institutionId);
   const [page, setPage] = useState(1);
   const [action, setAction] = useState<AuditAction | "">("");
   const [resourceType, setResourceType] = useState("");
@@ -141,7 +146,7 @@ export default function AuditPage() {
         </p>
       </div>
 
-      <ChainIntegrityBanner />
+      {isPlatform && <ChainIntegrityBanner />}
 
       <div className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-4 grid grid-cols-1 md:grid-cols-3 gap-3">
         <select
