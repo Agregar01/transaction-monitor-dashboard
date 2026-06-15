@@ -17,7 +17,10 @@ import {
   useGetCaseDeviceHistoryQuery,
   useGetCaseTransactionChainQuery,
 } from "@/redux/slices/api/casesApi";
-import { useListAttachmentsQuery } from "@/redux/slices/api/attachmentsApi";
+import {
+  useListAttachmentsQuery,
+  useUploadAttachmentMutation,
+} from "@/redux/slices/api/attachmentsApi";
 import { useListAssignableUsersQuery } from "@/redux/slices/api/authApi";
 import { useAppSelector } from "@/redux/store";
 import { SkeletonCard } from "@/components/Skeleton";
@@ -51,6 +54,12 @@ function slaColor(due: string | null): string {
   return "text-gray-900 dark:text-white";
 }
 
+// Mirror the backend evidence limits (EVIDENCE_MAX_FILE_SIZE_MB / EVIDENCE_ALLOWED_EXTENSIONS).
+const MAX_EVIDENCE_MB = 25;
+const MAX_EVIDENCE_BYTES = MAX_EVIDENCE_MB * 1024 * 1024;
+const EVIDENCE_ACCEPT =
+  ".pdf,.jpg,.jpeg,.png,.doc,.docx,.xlsx,.csv,.txt,.eml,.msg,.mp4,.mov,.avi,.mkv,.webm";
+
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -64,11 +73,15 @@ export default function CaseDetailPage() {
 
   const currentUserId = useAppSelector((s) => s.auth.userId);
   const roles = useAppSelector((s) => s.auth.roles);
+  const permissions = useAppSelector((s) => s.auth.permissions);
   // Assigning an investigator is a supervisory action (mirrors the backend
   // assign_cases permission: SYSTEM_ADMIN / SENIOR_ANALYST / COMPLIANCE_OFFICER).
   const canAssign = roles.some((r) =>
     ["SYSTEM_ADMIN", "SENIOR_ANALYST", "COMPLIANCE_OFFICER"].includes(r),
   );
+  // Both Level 1 (ANALYST) and Level 2 (SENIOR_ANALYST) hold UPLOAD_EVIDENCE;
+  // backend POST /cases/{id}/attachments enforces it for real.
+  const canUploadEvidence = permissions.includes("upload_evidence");
 
   const { data: kase, isLoading, error } = useGetCaseQuery(caseId);
   const { data: users } = useListAssignableUsersQuery();
@@ -85,12 +98,15 @@ export default function CaseDetailPage() {
   const [linkAlert, { isLoading: linking }] = useLinkAlertToCaseMutation();
   const [addNote, { isLoading: addingNote }] = useAddCaseNoteMutation();
   const [deleteNote] = useDeleteCaseNoteMutation();
+  const [uploadAttachment, { isLoading: uploadingEvidence }] = useUploadAttachmentMutation();
 
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [linkAlertId, setLinkAlertId] = useState("");
   const [transitionNotes, setTransitionNotes] = useState("");
   const [newNote, setNewNote] = useState("");
   const [assignTo, setAssignTo] = useState(kase?.assigned_to ?? "");
+  const [evidenceFile, setEvidenceFile] = useState<File | null>(null);
+  const [evidenceDesc, setEvidenceDesc] = useState("");
 
   if (isLoading) return <SkeletonCard />;
   if (error || !kase) {
@@ -155,6 +171,30 @@ export default function CaseDetailPage() {
       await deleteNote({ case_id: caseId, note_id: noteId }).unwrap();
     } catch (e) {
       showToast({ type: "error", title: "Could not delete note", message: errorMessage(e) });
+    }
+  };
+
+  const onUploadEvidence = async () => {
+    if (!evidenceFile) return;
+    if (evidenceFile.size > MAX_EVIDENCE_BYTES) {
+      showToast({
+        type: "error",
+        title: "File too large",
+        message: `Maximum evidence file size is ${MAX_EVIDENCE_MB} MB.`,
+      });
+      return;
+    }
+    try {
+      await uploadAttachment({
+        case_id: caseId,
+        file: evidenceFile,
+        description: evidenceDesc.trim() || undefined,
+      }).unwrap();
+      showToast({ type: "success", title: "Evidence uploaded", message: evidenceFile.name });
+      setEvidenceFile(null);
+      setEvidenceDesc("");
+    } catch (e) {
+      showToast({ type: "error", title: "Upload failed", message: errorMessage(e) });
     }
   };
 
@@ -315,12 +355,7 @@ export default function CaseDetailPage() {
               Evidence files
             </h2>
             {!attachments || attachments.length === 0 ? (
-              <p className="text-sm text-gray-400">
-                No evidence files attached.{" "}
-                <span className="italic">
-                  (Upload via the API — S3 storage must be enabled on this deployment.)
-                </span>
-              </p>
+              <p className="text-sm text-gray-400">No evidence files attached yet.</p>
             ) : (
               <ul className="divide-y divide-gray-100 dark:divide-navy-600">
                 {attachments.map((att) => (
@@ -352,6 +387,43 @@ export default function CaseDetailPage() {
                   </li>
                 ))}
               </ul>
+            )}
+
+            {canUploadEvidence && (
+              <div className="mt-4 pt-4 border-t border-gray-100 dark:border-navy-600 space-y-3">
+                <label
+                  htmlFor="evidence-file"
+                  className="block text-xs font-medium text-gray-500 dark:text-gray-400"
+                >
+                  Add evidence
+                </label>
+                <input
+                  id="evidence-file"
+                  type="file"
+                  accept={EVIDENCE_ACCEPT}
+                  onChange={(e) => setEvidenceFile(e.target.files?.[0] ?? null)}
+                  className="block w-full text-sm text-gray-700 dark:text-gray-300 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                />
+                <input
+                  type="text"
+                  value={evidenceDesc}
+                  onChange={(e) => setEvidenceDesc(e.target.value)}
+                  placeholder="Description (optional)"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs text-gray-400">
+                    Max {MAX_EVIDENCE_MB} MB · PDF, images, Office docs, CSV, email, video.
+                  </p>
+                  <button
+                    onClick={onUploadEvidence}
+                    disabled={!evidenceFile || uploadingEvidence}
+                    className="px-3 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-600 disabled:opacity-50"
+                  >
+                    {uploadingEvidence ? "Uploading…" : "Upload evidence"}
+                  </button>
+                </div>
+              </div>
             )}
           </section>
 
