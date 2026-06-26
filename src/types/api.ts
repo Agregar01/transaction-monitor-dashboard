@@ -519,6 +519,12 @@ export interface Rule {
   explain_template: string | null;
   created_at: string;
   updated_at: string;
+  /** Tunable thresholds exposed for per-institution override (e.g. {threshold: 10000}). Empty/absent ⇒ nothing tunable. */
+  default_parameters?: Record<string, number | string | boolean>;
+  /** This institution's override values, merged on top of the defaults. Present only when overridden. */
+  parameters?: Record<string, number | string | boolean>;
+  /** True when the calling institution has an override on this rule. */
+  has_institution_override?: boolean;
 }
 
 // ─── STR / CTR reports ──────────────────────────────────────────────────────

@@ -76,6 +76,8 @@ export const rulesApi = baseApi.injectEndpoints({
         enabled?: boolean;
         conditions?: RuleCondition[];
         explain_template?: string;
+        /** Per-institution threshold overrides; keys must match the rule's default_parameters. */
+        parameters?: Record<string, number | string | boolean>;
       }
     >({
       query: ({ rule_id, ...body }) => ({ url: `/rules/${rule_id}`, method: "PUT", body }),
