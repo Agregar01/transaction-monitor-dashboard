@@ -9,14 +9,13 @@ import type { RuleStatus, RuleCategory } from "@/types/api";
 import { useAppSelector } from "@/redux/store";
 
 const STATUS_TABS: RuleStatus[] = ["DRAFT", "SHADOW", "PRODUCTION", "ARCHIVED"];
-const CAN_CREATE_ROLES = ["SYSTEM_ADMIN", "ML_ENGINEER"];
 
 export default function RulesPage() {
   const [status, setStatus] = useState<RuleStatus>("PRODUCTION");
   const [category, setCategory] = useState<RuleCategory | "">("");
   const [enabledOnly, setEnabledOnly] = useState(false);
-  const { roles } = useAppSelector((s) => s.auth);
-  const canCreate = roles.some((r) => CAN_CREATE_ROLES.includes(r));
+  const { permissions } = useAppSelector((s) => s.auth);
+  const canCreate = permissions.includes("create_rule");
 
   const { data, isLoading, error } = useListRulesQuery({
     status,

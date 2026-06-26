@@ -10,6 +10,7 @@ import {
 import { SkeletonCard } from "@/components/Skeleton";
 import ActionBadge from "@/components/ActionBadge";
 import RuleBuilderForm from "@/components/RuleBuilderForm";
+import RuleSettings from "@/components/RuleSettings";
 import { showToast } from "@/components/Toast";
 import { errorMessage } from "@/lib/errors";
 import { useAppSelector } from "@/redux/store";
@@ -23,8 +24,10 @@ export default function RuleDetailPage() {
   const { data: rule, isLoading, error } = useGetRuleQuery(ruleId);
   const [promote, { isLoading: promoting }] = usePromoteRuleMutation();
   const [archive, { isLoading: archiving }] = useArchiveRuleMutation();
-  const { roles } = useAppSelector((s) => s.auth);
-  const canEdit = roles.some((r) => ["SYSTEM_ADMIN", "ML_ENGINEER"].includes(r));
+  const { permissions } = useAppSelector((s) => s.auth);
+  // Permission-driven so tenants granted modify_rule can tune rules for their
+  // own institution (backend scopes the edit), not just platform engineers.
+  const canEdit = permissions.includes("modify_rule") || permissions.includes("create_rule");
 
   if (isLoading) return <SkeletonCard />;
   if (error || !rule) {
@@ -182,6 +185,8 @@ export default function RuleDetailPage() {
           {JSON.stringify(rule.rule_logic, null, 2)}
         </pre>
       </section>
+
+      {canEdit && <RuleSettings rule={rule} />}
 
       <section className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-6 flex items-center justify-between flex-wrap gap-3">
         <div>

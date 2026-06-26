@@ -106,7 +106,9 @@ const PERSONA_SECTIONS: Record<Persona, NavSectionDef[]> = {
   client_admin: [
     { label: "Monitor", items: [NAV.overview, NAV.alerts, NAV.cases, NAV.transactions, NAV.customers, NAV.kyc] },
     { label: "Compliance", items: [NAV.str, NAV.ctr, NAV.approvals, NAV.reports, NAV.behavioral, NAV.geo, NAV.watchlists, NAV.sanctions] },
-    // Rule & ML Ops (rules/shadow/models/drift) intentionally omitted — Agregar-only for now.
+    // Tenants can view + tune detection rules for their own institution (backend
+    // scopes the edit). ML Ops (shadow/models/drift) stays Agregar-only.
+    { label: "Detection", items: [NAV.rules] },
     { label: "Admin", items: [NAV.ingestion, NAV.team, NAV.apiKeys, NAV.users, NAV.privacy, NAV.audit, NAV.health, NAV.settings] },
   ],
   compliance: [
