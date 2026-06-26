@@ -6,12 +6,11 @@
  * (frame-src + Permissions-Policy camera/microphone) — keep them in sync.
  */
 export const CENTRAL_KYC_ORIGIN =
-  process.env.NEXT_PUBLIC_CENTRAL_KYC_ORIGIN || "https://videokyc-frontend2.vercel.app";
+  process.env.NEXT_PUBLIC_CENTRAL_KYC_ORIGIN || "https://central-kyc.vercel.app";
 
-/** Customer-facing capture entry point. Reads verification_id + verification_type from the query. */
+/** Customer-facing capture entry point. central-kyc reads verification_id + verification_type from the root query. */
 export const CENTRAL_KYC_URL =
-  process.env.NEXT_PUBLIC_CENTRAL_KYC_URL ||
-  `${CENTRAL_KYC_ORIGIN}/agent_vkyc_portal/customer`;
+  process.env.NEXT_PUBLIC_CENTRAL_KYC_URL || `${CENTRAL_KYC_ORIGIN}/`;
 
 /** Verification flows offered in the launcher. The label is passed through as verification_type. */
 export const VERIFICATION_TYPES = [

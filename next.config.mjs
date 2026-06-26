@@ -1,7 +1,7 @@
 // Central-KYC / Video-KYC origins that the Identity Verification page embeds.
 // Override via NEXT_PUBLIC_CENTRAL_KYC_ORIGIN to point at a different deployment.
 const KYC_ORIGINS = [
-  process.env.NEXT_PUBLIC_CENTRAL_KYC_ORIGIN || "https://videokyc-frontend2.vercel.app",
+  process.env.NEXT_PUBLIC_CENTRAL_KYC_ORIGIN || "https://central-kyc.vercel.app",
   "https://app.agregartech.com",
 ];
 // Permissions-Policy allowlist syntax: self + quoted origins.
