@@ -29,8 +29,9 @@ export default function RulesPage() {
         <div>
           <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Rules</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            43 detection rules across Amount, Velocity, Behavioural, Network, Africa, Device, and
-            Travel Rule. Promotion to PRODUCTION requires four-eyes approval.
+            {data ? `${data.length} ${status} ` : ""}detection rules across Amount, Velocity,
+            Behavioural, Network, Africa, Travel Rule and Device categories. Promotion to PRODUCTION
+            requires four-eyes approval.
           </p>
         </div>
         {canCreate && (
