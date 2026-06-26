@@ -18,6 +18,7 @@ import ActionBadge from "@/components/ActionBadge";
 import UserPicker from "@/components/UserPicker";
 import { showToast } from "@/components/Toast";
 import type { AlertResolution, TriggeredRuleDetail } from "@/types/api";
+import { resolutionLabels } from "@/config/constants";
 import { errorMessage } from "@/lib/errors";
 
 // Assigning / reassigning an alert is a supervisory action.
@@ -156,7 +157,11 @@ export default function AlertDetailPage() {
         resolution_notes: resolutionNotes,
         sar_filed: sarFiled,
       }).unwrap();
-      showToast({ type: "success", title: "Resolved", message: `Alert closed (${resolution}).` });
+      showToast({
+        type: "success",
+        title: "Resolved",
+        message: `Alert closed (${resolutionLabels[resolution] ?? resolution}).`,
+      });
       router.push("/dashboard/alerts");
     } catch (e) {
       showToast({ type: "error", title: "Resolve failed", message: errorMessage(e) });
@@ -455,10 +460,10 @@ export default function AlertDetailPage() {
                 onChange={(e) => setResolution(e.target.value as AlertResolution)}
                 className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-800 text-gray-900 dark:text-white"
               >
-                <option value="FALSE_POSITIVE">False positive</option>
-                <option value="LEGITIMATE">Legitimate</option>
-                <option value="SAR_FILED">SAR filed</option>
-                <option value="RESTRICTED">Restricted</option>
+                <option value="FALSE_POSITIVE">{resolutionLabels.FALSE_POSITIVE}</option>
+                <option value="LEGITIMATE">{resolutionLabels.LEGITIMATE}</option>
+                <option value="SAR_FILED">{resolutionLabels.SAR_FILED}</option>
+                <option value="RESTRICTED">{resolutionLabels.RESTRICTED}</option>
               </select>
               <textarea
                 rows={3}

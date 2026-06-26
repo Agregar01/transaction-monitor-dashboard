@@ -7,6 +7,7 @@ import type {
   AuditChainVerification,
   InsiderThreatReport,
   GeoHeatmapData,
+  BehavioralRiskSummary,
 } from "@/types/api";
 
 export const analyticsApi = baseApi.injectEndpoints({
@@ -43,6 +44,13 @@ export const analyticsApi = baseApi.injectEndpoints({
       query: (params) => ({ url: "/analytics/geo-heatmap", params }),
       providesTags: ["Analytics"],
     }),
+    getBehavioralRisk: b.query<
+      BehavioralRiskSummary,
+      { period_days?: number; limit?: number }
+    >({
+      query: (params) => ({ url: "/analytics/behavioral-risk", params }),
+      providesTags: ["Analytics"],
+    }),
   }),
 });
 
@@ -54,4 +62,5 @@ export const {
   useVerifyAuditChainQuery,
   useGetInsiderThreatReportQuery,
   useGetGeoHeatmapQuery,
+  useGetBehavioralRiskQuery,
 } = analyticsApi;

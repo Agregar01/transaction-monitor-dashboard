@@ -38,6 +38,7 @@ import {
   ScaleIcon,
   DocumentCheckIcon,
   CloudArrowUpIcon,
+  EyeIcon,
 } from "@heroicons/react/24/outline";
 import { effectivePersona, PERSONA_META, type Persona } from "@/lib/personas";
 
@@ -63,6 +64,7 @@ const NAV = {
   approvals: { name: "Approvals", href: "/dashboard/approvals", icon: CheckBadgeIcon },
   reports: { name: "Reports", href: "/dashboard/reports", icon: ChartBarIcon },
   geo: { name: "Geo Heatmap", href: "/dashboard/geo", icon: GlobeAltIcon },
+  behavioral: { name: "Fraud Intelligence", href: "/dashboard/behavioral", icon: EyeIcon },
   watchlists: { name: "Watchlists", href: "/dashboard/watchlists", icon: ShieldExclamationIcon },
   sanctions: { name: "Sanctions Check", href: "/dashboard/sanctions", icon: NoSymbolIcon },
   rules: { name: "Rules", href: "/dashboard/rules", icon: AdjustmentsHorizontalIcon },
@@ -101,20 +103,20 @@ const PERSONA_SECTIONS: Record<Persona, NavSectionDef[]> = {
   ],
   client_admin: [
     { label: "Monitor", items: [NAV.overview, NAV.alerts, NAV.cases, NAV.transactions, NAV.customers] },
-    { label: "Compliance", items: [NAV.str, NAV.ctr, NAV.approvals, NAV.reports, NAV.geo, NAV.watchlists, NAV.sanctions] },
+    { label: "Compliance", items: [NAV.str, NAV.ctr, NAV.approvals, NAV.reports, NAV.behavioral, NAV.geo, NAV.watchlists, NAV.sanctions] },
     // Rule & ML Ops (rules/shadow/models/drift) intentionally omitted — Agregar-only for now.
     { label: "Admin", items: [NAV.ingestion, NAV.team, NAV.apiKeys, NAV.users, NAV.privacy, NAV.audit, NAV.health, NAV.settings] },
   ],
   compliance: [
     { label: "Monitor", items: [NAV.overview, NAV.alerts, NAV.cases] },
-    { label: "Compliance", items: [NAV.str, NAV.ctr, NAV.approvals, NAV.reports, NAV.watchlists, NAV.sanctions] },
+    { label: "Compliance", items: [NAV.str, NAV.ctr, NAV.approvals, NAV.reports, NAV.behavioral, NAV.watchlists, NAV.sanctions] },
     { label: "Account", items: [NAV.audit, NAV.settings] },
   ],
   supervisor: [
     { label: "Team", items: [NAV.overview, NAV.alerts, NAV.cases, NAV.transactions, NAV.customers] },
     // Supervisors review filed STR/CTR reports (read/file STR via FILE_STR; CTR read-only via VIEW_CASES).
     { label: "Compliance", items: [NAV.str, NAV.ctr] },
-    { label: "Analytics", items: [NAV.reports, NAV.geo] },
+    { label: "Analytics", items: [NAV.reports, NAV.behavioral, NAV.geo] },
     { label: "Account", items: [NAV.settings] },
   ],
   ml: [
@@ -161,6 +163,7 @@ const PERMISSION_NAV_MAP: Record<string, string[]> = {
   "/dashboard/approvals":     ["approve_action"],
   "/dashboard/reports":       ["view_analytics"],
   "/dashboard/geo":           ["view_analytics"],
+  "/dashboard/behavioral":    ["view_analytics"],
   "/dashboard/watchlists":    ["manage_sanctions_lists"],
   "/dashboard/sanctions":     ["manage_sanctions_lists"],
   "/dashboard/rules":         ["view_rules"],

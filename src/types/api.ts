@@ -952,3 +952,44 @@ export interface InsiderThreatReport {
   self_approval_signals: InsiderThreatUser[];
   top_users_by_activity: InsiderThreatUser[];
 }
+
+// ─── Behavioral fraud engine (SEON-style) ───────────────────────────────────
+// GET /analytics/behavioral-risk — aggregate behavioral signals per customer/device.
+
+export interface MuleSignal {
+  customer_id: string;
+  inbound_count: number;
+  inbound_total: number;
+}
+
+export interface CardTestingSignal {
+  customer_id: string;
+  micro_count: number;
+}
+
+export interface DeviceSharingSignal {
+  device_id: string;
+  distinct_customers: number;
+  last_customer: string | null;
+  sim_swap: boolean;
+  imei_change: boolean;
+}
+
+export interface SimSwapSignal {
+  device_id: string;
+  last_customer: string | null;
+  prev_iccid: string | null;
+  last_iccid: string | null;
+}
+
+export interface BehavioralRiskSummary {
+  period_days: number;
+  mule_signals: MuleSignal[];
+  card_testing_signals: CardTestingSignal[];
+  device_sharing: DeviceSharingSignal[];
+  sim_swaps: SimSwapSignal[];
+  total_mule_signals: number;
+  total_card_testing: number;
+  total_device_sharing: number;
+  total_sim_swaps: number;
+}

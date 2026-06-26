@@ -72,6 +72,19 @@ export const approvalStatusColors: Record<string, string> = {
 };
 
 /**
+ * Analyst-facing labels for the backend alert-resolution enum.
+ * The wire values (FALSE_POSITIVE / LEGITIMATE / …) stay verbatim on the API;
+ * these are display-only so non-technical reviewers read plain language:
+ * a cleared alert is "Not Suspicious", a confirmed one is "Suspicious".
+ */
+export const resolutionLabels: Record<string, string> = {
+  FALSE_POSITIVE: "Not Suspicious",
+  LEGITIMATE: "Suspicious",
+  SAR_FILED: "SAR Filed",
+  RESTRICTED: "Restricted",
+};
+
+/**
  * Backend domain enums as actually STORED/EMITTED by the TMS.
  *
  * Source of truth is the SQLAlchemy enums in the backend (`app/models/transaction.py`,
