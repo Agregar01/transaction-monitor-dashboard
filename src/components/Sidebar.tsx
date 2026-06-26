@@ -40,6 +40,7 @@ import {
   CloudArrowUpIcon,
   EyeIcon,
   IdentificationIcon,
+  CircleStackIcon,
 } from "@heroicons/react/24/outline";
 import { effectivePersona, PERSONA_META, type Persona } from "@/lib/personas";
 
@@ -86,6 +87,7 @@ const NAV = {
   usage: { name: "Usage", href: "/dashboard/api-keys", icon: ChartBarIcon },
   regulator: { name: "Regulator Dashboard", href: "/dashboard/regulator", icon: ScaleIcon },
   filings: { name: "Filed Reports", href: "/dashboard/regulator/filings", icon: DocumentCheckIcon },
+  dataLake: { name: "Data Lake", href: "/dashboard/data-lake", icon: CircleStackIcon },
 } satisfies Record<string, NavItem>;
 
 type NavSectionDef = { label: string; items: NavItem[] };
@@ -97,7 +99,7 @@ const PERSONA_SECTIONS: Record<Persona, NavSectionDef[]> = {
     { label: "Platform", items: [NAV.overview, NAV.institutions] },
     // Rules + ML ops are Agregar-owned (platform assets), not exposed to tenants.
     { label: "Rules & ML", items: [NAV.adminConfig, NAV.rules, NAV.models, NAV.drift, NAV.shadow] },
-    { label: "System", items: [NAV.jurisdictions, NAV.audit, NAV.health, NAV.settings] },
+    { label: "System", items: [NAV.jurisdictions, NAV.dataLake, NAV.audit, NAV.health, NAV.settings] },
   ],
   regulator: [
     { label: "Oversight", items: [NAV.regulator, NAV.filings] },
@@ -188,6 +190,7 @@ const PERMISSION_NAV_MAP: Record<string, string[]> = {
   "/dashboard/api-keys":      ["manage_api_keys"],
   "/dashboard/regulator":          ["view_regulator_filings"],
   "/dashboard/regulator/filings":  ["view_regulator_filings"],
+  "/dashboard/data-lake":          ["view_audit_trail"],
 };
 
 export function filterNavByPermissions(items: NavItem[], permissions: string[]): NavItem[] {

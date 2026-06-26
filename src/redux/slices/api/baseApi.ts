@@ -84,6 +84,7 @@ export const baseApi = createApi({
     "TeamUser",
     "ApiKey",
     "Filing",
+    "DataLake",
   ],
   endpoints: () => ({}),
 });
