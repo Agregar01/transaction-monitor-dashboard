@@ -14,6 +14,7 @@ import RuleSettings from "@/components/RuleSettings";
 import { showToast } from "@/components/Toast";
 import { errorMessage } from "@/lib/errors";
 import { useAppSelector } from "@/redux/store";
+import { RULE_CATALOG } from "@/config/ruleCatalog";
 
 export default function RuleDetailPage() {
   const params = useParams<{ rule_id: string }>();
@@ -146,15 +147,43 @@ export default function RuleDetailPage() {
       )}
 
       {rule.logic_type === "python" ? (
-        <section className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-6">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
-            Detection logic
-          </h2>
-          <p className="text-sm text-gray-700 dark:text-gray-300">
-            This is a <span className="font-medium">built-in {rule.rule_category}</span> rule maintained
-            in the detection engine. Its logic runs server-side rather than as editable conditions —
-            the rationale above is what an investigator sees on each alert it raises.
-          </p>
+        <section className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-6 space-y-4">
+          <div>
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+              Detection logic
+            </h2>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              Built-in {rule.rule_category} rule evaluated in the detection engine.
+            </p>
+          </div>
+          {(() => {
+            const cat = RULE_CATALOG[ruleId];
+            if (!cat || (!cat.trigger && !cat.reason)) {
+              return (
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  This rule&apos;s logic runs server-side. The rationale is shown on each alert it raises.
+                </p>
+              );
+            }
+            return (
+              <div className="space-y-3">
+                {cat.trigger && (
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Triggers when</p>
+                    <code className="block text-sm px-3 py-2 rounded bg-gray-50 dark:bg-navy-800 text-gray-900 dark:text-white font-mono">
+                      {cat.trigger}
+                    </code>
+                  </div>
+                )}
+                {cat.reason && (
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">What it means</p>
+                    <p className="text-sm text-gray-900 dark:text-white">{cat.reason}</p>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </section>
       ) : (
       <section className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-6">
@@ -177,14 +206,16 @@ export default function RuleDetailPage() {
       </section>
       )}
 
-      <section className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-6">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">
-          Raw JSON
-        </h2>
-        <pre className="text-xs bg-gray-50 dark:bg-navy-800 border border-gray-200 dark:border-navy-500 rounded-lg p-3 overflow-x-auto font-mono text-gray-900 dark:text-white">
-          {JSON.stringify(rule.rule_logic, null, 2)}
-        </pre>
-      </section>
+      {rule.logic_type === "dsl" && (
+        <section className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-6">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">
+            Raw JSON
+          </h2>
+          <pre className="text-xs bg-gray-50 dark:bg-navy-800 border border-gray-200 dark:border-navy-500 rounded-lg p-3 overflow-x-auto font-mono text-gray-900 dark:text-white">
+            {JSON.stringify(rule.rule_logic, null, 2)}
+          </pre>
+        </section>
+      )}
 
       {canEdit && <RuleSettings rule={rule} />}
 
