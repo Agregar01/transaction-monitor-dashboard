@@ -133,6 +133,27 @@ export default function RuleDetailPage() {
         </section>
       )}
 
+      {rule.explain_template && (
+        <section className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-6">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
+            Why this rule fires <span className="normal-case font-normal text-gray-400">(shown on every alert)</span>
+          </h2>
+          <p className="text-sm text-gray-900 dark:text-white font-mono">{rule.explain_template}</p>
+        </section>
+      )}
+
+      {rule.logic_type === "python" ? (
+        <section className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-6">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
+            Detection logic
+          </h2>
+          <p className="text-sm text-gray-700 dark:text-gray-300">
+            This is a <span className="font-medium">built-in {rule.rule_category}</span> rule maintained
+            in the detection engine. Its logic runs server-side rather than as editable conditions —
+            the rationale above is what an investigator sees on each alert it raises.
+          </p>
+        </section>
+      ) : (
       <section className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-6">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">
           Conditions ({operator})
@@ -151,6 +172,7 @@ export default function RuleDetailPage() {
           </ul>
         )}
       </section>
+      )}
 
       <section className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-6">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">

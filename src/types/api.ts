@@ -953,6 +953,26 @@ export interface InsiderThreatReport {
   top_users_by_activity: InsiderThreatUser[];
 }
 
+// ─── Live transaction feed (polling) ────────────────────────────────────────
+// GET /transactions/feed — poll with the previous response's next_cursor.
+
+export interface TransactionFeedItem {
+  transaction_id: string;
+  customer_id: string | null;
+  timestamp: string | null;
+  amount: number | null;
+  transaction_type: string | null;
+  channel: string | null;
+  combined_risk_score: number | null;
+  flagged: boolean;
+}
+
+export interface TransactionFeedResponse {
+  items: TransactionFeedItem[];
+  count: number;
+  next_cursor: string | null;
+}
+
 // ─── Behavioral fraud engine (SEON-style) ───────────────────────────────────
 // GET /analytics/behavioral-risk — aggregate behavioral signals per customer/device.
 

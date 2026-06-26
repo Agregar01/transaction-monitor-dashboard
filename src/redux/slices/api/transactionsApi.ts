@@ -4,6 +4,7 @@ import type {
   Transaction,
   TransactionTimelineEvent,
   RelatedTransaction,
+  TransactionFeedResponse,
 } from "@/types/api";
 
 export interface ListTransactionsParams {
@@ -30,6 +31,15 @@ export const transactionsApi = baseApi.injectEndpoints({
       query: (id) => `/transactions/${id}`,
       providesTags: (_r, _e, id) => [{ type: "Transaction", id }],
     }),
+    // Polling-based live feed. Caller advances `since` with the previous
+    // response's next_cursor each tick. Deliberately untagged — the live
+    // component owns accumulation, so cache invalidation must not reset it.
+    getTransactionFeed: b.query<
+      TransactionFeedResponse,
+      { since?: string; limit?: number; flagged_only?: boolean }
+    >({
+      query: (params) => ({ url: "/transactions/feed", params }),
+    }),
     getTransactionTimeline: b.query<{ events: TransactionTimelineEvent[] }, string>({
       query: (id) => `/transactions/${id}/timeline`,
     }),
@@ -50,4 +60,5 @@ export const {
   useGetTransactionQuery,
   useGetTransactionTimelineQuery,
   useGetRelatedTransactionsQuery,
+  useLazyGetTransactionFeedQuery,
 } = transactionsApi;

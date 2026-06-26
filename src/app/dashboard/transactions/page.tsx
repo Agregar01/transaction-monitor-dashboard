@@ -9,6 +9,7 @@ import { SkeletonTable } from "@/components/Skeleton";
 import RiskBadge from "@/components/RiskBadge";
 import DonutCard from "@/components/DonutCard";
 import RiskComposition from "@/components/RiskComposition";
+import LiveTransactionFeed from "@/components/LiveTransactionFeed";
 import Pagination from "@/components/Pagination";
 import { riskBand, type RiskBand, TRANSACTION_TYPES, CHANNELS } from "@/config/constants";
 
@@ -78,6 +79,8 @@ export default function TransactionsListPage() {
         </div>
         <ExportButton url={exportUrl} filename="transactions.csv" requiredPermission="view_audit_trail" />
       </div>
+
+      <LiveTransactionFeed />
 
       <div className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-4 grid grid-cols-1 md:grid-cols-4 gap-3">
         <input
