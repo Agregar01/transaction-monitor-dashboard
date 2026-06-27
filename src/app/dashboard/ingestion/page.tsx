@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   useUploadBatchFileMutation,
   useGetBatchStatusQuery,
@@ -30,11 +30,13 @@ const TRANSACTION_TEMPLATE = [
   "DEMO-002,2026-06-02T14:00:00Z,9400.00,deposit,agent,,,GH,DEV-A1,,false,ICC-002,IMEI-001,MTN,GH,,,,,",
 ].join("\n");
 
+// list_name must be an EXISTING watchlist name (not a list type). Seeded names:
+// OFAC_SDN, EU_SANCTIONS, UN_CONSOLIDATED, LOCAL_PEP_GHANA/NIGERIA/KENYA, FATF_HIGH_RISK_JURISDICTIONS.
 const WATCHLIST_TEMPLATE = [
   "list_name,value,notes",
-  "PEP,Demo PEP Person,Politically exposed — demo",
-  "PEP,Kwame Demo Minister,Cabinet member",
-  "internal_blocklist,Sanctioned Demo Entity,Blocked counterparty",
+  "LOCAL_PEP_GHANA,Kwame Demo Minister,Cabinet member — demo PEP",
+  "LOCAL_PEP_GHANA,Demo PEP Person,Politically exposed — demo",
+  "OFAC_SDN,Sanctioned Demo Entity,Blocked counterparty — demo",
 ].join("\n");
 
 const CUSTOMER_TEMPLATE = [
@@ -110,6 +112,20 @@ function UploadCard({
   result,
 }: UploadCardProps) {
   const [file, setFile] = useState<File | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const wasLoading = useRef(false);
+
+  // Clear the selected file + reset the native input once the upload SETTLES
+  // (never mid-stream — resetting input.value during the fetch can abort it).
+  // This makes the picker clear after upload and lets the same filename be
+  // re-selected without a stale File handle causing "Failed to fetch".
+  useEffect(() => {
+    if (wasLoading.current && !isLoading) {
+      setFile(null);
+      if (inputRef.current) inputRef.current.value = "";
+    }
+    wasLoading.current = isLoading;
+  }, [isLoading]);
 
   return (
     <div className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-6 space-y-4">
@@ -129,8 +145,12 @@ function UploadCard({
 
       <div className="flex items-center gap-3">
         <input
+          ref={inputRef}
           type="file"
           accept={accept}
+          onClick={(e) => {
+            (e.currentTarget as HTMLInputElement).value = "";
+          }}
           onChange={(e) => setFile(e.target.files?.[0] ?? null)}
           className="block text-sm text-gray-700 dark:text-gray-300 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
         />
@@ -251,6 +271,7 @@ export default function IngestionPage() {
   const [txnResult, setTxnResult] = useState<FileUploadResponse | null>(null);
   const [sourceSystem, setSourceSystem] = useState("");
   const [txnFile, setTxnFile] = useState<File | null>(null);
+  const txnInputRef = useRef<HTMLInputElement>(null);
   const [uploadBatchFile, { isLoading: txnLoading }] = useUploadBatchFileMutation();
 
   // Watchlist upload
@@ -273,6 +294,11 @@ export default function IngestionPage() {
       });
     } catch (e) {
       showToast({ type: "error", title: "Upload failed", message: errorMessage(e) });
+    } finally {
+      // Reset after the request settles (never mid-stream) so re-selecting the
+      // same filename works and a stale File handle can't cause "Failed to fetch".
+      setTxnFile(null);
+      if (txnInputRef.current) txnInputRef.current.value = "";
     }
   };
 
@@ -342,8 +368,12 @@ export default function IngestionPage() {
             File
           </label>
           <input
+            ref={txnInputRef}
             type="file"
             accept=".csv,.json,.jsonl,.xlsx"
+            onClick={(e) => {
+              (e.currentTarget as HTMLInputElement).value = "";
+            }}
             onChange={(e) => setTxnFile(e.target.files?.[0] ?? null)}
             className="block w-full text-sm text-gray-700 dark:text-gray-300 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
           />
