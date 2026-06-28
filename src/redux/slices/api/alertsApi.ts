@@ -89,6 +89,11 @@ export const alertsApi = baseApi.injectEndpoints({
         "Analytics",
       ],
     }),
+    // Self-assign: idempotent if already owned, 409 if owned by someone else.
+    claimAlert: b.mutation<MutationResponse, string>({
+      query: (alert_id) => ({ url: `/alerts/${alert_id}/claim`, method: "POST" }),
+      invalidatesTags: (_r, _e, alert_id) => [{ type: "Alert", id: alert_id }],
+    }),
     // Atomic: creates a case, links the alert, OPEN→INVESTIGATING→ESCALATED in
     // one commit. Idempotent on the backend. Returns the (created/existing) case.
     escalateAlert: b.mutation<
@@ -115,6 +120,7 @@ export const {
   useGetAlertQuery,
   useUpdateAlertMutation,
   useAssignAlertMutation,
+  useClaimAlertMutation,
   useAddAlertNoteMutation,
   useResolveAlertMutation,
   useEscalateAlertMutation,

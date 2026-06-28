@@ -6,6 +6,7 @@ import Link from "next/link";
 import {
   useGetAlertQuery,
   useAssignAlertMutation,
+  useClaimAlertMutation,
   useAddAlertNoteMutation,
   useResolveAlertMutation,
   useEscalateAlertMutation,
@@ -69,7 +70,20 @@ export default function AlertDetailPage() {
   // L1 analysts (and above) hold close_alerts — they may escalate to a supervisor.
   const canEscalate = permissions.includes("close_alerts");
 
+  // Auto-claim: silently self-assign on first real action (note / resolve / escalate).
+  // Only fires when the alert is unassigned and the caller holds close_alerts.
+  // Never steals an alert already owned by someone else (409 → no-op).
+  const tryClaim = async (alertId: string, assignedTo: string | null | undefined) => {
+    if (!canEscalate || assignedTo != null) return;
+    try {
+      await claimAlert(alertId).unwrap();
+    } catch {
+      // 409 = grabbed by another analyst between page load and action — continue anyway
+    }
+  };
+
   const [assignAlert, { isLoading: assigning }] = useAssignAlertMutation();
+  const [claimAlert] = useClaimAlertMutation();
   const [addNote, { isLoading: addingNote }] = useAddAlertNoteMutation();
   const [resolveAlert, { isLoading: resolving }] = useResolveAlertMutation();
   const [escalateAlert] = useEscalateAlertMutation();
@@ -110,6 +124,7 @@ export default function AlertDetailPage() {
       showToast({ type: "warning", title: "Reason required", message: "Add a reason before escalating." });
       return;
     }
+    await tryClaim(alertId, alert.assigned_to);
     setEscalating(true);
     try {
       const kase = await escalateAlert({ alert_id: alertId, reason: escalateReason.trim() }).unwrap();
@@ -136,6 +151,7 @@ export default function AlertDetailPage() {
 
   const onAddNote = async () => {
     if (!note.trim()) return;
+    await tryClaim(alertId, alert.assigned_to);
     try {
       await addNote({ alert_id: alertId, note, note_type: "investigation" }).unwrap();
       showToast({ type: "success", title: "Note added", message: "Investigation note recorded." });
@@ -150,6 +166,7 @@ export default function AlertDetailPage() {
       showToast({ type: "warning", title: "Notes required", message: "Add resolution notes before closing." });
       return;
     }
+    await tryClaim(alertId, alert.assigned_to);
     try {
       await resolveAlert({
         alert_id: alertId,
