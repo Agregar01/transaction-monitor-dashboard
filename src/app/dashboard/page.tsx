@@ -14,6 +14,7 @@ import PlatformOverview from "@/components/overviews/PlatformOverview";
 import { useListAlertsQuery } from "@/redux/slices/api/alertsApi";
 import { useListCasesQuery } from "@/redux/slices/api/casesApi";
 import { useListSTRQuery } from "@/redux/slices/api/strApi";
+import { useListCTRQuery } from "@/redux/slices/api/ctrApi";
 import { useListApprovalsQuery } from "@/redux/slices/api/approvalsApi";
 import { useListTransactionsQuery } from "@/redux/slices/api/transactionsApi";
 import { useGetAnalyticsSummaryQuery } from "@/redux/slices/api/analyticsApi";
@@ -155,6 +156,11 @@ function InstitutionOverview({ persona: realPersona }: { persona: RealPersona })
   );
 
   const { data: draftSTR } = useListSTRQuery({ status: "DRAFT", page_size: 1 });
+  // Pending (unfiled) CTRs — auto-generated above the cash threshold, awaiting filing.
+  const { data: draftCTR } = useListCTRQuery(
+    { status: "DRAFT", page_size: 1 },
+    { pollingInterval: slowPoll },
+  );
   // Approvals endpoint returns a bare list, not paginated — derive the count
   // client-side. Safe because the queue is bounded (active four-eyes work).
   const { data: pendingApprovals } = useListApprovalsQuery(
@@ -371,9 +377,28 @@ function InstitutionOverview({ persona: realPersona }: { persona: RealPersona })
       sublabel: "awaiting filing",
       href: "/dashboard/str?status=DRAFT",
     };
+    const ctrDrafts: ActionItem = {
+      count: draftCTR?.total ?? 0,
+      label: "CTR reports",
+      sublabel: "awaiting filing",
+      href: "/dashboard/ctr",
+    };
+    const openAlertsItem: ActionItem = {
+      count: openAlerts?.total ?? 0,
+      label: "open alerts",
+      sublabel: "in queue",
+      href: "/dashboard/alerts?status=OPEN",
+    };
+    const openCasesItem: ActionItem = {
+      count: openCases?.total ?? 0,
+      label: "open cases",
+      sublabel: "to work",
+      href: "/dashboard/cases?status=OPEN",
+    };
     switch (persona) {
       case "compliance":
-        return { items: [approvals, strDrafts, immediate] };
+        // Files STR/CTR + approves; also watches the open queues behind them.
+        return { items: [approvals, strDrafts, ctrDrafts, immediate, openCasesItem] };
       case "ml":
         return {
           items: [
@@ -387,17 +412,14 @@ function InstitutionOverview({ persona: realPersona }: { persona: RealPersona })
           clear: "No critical drift — models stable.",
         };
       case "analyst":
-        return {
-          items: [
-            immediate,
-            { count: openAlerts?.total ?? 0, label: "open alerts", sublabel: "in queue", href: "/dashboard/alerts?status=OPEN" },
-          ],
-        };
+        return { items: [immediate, openAlertsItem, openCasesItem] };
       case "admin":
       default:
-        return { items: [immediate, approvals] };
+        // Institution admin: urgent-today + four-eyes, plus the standing backlog
+        // (open alerts/cases, unfiled CTRs) so a real pile-up can't hide behind "All clear".
+        return { items: [immediate, approvals, openAlertsItem, openCasesItem, ctrDrafts] };
     }
-  }, [persona, immediateToday, pendingApprovals, draftSTR, openAlerts, latestDrift]);
+  }, [persona, immediateToday, pendingApprovals, draftSTR, draftCTR, openAlerts, openCases, latestDrift]);
 
   const isLoading = !openAlerts && !alertsLast14d;
 
