@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useListCTRQuery, useExemptCTRMutation, ctrXmlUrl } from "@/redux/slices/api/ctrApi";
+import { useListCTRQuery, useExemptCTRMutation, useFileCTRMutation, ctrXmlUrl } from "@/redux/slices/api/ctrApi";
 import { API_V1 } from "@/config/api";
 import { SkeletonTable } from "@/components/Skeleton";
 import ActionBadge from "@/components/ActionBadge";
@@ -25,6 +25,7 @@ export default function CTRListPage() {
   });
 
   const [exemptCTR, { isLoading: exempting }] = useExemptCTRMutation();
+  const [fileCTR, { isLoading: filing }] = useFileCTRMutation();
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.page_size)) : 1;
 
@@ -140,6 +141,29 @@ export default function CTRListPage() {
                     >
                       PDF
                     </a>
+                    {r.status === "DRAFT" && (
+                      <button
+                        onClick={async () => {
+                          if (!confirm("File this CTR? This triggers a four-eyes approval.")) return;
+                          try {
+                            const res = (await fileCTR({ id: r.id }).unwrap()) as { approval_id?: string };
+                            showToast({
+                              type: "info",
+                              title: res.approval_id ? "Awaiting approval" : "Filed",
+                              message: res.approval_id
+                                ? `Approval ${res.approval_id.slice(0, 8)}…`
+                                : "CTR filed successfully.",
+                            });
+                          } catch (e) {
+                            showToast({ type: "error", title: "Filing failed", message: errorMessage(e) });
+                          }
+                        }}
+                        disabled={filing}
+                        className="text-primary hover:underline disabled:opacity-50"
+                      >
+                        File
+                      </button>
+                    )}
                     {r.status !== "EXEMPT" && r.status !== "FILED" && (
                       <button
                         onClick={() => setExemptDialog({ id: r.id })}
