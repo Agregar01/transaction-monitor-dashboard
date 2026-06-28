@@ -403,6 +403,19 @@ export interface Case {
   updated_at: string;
 }
 
+/** Response from POST /alerts/{id}/escalate — note it keys the case by `case_id`, not `id`. */
+export interface EscalateAlertResponse {
+  case_id: string;
+  status: CaseStatus;
+  title: string;
+  case_type: CaseType;
+  institution_id: string | null;
+  jurisdiction_id: string | null;
+  assigned_to: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
 export interface CaseStatusHistoryEntry {
   id: string;
   from_status: CaseStatus | null;

@@ -114,7 +114,7 @@ export default function AlertDetailPage() {
     try {
       const kase = await escalateAlert({ alert_id: alertId, reason: escalateReason.trim() }).unwrap();
       showToast({ type: "success", title: "Escalated", message: "Case opened for supervisor review." });
-      router.push(`/dashboard/cases/${kase.id}`);
+      router.push(`/dashboard/cases/${kase.case_id}`);
     } catch (e) {
       showToast({ type: "error", title: "Escalation failed", message: errorMessage(e) });
     } finally {
