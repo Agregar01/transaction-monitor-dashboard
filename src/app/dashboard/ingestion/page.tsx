@@ -23,11 +23,15 @@ const TERMINAL = new Set(["completed", "failed"]);
 
 // ── CSV templates ────────────────────────────────────────────────────────────
 
+// The device-bearing rows below double as a behavioral-signal demo:
+//  • DEMO-002 seen twice on DEV-A1 with a changed ICCID → SIM-swap signal
+//  • DEMO-003 on the SAME DEV-A1 → shared-device signal (2 distinct customers)
 const TRANSACTION_TEMPLATE = [
   "customer_id,timestamp,amount,transaction_type,channel,flow_type,receiver_id,receiver_country,device_id,geo_location,is_rooted,iccid,imei,mno,ip_country,customer_name,customer_type,customer_occupation,customer_kyc_score,declared_monthly_income",
   "DEMO-001,2026-06-01T10:00:00Z,450.00,transfer,momo,,,GH,,,,,,,,,Individual,teacher,75,3000",
   "DEMO-002,2026-06-02T11:30:00Z,9500.00,deposit,agent,,,GH,DEV-A1,,false,ICC-001,IMEI-001,MTN,GH,,,,,",
   "DEMO-002,2026-06-02T14:00:00Z,9400.00,deposit,agent,,,GH,DEV-A1,,false,ICC-002,IMEI-001,MTN,GH,,,,,",
+  "DEMO-003,2026-06-03T09:15:00Z,1200.00,deposit,agent,,,GH,DEV-A1,,false,ICC-003,IMEI-001,MTN,GH,,,,,",
 ].join("\n");
 
 // list_name must be an EXISTING watchlist name (not a list type). Seeded names:
