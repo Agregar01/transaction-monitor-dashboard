@@ -19,7 +19,7 @@ export const CENTRAL_KYC_URL =
  * + camera/mic in next.config.mjs — keep in sync.
  */
 export const VIDEO_KYC_ORIGIN =
-  process.env.NEXT_PUBLIC_VIDEO_KYC_ORIGIN || "https://videokyc.vercel.app";
+  process.env.NEXT_PUBLIC_VIDEO_KYC_ORIGIN || "https://autheo.agregartech.com";
 
 export const VIDEO_KYC_URL =
   process.env.NEXT_PUBLIC_VIDEO_KYC_URL || `${VIDEO_KYC_ORIGIN}/`;
