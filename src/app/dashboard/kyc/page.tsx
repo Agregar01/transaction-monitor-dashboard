@@ -4,6 +4,9 @@ import { useState, useEffect, useCallback } from "react";
 import {
   CENTRAL_KYC_URL,
   CENTRAL_KYC_ORIGIN,
+  VIDEO_KYC_URL,
+  VIDEO_KYC_ORIGIN,
+  VIDEO_KYC_TYPE,
   VERIFICATION_TYPES,
   type VerificationTypeLabel,
 } from "@/config/kyc";
@@ -17,26 +20,72 @@ import {
 
 type KycEvent = { type: string; data?: unknown; at: string };
 
-/** Build the central-KYC embed URL for a freshly minted verification session. */
-function buildKycUrl(verificationId: string, verificationType: string): string {
+/**
+ * Build the central-KYC URL for a freshly minted verification session.
+ *
+ * `redirectTo` switches the flow into `mode=redirect`: central-KYC sends the
+ * user to that URL via `submission_url` once verification completes, instead of
+ * posting completion back to the host (see central-kyc selfie-capture redirect
+ * logic). We use it only for the "Open in new tab" link, so the embedded iframe
+ * keeps `mode=fetch` and reports completion inline via postMessage.
+ *
+ * The return URL is kept query-string-free on purpose: central-kyc runs
+ * decodeURIComponent on submission_url a second time, so a clean URL avoids any
+ * double-decode corruption.
+ */
+function buildCentralKycUrl(
+  verificationId: string,
+  verificationType: string,
+  redirectTo?: string,
+): string {
   const u = new URL(CENTRAL_KYC_URL);
   u.searchParams.set("verification_id", verificationId);
   u.searchParams.set("verification_type", verificationType);
-  u.searchParams.set("mode", "fetch");
+  if (redirectTo) {
+    u.searchParams.set("mode", "redirect");
+    u.searchParams.set("submission_url", redirectTo);
+  } else {
+    u.searchParams.set("mode", "fetch");
+  }
+  return u.toString();
+}
+
+/** Build the standalone Video-KYC app URL (a different deployment from central-KYC). */
+function buildVideoKycUrl(verificationId: string): string {
+  const u = new URL(VIDEO_KYC_URL);
+  u.searchParams.set("verification_id", verificationId);
   return u.toString();
 }
 
 export default function KycPage() {
   const [verificationType, setVerificationType] =
     useState<VerificationTypeLabel>("REMOTE CUSTOMER ONBOARDING");
-  const [session, setSession] = useState<{ id: string; url: string } | null>(null);
+  // embedUrl drives the iframe (central-KYC stays mode=fetch so completion posts
+  // back inline). openUrl drives "Open in new tab" — for central-KYC it carries
+  // mode=redirect + submission_url so the customer is returned to the dashboard.
+  const [session, setSession] = useState<{
+    id: string;
+    embedUrl: string;
+    openUrl: string;
+  } | null>(null);
   const [events, setEvents] = useState<KycEvent[]>([]);
   const [completed, setCompleted] = useState(false);
 
   const start = useCallback(() => {
     // crypto.randomUUID is available in all evergreen browsers.
     const id = crypto.randomUUID();
-    setSession({ id, url: buildKycUrl(id, verificationType) });
+    const isVideo = verificationType === VIDEO_KYC_TYPE;
+    // Where central-KYC returns the user once verification completes.
+    const returnUrl =
+      process.env.NEXT_PUBLIC_KYC_RETURN_URL ||
+      `${window.location.origin}/dashboard/kyc`;
+    setSession({
+      id,
+      embedUrl: isVideo ? buildVideoKycUrl(id) : buildCentralKycUrl(id, verificationType),
+      openUrl: isVideo
+        ? buildVideoKycUrl(id)
+        : buildCentralKycUrl(id, verificationType, returnUrl),
+    });
     setEvents([]);
     setCompleted(false);
   }, [verificationType]);
@@ -44,7 +93,8 @@ export default function KycPage() {
   // The embedded KYC app reports progress back to the host via postMessage.
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
-      if (e.origin !== CENTRAL_KYC_ORIGIN) return; // only trust the KYC origin
+      // only trust the embedded KYC origins (central-KYC or video-KYC)
+      if (e.origin !== CENTRAL_KYC_ORIGIN && e.origin !== VIDEO_KYC_ORIGIN) return;
       const msg = e.data as { type?: string; data?: unknown } | undefined;
       if (!msg || typeof msg.type !== "string") return;
       setEvents((prev) => [
@@ -101,7 +151,7 @@ export default function KycPage() {
             </button>
             {session && (
               <a
-                href={session.url}
+                href={session.openUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center justify-center gap-1.5 w-full py-2 rounded-lg text-sm font-medium border border-gray-200 dark:border-navy-500 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-navy-600 transition-colors"
@@ -166,8 +216,8 @@ export default function KycPage() {
             {session ? (
               <iframe
                 key={session.id}
-                src={session.url}
-                title="Central KYC verification"
+                src={session.embedUrl}
+                title="KYC verification"
                 allow="camera; microphone"
                 className="w-full h-[640px] border-0"
               />

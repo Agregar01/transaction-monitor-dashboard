@@ -2,6 +2,7 @@
 // Override via NEXT_PUBLIC_CENTRAL_KYC_ORIGIN to point at a different deployment.
 const KYC_ORIGINS = [
   process.env.NEXT_PUBLIC_CENTRAL_KYC_ORIGIN || "https://central-kyc.vercel.app",
+  process.env.NEXT_PUBLIC_VIDEO_KYC_ORIGIN || "https://videokyc.vercel.app",
   "https://app.agregartech.com",
 ];
 // Permissions-Policy allowlist syntax: self + quoted origins.
