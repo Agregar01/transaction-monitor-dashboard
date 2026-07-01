@@ -43,6 +43,35 @@ export interface DocumentVerificationResult {
   message?: string;
 }
 
+// ── Video KYC ────────────────────────────────────────────────────────────────
+// Agent-initiated, agent-supervised live video verification. The agent fills the
+// candidate's details; the backend invites the candidate (email) and returns the
+// agent-portal URL the agent opens to run the session.
+
+export const VIDEO_ID_TYPES = ["Ghana Card", "Passport", "Driver's License"] as const;
+export type VideoIdType = (typeof VIDEO_ID_TYPES)[number];
+
+export interface RequestVideoVerificationBody {
+  customer_id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone_number: string;
+  id_type: string;
+  id_number: string;
+}
+
+export interface VideoVerificationResult {
+  verification_id: string;
+  /** ID assigned by the external Video-KYC platform. */
+  external_verification_id: string;
+  reference: string;
+  status: DocumentVerificationStatus;
+  /** Where the agent runs the live session, e.g. .../agent-vkyc/verification?id=…&reference=… */
+  agent_portal_url: string;
+  message?: string;
+}
+
 export const kycApi = baseApi.injectEndpoints({
   endpoints: (b) => ({
     requestDocumentVerification: b.mutation<
@@ -56,6 +85,17 @@ export const kycApi = baseApi.injectEndpoints({
       query: (verification_id) => `/kyc/document-verification/${verification_id}`,
       providesTags: (_r, _e, id) => [{ type: "Verification", id }],
     }),
+    requestVideoVerification: b.mutation<
+      VideoVerificationResult,
+      RequestVideoVerificationBody
+    >({
+      query: (body) => ({ url: "/kyc/video-verification", method: "POST", body }),
+      invalidatesTags: [{ type: "Verification", id: "VIDEO_LIST" }],
+    }),
+    getVideoVerificationStatus: b.query<VideoVerificationResult, string>({
+      query: (verification_id) => `/kyc/video-verification/${verification_id}`,
+      providesTags: (_r, _e, id) => [{ type: "Verification", id }],
+    }),
   }),
 });
 
@@ -63,4 +103,7 @@ export const {
   useRequestDocumentVerificationMutation,
   useGetDocumentVerificationStatusQuery,
   useLazyGetDocumentVerificationStatusQuery,
+  useRequestVideoVerificationMutation,
+  useGetVideoVerificationStatusQuery,
+  useLazyGetVideoVerificationStatusQuery,
 } = kycApi;
