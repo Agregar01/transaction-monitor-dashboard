@@ -82,10 +82,17 @@ function CentralKycSendLink({ verificationType }: { verificationType: Verificati
         return_url: null, // left blank for now per product decision
       }).unwrap();
       setResult(res);
+      // A 2xx means the verification was CREATED — not necessarily delivered.
+      // Only status "SENT" confirms the link actually went out; anything else
+      // (e.g. "PENDING" when SMTP fails) must not show a green "sent" toast.
+      const delivered = res.status === "SENT";
       showToast({
-        type: "success",
-        title: "Verification link sent",
-        message: `Sent to ${destination.trim()}.`,
+        type: delivered ? "success" : "warning",
+        title: delivered ? "Verification link sent" : "Created — but not delivered",
+        message: delivered
+          ? `Sent to ${destination.trim()}.`
+          : res.message ||
+            "Verification created, but the link couldn't be delivered. Use “Copy link” to share it manually.",
       });
     } catch (e) {
       showToast({ type: "error", title: "Could not send link", message: errorMessage(e) });
