@@ -389,19 +389,32 @@ function VideoKycFlow() {
     if (!result) return;
     try {
       const fresh = await triggerStatus(result.verification_id).unwrap();
-      // The status GET returns reference: null — keep the value from create so
-      // the ref line (and any manual re-send) doesn't blank out on refresh.
-      setResult((prev) => ({ ...fresh, reference: fresh.reference ?? prev?.reference ?? null }));
+      // The status GET may omit reference/candidate_link — keep the values from
+      // create so the ref line and Copy candidate link don't blank out on refresh.
+      setResult((prev) => ({
+        ...fresh,
+        reference: fresh.reference ?? prev?.reference ?? null,
+        candidate_link: fresh.candidate_link ?? prev?.candidate_link ?? null,
+      }));
     } catch (e) {
       showToast({ type: "error", title: "Status check failed", message: errorMessage(e) });
     }
   };
 
   const copyLink = async () => {
-    if (!result?.agent_portal_url) return;
+    // Prefer the candidate's invite link (for manual re-send); fall back to the
+    // agent portal only if the backend hasn't supplied one.
+    const link = result?.candidate_link || result?.agent_portal_url;
+    if (!link) return;
     try {
-      await navigator.clipboard.writeText(result.agent_portal_url);
-      showToast({ type: "success", title: "Link copied", message: "Agent portal link copied to clipboard." });
+      await navigator.clipboard.writeText(link);
+      showToast({
+        type: "success",
+        title: "Link copied",
+        message: result?.candidate_link
+          ? "Candidate verification link copied — send it to the candidate."
+          : "Agent portal link copied.",
+      });
     } catch {
       showToast({ type: "error", title: "Copy failed", message: "Could not copy the link." });
     }
@@ -453,7 +466,7 @@ function VideoKycFlow() {
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-gray-200 dark:border-navy-500 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-navy-600"
               >
                 <ClipboardDocumentIcon className="h-3.5 w-3.5" />
-                Copy link
+                Copy candidate link
               </button>
               <button
                 onClick={() => setResult(null)}

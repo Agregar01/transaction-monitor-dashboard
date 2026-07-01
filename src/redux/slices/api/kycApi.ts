@@ -84,6 +84,8 @@ export interface VideoVerificationResult {
   status: DocumentVerificationStatus;
   /** Where the agent runs the live session, e.g. .../agent-vkyc/verification?id=…&reference=… */
   agent_portal_url: string;
+  /** The link emailed to the candidate — surfaced so the agent can re-send it manually. */
+  candidate_link?: string | null;
   message?: string;
   /** Null until the candidate completes; then the full video-KYC payload. */
   result?: VideoKycResultPayload | null;
