@@ -61,16 +61,32 @@ export interface RequestVideoVerificationBody {
   id_number: string;
 }
 
+/** The full Video-KYC payload, fetched by TMS from videokyc by reference. Null until
+ *  the candidate completes their session. Field set is open — known fields are typed. */
+export interface VideoKycResultPayload {
+  first_name?: string;
+  last_name?: string;
+  email_status?: string;
+  verification_status?: string;
+  /** Image URL or base64. */
+  card_front?: string;
+  /** Image URL or base64. */
+  selfie_with_card?: string;
+  [key: string]: unknown;
+}
+
 export interface VideoVerificationResult {
   verification_id: string;
   /** ID assigned by the external Video-KYC platform. */
-  external_verification_id: string;
+  external_verification_id?: string;
   /** Present on create (POST); the status GET currently returns null — the UI keeps the last known value. */
   reference: string | null;
   status: DocumentVerificationStatus;
   /** Where the agent runs the live session, e.g. .../agent-vkyc/verification?id=…&reference=… */
   agent_portal_url: string;
   message?: string;
+  /** Null until the candidate completes; then the full video-KYC payload. */
+  result?: VideoKycResultPayload | null;
 }
 
 export const kycApi = baseApi.injectEndpoints({

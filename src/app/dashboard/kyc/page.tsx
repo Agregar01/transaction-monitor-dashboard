@@ -16,6 +16,7 @@ import {
   type DocumentVerificationResult,
   type RequestVideoVerificationBody,
   type VideoVerificationResult,
+  type VideoKycResultPayload,
 } from "@/redux/slices/api/kycApi";
 import { showToast } from "@/components/Toast";
 import { errorMessage } from "@/lib/errors";
@@ -256,6 +257,68 @@ const inputCls =
   "w-full px-3 py-2 text-sm border border-gray-200 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-800 text-gray-900 dark:text-white";
 const labelCls = "block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5";
 
+/** Resolve a result image field (URL or raw base64) to an <img> src, or null. */
+function imgSrc(v: unknown): string | null {
+  if (typeof v !== "string" || v.length < 8) return null;
+  if (v.startsWith("http") || v.startsWith("data:")) return v;
+  if (/^[A-Za-z0-9+/=\s]+$/.test(v) && v.length > 100) return `data:image/jpeg;base64,${v}`;
+  return null;
+}
+
+/** Renders the completed video-KYC payload: key fields, captured images, raw JSON. */
+function VideoResultPanel({ data }: { data: VideoKycResultPayload }) {
+  const name = [data.first_name, data.last_name].filter(Boolean).join(" ");
+  const rows: [string, string][] = [
+    ["Name", name || "—"],
+    ["Verification", data.verification_status ?? "—"],
+    ["Email", data.email_status ?? "—"],
+  ];
+  const images: [string, string | null][] = [
+    ["Card front", imgSrc(data.card_front)],
+    ["Selfie with card", imgSrc(data.selfie_with_card)],
+  ];
+  const hasImages = images.some(([, src]) => src);
+
+  return (
+    <div className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-5 space-y-3">
+      <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+        Result
+      </h2>
+      <dl className="space-y-1.5 text-sm">
+        {rows.map(([k, v]) => (
+          <div key={k} className="flex justify-between gap-3">
+            <dt className="text-gray-500 dark:text-gray-400">{k}</dt>
+            <dd className="text-gray-900 dark:text-white text-right break-all">{v}</dd>
+          </div>
+        ))}
+      </dl>
+      {hasImages && (
+        <div className="grid grid-cols-2 gap-3 pt-1">
+          {images.map(([label, src]) =>
+            src ? (
+              <figure key={label} className="space-y-1">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={src}
+                  alt={label}
+                  className="w-full h-32 object-cover rounded-lg border border-gray-100 dark:border-navy-600"
+                />
+                <figcaption className="text-[11px] text-gray-400 text-center">{label}</figcaption>
+              </figure>
+            ) : null,
+          )}
+        </div>
+      )}
+      <details className="text-xs">
+        <summary className="cursor-pointer text-gray-500 dark:text-gray-400">Full payload</summary>
+        <pre className="mt-2 max-h-60 overflow-auto rounded-lg bg-gray-50 dark:bg-navy-800 p-3 text-gray-700 dark:text-gray-300">
+          {JSON.stringify(data, null, 2)}
+        </pre>
+      </details>
+    </div>
+  );
+}
+
 /**
  * Two-step flow. Step 1: the agent fills the candidate's details and submits.
  * Step 2 (after a 2xx): show the agent-portal URL the backend returns, so the
@@ -404,6 +467,17 @@ function VideoKycFlow() {
               <p>id {result.verification_id}</p>
             </div>
           </div>
+
+          {result.result ? (
+            <VideoResultPanel data={result.result} />
+          ) : (
+            <div className="rounded-xl border border-dashed border-gray-200 dark:border-navy-600 p-5 text-center">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Awaiting candidate — the result appears here once they complete their session. Use{" "}
+                <span className="font-medium">Refresh status</span> to check.
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="lg:col-span-2">
