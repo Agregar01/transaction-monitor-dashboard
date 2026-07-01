@@ -325,9 +325,22 @@ function VideoKycFlow() {
   const refresh = async () => {
     if (!result) return;
     try {
-      setResult(await triggerStatus(result.verification_id).unwrap());
+      const fresh = await triggerStatus(result.verification_id).unwrap();
+      // The status GET returns reference: null — keep the value from create so
+      // the ref line (and any manual re-send) doesn't blank out on refresh.
+      setResult((prev) => ({ ...fresh, reference: fresh.reference ?? prev?.reference ?? null }));
     } catch (e) {
       showToast({ type: "error", title: "Status check failed", message: errorMessage(e) });
+    }
+  };
+
+  const copyLink = async () => {
+    if (!result?.agent_portal_url) return;
+    try {
+      await navigator.clipboard.writeText(result.agent_portal_url);
+      showToast({ type: "success", title: "Link copied", message: "Agent portal link copied to clipboard." });
+    } catch {
+      showToast({ type: "error", title: "Copy failed", message: "Could not copy the link." });
     }
   };
 
@@ -371,6 +384,13 @@ function VideoKycFlow() {
               >
                 <ArrowPathIcon className={`h-3.5 w-3.5 ${statusFetching ? "animate-spin" : ""}`} />
                 Refresh status
+              </button>
+              <button
+                onClick={copyLink}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-gray-200 dark:border-navy-500 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-navy-600"
+              >
+                <ClipboardDocumentIcon className="h-3.5 w-3.5" />
+                Copy link
               </button>
               <button
                 onClick={() => setResult(null)}

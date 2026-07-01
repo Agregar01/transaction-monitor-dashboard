@@ -65,7 +65,8 @@ export interface VideoVerificationResult {
   verification_id: string;
   /** ID assigned by the external Video-KYC platform. */
   external_verification_id: string;
-  reference: string;
+  /** Present on create (POST); the status GET currently returns null — the UI keeps the last known value. */
+  reference: string | null;
   status: DocumentVerificationStatus;
   /** Where the agent runs the live session, e.g. .../agent-vkyc/verification?id=…&reference=… */
   agent_portal_url: string;
