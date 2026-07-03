@@ -2,6 +2,8 @@
 
 import { useState, useMemo } from "react";
 import { useGetAnalyticsSummaryQuery } from "@/redux/slices/api/analyticsApi";
+import { useTriggerExecutiveReportMutation } from "@/redux/slices/api/mlApi";
+import type { ExecutiveReportResult } from "@/redux/slices/api/mlApi";
 import StatCard from "@/components/StatCard";
 import RiskComposition from "@/components/RiskComposition";
 import QueryState from "@/components/QueryState";
@@ -11,6 +13,7 @@ import {
   FunnelIcon,
   DocumentCheckIcon,
   InboxStackIcon,
+  PaperAirplaneIcon,
 } from "@heroicons/react/24/outline";
 
 const PERIODS = [30, 60, 90] as const;
@@ -32,9 +35,63 @@ function Bar({ label, value, max, color }: { label: string; value: number; max: 
   );
 }
 
+/** Inline banner shown after triggering a report send. */
+function SendResultBanner({ result }: { result: ExecutiveReportResult }) {
+  const isOk = result.status === "sent";
+  const isSkipped = result.status === "skipped";
+  const bg = isOk
+    ? "bg-emerald-50 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800"
+    : isSkipped
+    ? "bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800"
+    : "bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800";
+  const text = isOk
+    ? "text-emerald-800 dark:text-emerald-300"
+    : isSkipped
+    ? "text-amber-800 dark:text-amber-300"
+    : "text-red-800 dark:text-red-300";
+
+  return (
+    <div className={`rounded-lg border px-4 py-3 text-sm ${bg} ${text}`}>
+      {isOk && (
+        <>
+          <span className="font-semibold">Report sent</span> to{" "}
+          {result.recipients?.join(", ") ?? "configured recipients"} · {result.period_days}d window ·{" "}
+          {result.transactions?.toLocaleString() ?? "—"} transactions · drift:{" "}
+          <span className="font-medium">{result.drift_status ?? "—"}</span>
+        </>
+      )}
+      {isSkipped && (
+        <>
+          <span className="font-semibold">Skipped —</span>{" "}
+          {result.reason ?? "no recipients configured (set EXECUTIVE_REPORT_RECIPIENTS on the server)"}
+        </>
+      )}
+      {result.status === "failed" && (
+        <>
+          <span className="font-semibold">Send failed.</span>{" "}
+          {result.reason ?? "Check server logs for details."}
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function ExecutiveReportsPage() {
   const [periodDays, setPeriodDays] = useState<number>(30);
+  const [lastSendResult, setLastSendResult] = useState<ExecutiveReportResult | null>(null);
+
   const { data, isLoading, isError, error } = useGetAnalyticsSummaryQuery({ period_days: periodDays });
+  const [triggerReport, { isLoading: isSending }] = useTriggerExecutiveReportMutation();
+
+  const handleSendReport = async () => {
+    setLastSendResult(null);
+    try {
+      const result = await triggerReport({ period_days: periodDays }).unwrap();
+      setLastSendResult(result);
+    } catch {
+      setLastSendResult({ status: "failed", period_days: periodDays, reason: "Request failed — check network or auth." });
+    }
+  };
 
   const derived = useMemo(() => {
     if (!data) return null;
@@ -71,22 +128,44 @@ export default function ExecutiveReportsPage() {
             Board-level view of fraud exposure, operational efficiency and regulatory posture.
           </p>
         </div>
-        <div className="flex items-center gap-1 bg-gray-100 dark:bg-navy-800 rounded-lg p-1">
-          {PERIODS.map((p) => (
-            <button
-              key={p}
-              onClick={() => setPeriodDays(p)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                periodDays === p
-                  ? "bg-white dark:bg-navy-600 text-gray-900 dark:text-white shadow-sm"
-                  : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-              }`}
-            >
-              {p}d
-            </button>
-          ))}
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Period selector */}
+          <div className="flex items-center gap-1 bg-gray-100 dark:bg-navy-800 rounded-lg p-1">
+            {PERIODS.map((p) => (
+              <button
+                key={p}
+                onClick={() => setPeriodDays(p)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                  periodDays === p
+                    ? "bg-white dark:bg-navy-600 text-gray-900 dark:text-white shadow-sm"
+                    : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                }`}
+              >
+                {p}d
+              </button>
+            ))}
+          </div>
+          {/* Send report now */}
+          <button
+            onClick={handleSendReport}
+            disabled={isSending}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-primary text-white hover:bg-primary/90 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+          >
+            {isSending ? (
+              <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+              </svg>
+            ) : (
+              <PaperAirplaneIcon className="h-3.5 w-3.5" />
+            )}
+            {isSending ? "Sending…" : "Send report now"}
+          </button>
         </div>
       </div>
+
+      {/* Send result banner */}
+      {lastSendResult && <SendResultBanner result={lastSendResult} />}
 
       <QueryState isLoading={isLoading} isError={isError} error={error} rows={4} cols={4}>
         {data && derived && (

@@ -15,8 +15,27 @@ export interface ListDriftParams {
   drifted_only?: boolean;
 }
 
+export interface ExecutiveReportResult {
+  status: "sent" | "failed" | "skipped";
+  recipients?: string[];
+  period_days: number;
+  transactions?: number;
+  flagged?: number;
+  flag_rate?: number;
+  str_count?: number;
+  drift_status?: string;
+  reason?: string;
+}
+
 export const mlApi = baseApi.injectEndpoints({
   endpoints: (b) => ({
+    triggerExecutiveReport: b.mutation<ExecutiveReportResult, { period_days?: number }>({
+      query: ({ period_days = 30 }) => ({
+        url: "/reports/executive/trigger",
+        method: "POST",
+        params: { period_days },
+      }),
+    }),
     listModels: b.query<Paginated<ModelRegistryEntry>, ListModelsParams>({
       query: (params) => ({ url: "/models", params }),
       providesTags: [{ type: "ModelRegistry", id: "LIST" }],
@@ -45,6 +64,7 @@ export const mlApi = baseApi.injectEndpoints({
 });
 
 export const {
+  useTriggerExecutiveReportMutation,
   useListModelsQuery,
   useListChampionsQuery,
   useGetModelQuery,
