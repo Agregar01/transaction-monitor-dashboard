@@ -47,8 +47,16 @@ export default function FilingDetailPage() {
       const a = document.createElement("a");
       a.href = url;
       a.download = `${data.filing_reference}.xml`;
+      // Anchor must be in the DOM for programmatic download in some browsers, and
+      // the object URL must stay alive until the download manager has read it —
+      // revoking synchronously after click() races the download ("file wasn't
+      // available on site"). Append, click, then clean up on the next tick.
+      document.body.appendChild(a);
       a.click();
-      URL.revokeObjectURL(url);
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 1000);
     } catch {
       showToast({ type: "error", title: "Download failed", message: "Could not reach the server." });
     } finally {
