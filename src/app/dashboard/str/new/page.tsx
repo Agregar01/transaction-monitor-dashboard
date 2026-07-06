@@ -112,12 +112,15 @@ export default function STRNewPage() {
             onChange={(e) => setActivityType(e.target.value)}
             className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-800 text-gray-900 dark:text-white"
           >
+            {/* Values must match the backend suspicious_activity_type enum exactly. */}
             <option value="STRUCTURING">Structuring</option>
-            <option value="LAYERING">Layering</option>
-            <option value="MULES">Mule activity</option>
-            <option value="CROSS_BORDER">Cross-border anomaly</option>
-            <option value="SANCTIONS">Sanctions match</option>
-            <option value="OTHER">Other</option>
+            <option value="LAYERING">Layering (incl. money mules)</option>
+            <option value="INTEGRATION">Integration</option>
+            <option value="MONEY_LAUNDERING">Money laundering (general)</option>
+            <option value="TERRORIST_FINANCING">Terrorist financing</option>
+            <option value="FRAUD">Fraud</option>
+            <option value="SANCTIONS_EVASION">Sanctions evasion</option>
+            <option value="OTHER">Other (e.g. cross-border anomaly)</option>
           </select>
         </div>
 
