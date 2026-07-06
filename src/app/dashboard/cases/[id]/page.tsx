@@ -638,7 +638,7 @@ export default function CaseDetailPage() {
                   rows={2}
                   value={transitionNotes}
                   onChange={(e) => setTransitionNotes(e.target.value)}
-                  placeholder="Optional notes"
+                  placeholder="Reason / notes — required to close or draft a SAR"
                   className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-800 text-gray-900 dark:text-white"
                 />
                 <div className="flex flex-col gap-2">
