@@ -3,10 +3,10 @@
 import { useEffect, useState } from "react";
 import { useAppSelector } from "@/redux/store";
 import {
-  useGetInstitutionQuery,
   useSetAnalystCaseAccessMutation,
   type CaseAccessMode,
 } from "@/redux/slices/api/institutionsApi";
+import { useGetTenantInfoQuery } from "@/redux/slices/api/tenantApi";
 import QueryState from "@/components/QueryState";
 import { showToast } from "@/components/Toast";
 import { errorMessage } from "@/lib/errors";
@@ -47,9 +47,10 @@ export default function InstitutionPolicyPage() {
     document.title = "Institution Policy | Transaction Monitor";
   }, []);
 
-  const { data, isLoading, isError, error } = useGetInstitutionQuery(institutionId ?? "", {
-    skip: !institutionId,
-  });
+  // Read the current mode from /tenant/info — the institution-scoped endpoint a
+  // CLIENT_ADMIN can actually call. GET /institutions/{id} is 403 for them
+  // (VIEW_INSTITUTIONS is platform-only), so it must NOT be used here.
+  const { data, isLoading, isError, error } = useGetTenantInfoQuery();
   const [setMode, { isLoading: saving }] = useSetAnalystCaseAccessMutation();
   const [pending, setPending] = useState<CaseAccessMode | null>(null);
   // Optimistic override: GET /institutions/{id} doesn't yet echo the field, so

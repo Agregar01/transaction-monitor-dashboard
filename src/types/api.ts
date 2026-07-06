@@ -57,6 +57,9 @@ export interface TenantInfo {
   };
   config_loaded: boolean;
   supported_jurisdictions: JurisdictionCode[];
+  /** L1 analyst case-access policy for this tenant. Present once the backend
+   *  adds it to /tenant/info; absent on older backends → treat as "originator". */
+  analyst_case_access?: "all" | "originator" | "none";
 }
 
 // ─── Data Privacy (DSAR / erasure) ──────────────────────────────────────────
