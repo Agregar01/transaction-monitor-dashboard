@@ -52,14 +52,18 @@ export default function InstitutionPolicyPage() {
   });
   const [setMode, { isLoading: saving }] = useSetAnalystCaseAccessMutation();
   const [pending, setPending] = useState<CaseAccessMode | null>(null);
+  // Optimistic override: GET /institutions/{id} doesn't yet echo the field, so
+  // fall back to what we last set (or the default) to show the active mode.
+  const [applied, setApplied] = useState<CaseAccessMode | null>(null);
 
-  const current = data?.analyst_case_access ?? DEFAULT_MODE;
+  const current = applied ?? data?.analyst_case_access ?? DEFAULT_MODE;
 
   const choose = async (mode: CaseAccessMode) => {
     if (!institutionId || mode === current) return;
     setPending(mode);
     try {
       await setMode({ id: institutionId, analyst_case_access: mode }).unwrap();
+      setApplied(mode);
       showToast({
         type: "success",
         title: "Policy updated",

@@ -112,7 +112,8 @@ export const institutionsApi = baseApi.injectEndpoints({
       query: ({ id, analyst_case_access }) => ({
         url: `/institutions/${id}/analyst-case-access`,
         method: "PATCH",
-        body: { analyst_case_access },
+        // Backend expects the field name `mode`.
+        body: { mode: analyst_case_access },
       }),
       invalidatesTags: (_r, _e, { id }) => [{ type: "Institution", id }],
     }),
