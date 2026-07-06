@@ -190,7 +190,7 @@ const PERMISSION_NAV_MAP: Record<string, string[]> = {
   "/dashboard/settings":      [],                                                         // any authenticated user
   // Multi-tenant + regulator
   "/dashboard/institutions":  ["manage_institutions", "view_institutions"],
-  "/dashboard/institution":   ["manage_institutions"],
+  "/dashboard/institution":   ["manage_institution_users", "manage_institutions"],
   "/dashboard/team":          ["manage_institution_users", "view_users"],
   "/dashboard/api-keys":      ["manage_api_keys"],
   "/dashboard/regulator":          ["view_regulator_filings"],

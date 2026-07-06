@@ -37,7 +37,11 @@ export default function InstitutionPolicyPage() {
   const institutionId = useAppSelector((s) => s.auth.institutionId);
   const institutionName = useAppSelector((s) => s.auth.institutionName);
   const permissions = useAppSelector((s) => s.auth.permissions);
-  const canManage = permissions.includes("manage_institutions");
+  // A client admin manages their own institution (manage_institution_users);
+  // Agregar platform admins (manage_institutions) can manage any tenant.
+  const canManage =
+    permissions.includes("manage_institution_users") ||
+    permissions.includes("manage_institutions");
 
   useEffect(() => {
     document.title = "Institution Policy | Transaction Monitor";
@@ -131,7 +135,7 @@ export default function InstitutionPolicyPage() {
 
           {!canManage && (
             <p className="text-xs text-amber-600 dark:text-amber-400">
-              You need the Manage Institutions permission to change this. Shown read-only.
+              You need institution-admin rights to change this. Shown read-only.
             </p>
           )}
         </section>
