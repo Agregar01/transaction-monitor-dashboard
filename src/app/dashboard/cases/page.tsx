@@ -236,7 +236,11 @@ function CasesListInner() {
       ) : !data || data.items.length === 0 ? (
         <div className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-12 text-center">
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            No cases match the current filters.
+            No cases to show.
+          </p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+            You&apos;ll see cases you escalate or are assigned here. Broader access depends on your
+            institution&apos;s case-access policy — check with your compliance team if you expect more.
           </p>
         </div>
       ) : (

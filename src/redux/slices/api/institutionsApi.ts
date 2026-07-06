@@ -1,6 +1,9 @@
 import { baseApi } from "./baseApi";
 
 export type InstitutionType = "BANK" | "FINTECH" | "MOMO_PROVIDER" | "REGULATOR";
+
+/** Governs which cases a plain L1 analyst can see. Per-institution, admin-toggled. */
+export type CaseAccessMode = "all" | "originator" | "none";
 export type InstitutionStatus =
   | "REGISTERED"
   | "PENDING_APPROVAL"
@@ -23,6 +26,8 @@ export interface Institution {
   rejection_reason: string | null;
   created_at: string;
   updated_at: string;
+  /** L1 analyst case-access policy. Absent on older backends → treat as "originator". */
+  analyst_case_access?: CaseAccessMode;
 }
 
 export interface InstitutionListResponse {
@@ -99,6 +104,18 @@ export const institutionsApi = baseApi.injectEndpoints({
         { type: "Institution", id: "LIST" },
       ],
     }),
+    // Set the L1 analyst case-access policy for an institution (MANAGE_INSTITUTIONS).
+    setAnalystCaseAccess: b.mutation<
+      ActionResponse,
+      { id: string; analyst_case_access: CaseAccessMode }
+    >({
+      query: ({ id, analyst_case_access }) => ({
+        url: `/institutions/${id}/analyst-case-access`,
+        method: "PATCH",
+        body: { analyst_case_access },
+      }),
+      invalidatesTags: (_r, _e, { id }) => [{ type: "Institution", id }],
+    }),
     // Re-sends the email-verification link to a REGISTERED institution's contact.
     // Backend returns a generic 200 regardless (no email enumeration).
     resendVerification: b.mutation<{ message?: string }, { contact_email: string }>({
@@ -118,5 +135,6 @@ export const {
   useRejectInstitutionMutation,
   useSuspendInstitutionMutation,
   useReactivateInstitutionMutation,
+  useSetAnalystCaseAccessMutation,
   useResendVerificationMutation,
 } = institutionsApi;

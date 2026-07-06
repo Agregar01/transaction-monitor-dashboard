@@ -86,6 +86,7 @@ const NAV = {
   health: { name: "System Health", href: "/dashboard/health", icon: ServerIcon },
   settings: { name: "Settings", href: "/dashboard/settings", icon: Cog6ToothIcon },
   institutions: { name: "Institutions", href: "/dashboard/institutions", icon: BuildingOffice2Icon },
+  institutionPolicy: { name: "Institution Policy", href: "/dashboard/institution", icon: BuildingOffice2Icon },
   usage: { name: "Usage", href: "/dashboard/api-keys", icon: ChartBarIcon },
   regulator: { name: "Regulator Dashboard", href: "/dashboard/regulator", icon: ScaleIcon },
   filings: { name: "Filed Reports", href: "/dashboard/regulator/filings", icon: DocumentCheckIcon },
@@ -113,7 +114,7 @@ const PERSONA_SECTIONS: Record<Persona, NavSectionDef[]> = {
     // Tenants can view + tune detection rules for their own institution (backend
     // scopes the edit). ML Ops (shadow/models/drift) stays Agregar-only.
     { label: "Detection", items: [NAV.rules] },
-    { label: "Admin", items: [NAV.ingestion, NAV.team, NAV.apiKeys, NAV.users, NAV.privacy, NAV.audit, NAV.health, NAV.settings] },
+    { label: "Admin", items: [NAV.ingestion, NAV.team, NAV.apiKeys, NAV.users, NAV.institutionPolicy, NAV.privacy, NAV.audit, NAV.health, NAV.settings] },
   ],
   compliance: [
     { label: "Monitor", items: [NAV.overview, NAV.alerts, NAV.cases, NAV.kyc] },
@@ -189,6 +190,7 @@ const PERMISSION_NAV_MAP: Record<string, string[]> = {
   "/dashboard/settings":      [],                                                         // any authenticated user
   // Multi-tenant + regulator
   "/dashboard/institutions":  ["manage_institutions", "view_institutions"],
+  "/dashboard/institution":   ["manage_institutions"],
   "/dashboard/team":          ["manage_institution_users", "view_users"],
   "/dashboard/api-keys":      ["manage_api_keys"],
   "/dashboard/regulator":          ["view_regulator_filings"],
