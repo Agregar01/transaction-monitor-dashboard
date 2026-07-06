@@ -33,30 +33,29 @@ export default function FilingDetailPage() {
     if (!data) return;
     setDownloading(true);
     try {
+      // Preflight so we can surface a real error (permission/409) as a toast.
       const res = await fetch(`${API_V1}/filings/${id}/goaml`, { credentials: "same-origin" });
       if (!res.ok) {
         const msg =
           res.status === 409
             ? "goAML XML was not captured for this filing."
-            : `Download failed (${res.status}).`;
+            : res.status === 403
+              ? "You don't have permission to download this filing."
+              : `Download failed (${res.status}).`;
         showToast({ type: "error", title: "Download failed", message: msg });
         return;
       }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
+      // Let the browser download it NATIVELY via the endpoint's own
+      // Content-Disposition (the proxy forwards it). This avoids blob object-URLs
+      // entirely — the earlier blob + revoke approach raced the download manager
+      // ("file wasn't available on site"). Same-origin, so the session cookie rides along.
       const a = document.createElement("a");
-      a.href = url;
+      a.href = `${API_V1}/filings/${id}/goaml`;
       a.download = `${data.filing_reference}.xml`;
-      // Anchor must be in the DOM for programmatic download in some browsers, and
-      // the object URL must stay alive until the download manager has read it —
-      // revoking synchronously after click() races the download ("file wasn't
-      // available on site"). Append, click, then clean up on the next tick.
+      a.rel = "noopener";
       document.body.appendChild(a);
       a.click();
-      setTimeout(() => {
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }, 1000);
+      a.remove();
     } catch {
       showToast({ type: "error", title: "Download failed", message: "Could not reach the server." });
     } finally {
