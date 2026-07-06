@@ -44,7 +44,7 @@ export default function RiskComposition({ title, subtitle, bands, clearedCount =
       {subtitle && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{subtitle}</p>}
 
       <p className="sr-only">
-        {fmt(total)} transactions: {fmt(clearedCount)} cleared ({pct(clearedCount).toFixed(1)}%),
+        {fmt(total)} transactions: {fmt(clearedCount)} allowed ({pct(clearedCount).toFixed(1)}%),
         {fmt(needsAction)} need action ({sorted.map((b) => `${b.band} ${b.count}`).join(", ")}).
       </p>
 
@@ -52,7 +52,7 @@ export default function RiskComposition({ title, subtitle, bands, clearedCount =
       <div className="mt-4">
         <div className="flex items-baseline justify-between text-xs mb-1.5">
           <span className="text-gray-500 dark:text-gray-400">
-            <span className="font-semibold text-gray-700 dark:text-gray-200">{fmt(clearedCount)}</span> cleared
+            <span className="font-semibold text-gray-700 dark:text-gray-200">{fmt(clearedCount)}</span> allowed
           </span>
           <span className="font-semibold text-orange-700 dark:text-orange-300">
             {fmt(needsAction)} need action · {needsPct < 0.1 ? needsPct.toFixed(2) : needsPct.toFixed(1)}%
@@ -62,7 +62,7 @@ export default function RiskComposition({ title, subtitle, bands, clearedCount =
           <div
             className="h-full bg-emerald-500/70"
             style={{ width: `${pct(clearedCount)}%` }}
-            title={`Cleared: ${fmt(clearedCount)}`}
+            title={`Allowed: ${fmt(clearedCount)}`}
           />
           <div
             className="h-full bg-orange-500"
