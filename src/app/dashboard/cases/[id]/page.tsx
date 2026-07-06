@@ -132,6 +132,17 @@ export default function CaseDetailPage() {
   }
 
   const onTransition = async (to: CaseStatus) => {
+    const reason = transitionNotes.trim();
+    // CLOSED requires a resolution and SAR_DRAFTED a narrative — both are typed
+    // into the transition reason box; block early with a clear message.
+    if ((to === "CLOSED" || to === "SAR_DRAFTED") && !reason) {
+      showToast({
+        type: "warning",
+        title: "Reason required",
+        message: `Add a reason before moving the case to ${to.replace(/_/g, " ")}.`,
+      });
+      return;
+    }
     try {
       if (to === "SAR_FILED") {
         await requestSarFiling({ case_id: caseId }).unwrap();
@@ -145,7 +156,11 @@ export default function CaseDetailPage() {
           id: caseId,
           to_status: to,
           assigned_to: assignTo.trim() || undefined,
-          notes: transitionNotes || undefined,
+          notes: reason || undefined,
+          // Route the reason to the field the backend validates for this target:
+          // CLOSED → resolution, SAR_DRAFTED → narrative (case_repository._validate_requirements).
+          resolution: to === "CLOSED" ? reason : undefined,
+          narrative: to === "SAR_DRAFTED" ? reason : undefined,
         }).unwrap();
         showToast({
           type: "success",
