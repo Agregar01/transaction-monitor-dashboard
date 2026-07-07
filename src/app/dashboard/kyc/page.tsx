@@ -14,6 +14,7 @@ import {
   VIDEO_ID_TYPES,
   type KycDestinationType,
   type DocumentVerificationResult,
+  type DocvResultPayload,
   type RequestVideoVerificationBody,
   type VideoVerificationResult,
   type VideoKycResultPayload,
@@ -47,6 +48,58 @@ const STATUS_STYLES: Record<string, string> = {
  * link, and sends it. The agent never operates the capture UI — they only
  * dispatch the link and watch the status.
  */
+/** Renders the docv verification outcome: overall result, face match, raw payload. */
+function DocResultPanel({ data }: { data: DocvResultPayload }) {
+  const overall = data.overall_verification ?? {};
+  const face = data.face_comparison ?? {};
+  const pct = (v: unknown) => (typeof v === "number" ? `${Math.round(v)}%` : "—");
+  const verified = String(overall.status ?? "").toUpperCase() === "VERIFIED";
+
+  return (
+    <div className="rounded-xl border border-gray-100 dark:border-navy-600 p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+          Verification result
+        </h3>
+        <span
+          className={`px-2 py-0.5 text-[11px] font-semibold rounded ${
+            verified
+              ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300"
+              : "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300"
+          }`}
+        >
+          {String(overall.status ?? "—").toUpperCase()}
+        </span>
+      </div>
+      <dl className="space-y-1.5 text-sm">
+        <div className="flex justify-between gap-3">
+          <dt className="text-gray-500 dark:text-gray-400">Overall confidence</dt>
+          <dd className="text-gray-900 dark:text-white">{pct(overall.confidence)}</dd>
+        </div>
+        <div className="flex justify-between gap-3">
+          <dt className="text-gray-500 dark:text-gray-400">Face match</dt>
+          <dd className="text-gray-900 dark:text-white">
+            {face.match === undefined ? "—" : face.match ? "Match" : "No match"}
+            {typeof face.confidence === "number" ? ` · ${pct(face.confidence)}` : ""}
+          </dd>
+        </div>
+        {overall.message ? (
+          <div className="flex justify-between gap-3">
+            <dt className="text-gray-500 dark:text-gray-400">Note</dt>
+            <dd className="text-gray-900 dark:text-white text-right break-words">{String(overall.message)}</dd>
+          </div>
+        ) : null}
+      </dl>
+      <details className="text-xs">
+        <summary className="cursor-pointer text-gray-500 dark:text-gray-400">Full payload</summary>
+        <pre className="mt-2 max-h-60 overflow-auto rounded-lg bg-gray-50 dark:bg-navy-800 p-3 text-gray-700 dark:text-gray-300">
+          {JSON.stringify(data, null, 2)}
+        </pre>
+      </details>
+    </div>
+  );
+}
+
 function CentralKycSendLink({ verificationType }: { verificationType: VerificationTypeLabel }) {
   const [customerId, setCustomerId] = useState("");
   const [destinationType, setDestinationType] = useState<KycDestinationType>("email");
@@ -228,6 +281,15 @@ function CentralKycSendLink({ verificationType }: { verificationType: Verificati
                 </button>
               )}
             </div>
+
+            {result.result ? (
+              <DocResultPanel data={result.result} />
+            ) : (
+              <p className="rounded-lg border border-dashed border-gray-200 dark:border-navy-600 p-3 text-xs text-center text-gray-500 dark:text-gray-400">
+                Awaiting the customer — the verification result appears here once they complete
+                capture. Use <span className="font-medium">Refresh status</span> to check.
+              </p>
+            )}
           </div>
         )}
       </div>

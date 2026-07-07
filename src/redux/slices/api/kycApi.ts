@@ -34,6 +34,23 @@ export type DocumentVerificationStatus =
   | "FAILED"
   | "EXPIRED";
 
+/** Raw docv verification payload, stored once the customer completes. Shape is
+ *  docv's — known sections typed; the rest is passed through for display. */
+export interface DocvResultPayload {
+  overall_verification?: {
+    status?: string;
+    confidence?: number;
+    message?: string;
+    [key: string]: unknown;
+  };
+  face_comparison?: {
+    match?: boolean;
+    confidence?: number;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
 export interface DocumentVerificationResult {
   /** Minted and persisted by the backend. */
   verification_id: string;
@@ -41,6 +58,8 @@ export interface DocumentVerificationResult {
   /** The central-KYC link the backend sent — surfaced so the agent can copy/resend. */
   link?: string;
   message?: string;
+  /** docv result once the customer completes; null while pending/in-progress. */
+  result?: DocvResultPayload | null;
 }
 
 // ── Video KYC ────────────────────────────────────────────────────────────────
