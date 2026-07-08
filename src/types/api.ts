@@ -281,7 +281,13 @@ export interface CustomerAlertsResponse {
 
 export type AlertPriority = "IMMEDIATE" | "BATCH" | "REVIEW";
 export type AlertStatus = "OPEN" | "INVESTIGATING" | "CLOSED";
-export type AlertResolution = "FALSE_POSITIVE" | "LEGITIMATE" | "SAR_FILED" | "RESTRICTED";
+export type AlertResolution =
+  | "FALSE_POSITIVE"
+  | "LEGITIMATE"
+  | "SAR_FILED"
+  | "RESTRICTED"
+  // System-set only (KYC auto-close on a passed verification) — not an agent choice.
+  | "IDENTITY_CONFIRMED";
 export type AlertNoteType = "investigation" | "follow_up" | "documentation" | "escalation";
 
 export interface InvestigationNote {

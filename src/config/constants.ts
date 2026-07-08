@@ -82,6 +82,7 @@ export const resolutionLabels: Record<string, string> = {
   LEGITIMATE: "Suspicious",
   SAR_FILED: "SAR Filed",
   RESTRICTED: "Restricted",
+  IDENTITY_CONFIRMED: "Identity Confirmed (KYC)",
 };
 
 /**
