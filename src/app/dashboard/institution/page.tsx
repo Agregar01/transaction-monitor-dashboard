@@ -5,6 +5,7 @@ import { useAppSelector } from "@/redux/store";
 import {
   useGetInstitutionQuery,
   useSetAnalystCaseAccessMutation,
+  useSetKycAutoThresholdMutation,
   type CaseAccessMode,
 } from "@/redux/slices/api/institutionsApi";
 import QueryState from "@/components/QueryState";
@@ -59,6 +60,31 @@ export default function InstitutionPolicyPage() {
   const [applied, setApplied] = useState<CaseAccessMode | null>(null);
 
   const current = applied ?? data?.analyst_case_access ?? DEFAULT_MODE;
+
+  // KYC auto-initiation threshold. GET doesn't echo it yet → optimistic override.
+  const [setThreshold, { isLoading: savingThreshold }] = useSetKycAutoThresholdMutation();
+  const [appliedThreshold, setAppliedThreshold] = useState<number | null | undefined>(undefined);
+  const currentThreshold =
+    appliedThreshold !== undefined ? appliedThreshold : data?.kyc_auto_threshold ?? null;
+  const [thresholdInput, setThresholdInput] = useState<string>("");
+
+  const saveThreshold = async (value: number | null) => {
+    if (!institutionId) return;
+    try {
+      await setThreshold({ id: institutionId, threshold: value }).unwrap();
+      setAppliedThreshold(value);
+      showToast({
+        type: "success",
+        title: "Threshold updated",
+        message:
+          value === null
+            ? "Auto-KYC disabled — the system will notify an analyst instead."
+            : `System will auto-initiate KYC at risk ≥ ${value}.`,
+      });
+    } catch (e) {
+      showToast({ type: "error", title: "Update failed", message: errorMessage(e) });
+    }
+  };
 
   const choose = async (mode: CaseAccessMode) => {
     if (!institutionId || mode === current) return;
@@ -143,6 +169,68 @@ export default function InstitutionPolicyPage() {
             <p className="text-xs text-amber-600 dark:text-amber-400">
               You need institution-admin rights to change this. Shown read-only.
             </p>
+          )}
+        </section>
+
+        <section className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-6 space-y-4">
+          <div>
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+              Auto-KYC risk threshold
+            </h2>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              When a transaction&apos;s risk score reaches this value, the system automatically sends
+              the customer a KYC document-verification link. Below it (but still STEP_UP), an analyst
+              is notified instead. Leave disabled to only ever notify.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="text-sm text-gray-700 dark:text-gray-300">
+              Current:{" "}
+              <span className="font-semibold text-gray-900 dark:text-white">
+                {currentThreshold === null ? "Disabled (notify-only)" : `≥ ${currentThreshold}`}
+              </span>
+            </span>
+          </div>
+
+          {canManage && (
+            <div className="flex items-end gap-2 flex-wrap">
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                  Set threshold (0–1000)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  max={1000}
+                  value={thresholdInput}
+                  onChange={(e) => setThresholdInput(e.target.value)}
+                  placeholder="e.g. 150"
+                  className="w-32 px-3 py-2 text-sm border border-gray-200 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-800 text-gray-900 dark:text-white"
+                />
+              </div>
+              <button
+                onClick={() => {
+                  const n = parseInt(thresholdInput, 10);
+                  if (Number.isNaN(n) || n < 0 || n > 1000) {
+                    showToast({ type: "error", title: "Invalid", message: "Enter a number 0–1000." });
+                    return;
+                  }
+                  saveThreshold(n);
+                }}
+                disabled={savingThreshold || thresholdInput.trim() === ""}
+                className="px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-600 disabled:opacity-50"
+              >
+                {savingThreshold ? "Saving…" : "Save"}
+              </button>
+              <button
+                onClick={() => saveThreshold(null)}
+                disabled={savingThreshold || currentThreshold === null}
+                className="px-4 py-2 text-sm font-medium border border-gray-200 dark:border-navy-500 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-navy-600 disabled:opacity-50"
+              >
+                Disable
+              </button>
+            </div>
           )}
         </section>
       </QueryState>

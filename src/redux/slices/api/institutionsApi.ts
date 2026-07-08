@@ -28,6 +28,8 @@ export interface Institution {
   updated_at: string;
   /** L1 analyst case-access policy. Absent on older backends → treat as "originator". */
   analyst_case_access?: CaseAccessMode;
+  /** Risk score at/above which the system auto-initiates KYC. null/absent = notify-only. */
+  kyc_auto_threshold?: number | null;
 }
 
 export interface InstitutionListResponse {
@@ -117,6 +119,18 @@ export const institutionsApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: (_r, _e, { id }) => [{ type: "Institution", id }],
     }),
+    // Set the risk threshold for system auto-initiated KYC (null = notify-only).
+    setKycAutoThreshold: b.mutation<
+      ActionResponse & { kyc_auto_threshold: number | null },
+      { id: string; threshold: number | null }
+    >({
+      query: ({ id, threshold }) => ({
+        url: `/institutions/${id}/kyc-auto-threshold`,
+        method: "PATCH",
+        body: { threshold },
+      }),
+      invalidatesTags: (_r, _e, { id }) => [{ type: "Institution", id }],
+    }),
     // Re-sends the email-verification link to a REGISTERED institution's contact.
     // Backend returns a generic 200 regardless (no email enumeration).
     resendVerification: b.mutation<{ message?: string }, { contact_email: string }>({
@@ -137,5 +151,6 @@ export const {
   useSuspendInstitutionMutation,
   useReactivateInstitutionMutation,
   useSetAnalystCaseAccessMutation,
+  useSetKycAutoThresholdMutation,
   useResendVerificationMutation,
 } = institutionsApi;

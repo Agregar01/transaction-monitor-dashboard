@@ -50,6 +50,7 @@ export const ALLOWED_PREFIXES = [
   "/api/v1/api-keys/",
   "/api/v1/filings/",
   "/api/v1/kyc/",
+  "/api/v1/notifications/",
 ] as const;
 
 export const CSRF_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);

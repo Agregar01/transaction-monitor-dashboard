@@ -13,6 +13,7 @@ import {
   useUpdateCaseMutation,
   useReassignCaseMutation,
   useRequestSarFilingMutation,
+  useRequestCaseVerificationMutation,
   useLinkAlertToCaseMutation,
   useGetCaseDeviceHistoryQuery,
   useGetCaseTransactionChainQuery,
@@ -97,6 +98,7 @@ export default function CaseDetailPage() {
   const [updateCase, { isLoading: transitioning }] = useUpdateCaseMutation();
   const [reassignCase, { isLoading: assigning }] = useReassignCaseMutation();
   const [requestSarFiling, { isLoading: filingSar }] = useRequestSarFilingMutation();
+  const [requestCaseKyc, { isLoading: requestingKyc }] = useRequestCaseVerificationMutation();
   const [linkAlert, { isLoading: linking }] = useLinkAlertToCaseMutation();
   const [addNote, { isLoading: addingNote }] = useAddCaseNoteMutation();
   const [deleteNote] = useDeleteCaseNoteMutation();
@@ -171,6 +173,29 @@ export default function CaseDetailPage() {
       setTransitionNotes("");
     } catch (e) {
       showToast({ type: "error", title: "Transition failed", message: errorMessage(e) });
+    }
+  };
+
+  const onRequestKyc = async () => {
+    try {
+      const res = await requestCaseKyc({ case_id: caseId }).unwrap();
+      if (res.status === "no_destination") {
+        showToast({
+          type: "warning",
+          title: "No contact on file",
+          message: "This customer has no email/phone — add one before requesting verification.",
+        });
+      } else if (res.status === "skipped_existing") {
+        showToast({ type: "info", title: "Already pending", message: res.message });
+      } else {
+        showToast({
+          type: res.delivered ? "success" : "warning",
+          title: res.delivered ? "Verification link sent" : "Created — not delivered",
+          message: res.message,
+        });
+      }
+    } catch (e) {
+      showToast({ type: "error", title: "Request failed", message: errorMessage(e) });
     }
   };
 
@@ -656,6 +681,25 @@ export default function CaseDetailPage() {
               </>
             )}
           </section>
+
+          {/* Request KYC verification for the case's customer */}
+          {kase.status !== "CLOSED" && (
+            <section className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-6 space-y-3">
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                Request KYC verification
+              </h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Send this customer a document-verification link (to the contact on file).
+              </p>
+              <button
+                onClick={onRequestKyc}
+                disabled={requestingKyc}
+                className="w-full border border-primary text-primary py-2 rounded-lg text-sm font-medium hover:bg-primary/5 disabled:opacity-50"
+              >
+                {requestingKyc ? "Requesting…" : "Request verification"}
+              </button>
+            </section>
+          )}
 
           {/* Escalate to supervisor (L1 → L2) */}
           {canEscalate &&

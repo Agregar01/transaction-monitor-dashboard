@@ -89,6 +89,18 @@ export const alertsApi = baseApi.injectEndpoints({
         "Analytics",
       ],
     }),
+    // Agent action: send a KYC document-verification link for the alert's customer.
+    // status ∈ created | skipped_existing | no_destination.
+    requestAlertVerification: b.mutation<
+      { status: string; verification_id?: string; destination?: string; delivered: boolean; message: string },
+      { alert_id: string; destination?: string }
+    >({
+      query: ({ alert_id, ...body }) => ({
+        url: `/alerts/${alert_id}/request-verification`,
+        method: "POST",
+        body,
+      }),
+    }),
     // Self-assign: idempotent if already owned, 409 if owned by someone else.
     claimAlert: b.mutation<MutationResponse, string>({
       query: (alert_id) => ({ url: `/alerts/${alert_id}/claim`, method: "POST" }),
@@ -121,6 +133,7 @@ export const {
   useUpdateAlertMutation,
   useAssignAlertMutation,
   useClaimAlertMutation,
+  useRequestAlertVerificationMutation,
   useAddAlertNoteMutation,
   useResolveAlertMutation,
   useEscalateAlertMutation,

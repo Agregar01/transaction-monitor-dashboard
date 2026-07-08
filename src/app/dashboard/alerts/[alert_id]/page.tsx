@@ -10,6 +10,7 @@ import {
   useAddAlertNoteMutation,
   useResolveAlertMutation,
   useEscalateAlertMutation,
+  useRequestAlertVerificationMutation,
 } from "@/redux/slices/api/alertsApi";
 import { useListAssignableUsersQuery } from "@/redux/slices/api/authApi";
 import { useAppSelector } from "@/redux/store";
@@ -87,6 +88,7 @@ export default function AlertDetailPage() {
   const [addNote, { isLoading: addingNote }] = useAddAlertNoteMutation();
   const [resolveAlert, { isLoading: resolving }] = useResolveAlertMutation();
   const [escalateAlert] = useEscalateAlertMutation();
+  const [requestVerification, { isLoading: requestingKyc }] = useRequestAlertVerificationMutation();
 
   const [assignTo, setAssignTo] = useState("");
   const [showReassign, setShowReassign] = useState(false);
@@ -158,6 +160,29 @@ export default function AlertDetailPage() {
       setNote("");
     } catch (e) {
       showToast({ type: "error", title: "Note failed", message: errorMessage(e) });
+    }
+  };
+
+  const onRequestKyc = async () => {
+    try {
+      const res = await requestVerification({ alert_id: alertId }).unwrap();
+      if (res.status === "no_destination") {
+        showToast({
+          type: "warning",
+          title: "No contact on file",
+          message: "This customer has no email/phone — add one before requesting verification.",
+        });
+      } else if (res.status === "skipped_existing") {
+        showToast({ type: "info", title: "Already pending", message: res.message });
+      } else {
+        showToast({
+          type: res.delivered ? "success" : "warning",
+          title: res.delivered ? "Verification link sent" : "Created — not delivered",
+          message: res.message,
+        });
+      }
+    } catch (e) {
+      showToast({ type: "error", title: "Request failed", message: errorMessage(e) });
     }
   };
 
@@ -415,6 +440,24 @@ export default function AlertDetailPage() {
               {addingNote ? "Saving…" : "Save note"}
             </button>
           </section>
+
+          {alert.status !== "CLOSED" && (
+            <section className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-6 space-y-3">
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                Request KYC verification
+              </h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Send this customer a document-verification link (to the contact on file).
+              </p>
+              <button
+                onClick={onRequestKyc}
+                disabled={requestingKyc}
+                className="w-full border border-primary text-primary py-2 rounded-lg text-sm font-medium hover:bg-primary/5 disabled:opacity-50"
+              >
+                {requestingKyc ? "Requesting…" : "Request verification"}
+              </button>
+            </section>
+          )}
 
           {canEscalate && alert.status !== "CLOSED" && (
             <section className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-6 space-y-3">

@@ -86,6 +86,7 @@ export const baseApi = createApi({
     "Filing",
     "DataLake",
     "Verification",
+    "Notification",
   ],
   endpoints: () => ({}),
 });

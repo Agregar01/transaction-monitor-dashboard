@@ -115,6 +115,17 @@ export const casesApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: (_r, _e, { case_id }) => [{ type: "CaseNote", id: case_id }],
     }),
+    // Agent action: send a KYC document-verification link for the case's customer.
+    requestCaseVerification: b.mutation<
+      { status: string; verification_id?: string; destination?: string; delivered?: boolean; message: string },
+      { case_id: string; destination?: string }
+    >({
+      query: ({ case_id, ...body }) => ({
+        url: `/cases/${case_id}/request-verification`,
+        method: "POST",
+        body,
+      }),
+    }),
     getCaseDeviceHistory: b.query<CaseDeviceHistory, string>({
       query: (case_id) => `/cases/${case_id}/device-history`,
     }),
@@ -137,6 +148,7 @@ export const {
   useGetCaseHistoryQuery,
   useGetCaseNotesQuery,
   useAddCaseNoteMutation,
+  useRequestCaseVerificationMutation,
   useDeleteCaseNoteMutation,
   useGetCaseDeviceHistoryQuery,
   useGetCaseTransactionChainQuery,

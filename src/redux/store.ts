@@ -39,6 +39,7 @@ import "./slices/api/institutionsApi";
 import "./slices/api/teamApi";
 import "./slices/api/apiKeysApi";
 import "./slices/api/filingsApi";
+import "./slices/api/notificationsApi";
 import "./slices/api/dataLakeApi";
 
 const authPersistConfig = {

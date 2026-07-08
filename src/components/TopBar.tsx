@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAppSelector, useAppDispatch } from "@/redux/store";
 import { logout, setActivePersona } from "@/redux/slices/authSlice";
 import { baseApi } from "@/redux/slices/api/baseApi";
+import NotificationBell from "@/components/NotificationBell";
 import {
   effectivePersona,
   personasForRoles,
@@ -225,6 +226,7 @@ export default function TopBar() {
       <InstitutionBadge />
       <JurisdictionBadge />
       <ApiStatusDot />
+      <NotificationBell />
       <ProfileDropdown />
     </header>
   );
