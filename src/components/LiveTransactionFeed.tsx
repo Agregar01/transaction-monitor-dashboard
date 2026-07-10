@@ -1,51 +1,19 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
 import Link from "next/link";
-import { useLazyGetTransactionFeedQuery } from "@/redux/slices/api/transactionsApi";
 import RiskBadge from "@/components/RiskBadge";
-import type { TransactionFeedItem } from "@/types/api";
+import { useLiveFeed } from "@/components/LiveFeedProvider";
 import { PlayIcon, PauseIcon } from "@heroicons/react/24/solid";
 
-const POLL_MS = 5000;
-const MAX_ROWS = 100;
-
 /**
- * Polling-based live transaction ticker. Backend has no SSE/WebSocket, so we
- * poll /transactions/feed every 5s, advancing the cursor and prepending only
- * the new rows — giving a streaming feel without a socket.
+ * Live transaction ticker — a thin VIEW over the layout-level LiveFeedProvider,
+ * which owns the SSE connection and accumulated rows. Because the engine lives
+ * above the page tree, the stream keeps running (and collecting) as the user
+ * navigates; this component just renders whatever the provider holds.
  */
 export default function LiveTransactionFeed({ flaggedOnly = false }: { flaggedOnly?: boolean }) {
-  const [running, setRunning] = useState(false);
-  const [items, setItems] = useState<TransactionFeedItem[]>([]);
-  const [newest, setNewest] = useState<string | null>(null);
-  const cursorRef = useRef<string | undefined>(undefined);
-  const [trigger] = useLazyGetTransactionFeedQuery();
-
-  const tick = useCallback(async () => {
-    try {
-      const res = await trigger(
-        { since: cursorRef.current, limit: 50, flagged_only: flaggedOnly },
-        false,
-      ).unwrap();
-      if (res.next_cursor) cursorRef.current = res.next_cursor;
-      if (res.items.length) {
-        // Feed is ascending; show newest first.
-        const fresh = [...res.items].reverse();
-        setItems((prev) => [...fresh, ...prev].slice(0, MAX_ROWS));
-        setNewest(fresh[0].transaction_id);
-      }
-    } catch {
-      /* transient poll error — keep the ticker alive, try again next tick */
-    }
-  }, [trigger, flaggedOnly]);
-
-  useEffect(() => {
-    if (!running) return;
-    tick(); // immediate first fetch
-    const h = setInterval(tick, POLL_MS);
-    return () => clearInterval(h);
-  }, [running, tick]);
+  const { running, connected, items: allItems, newest, start, stop } = useLiveFeed();
+  const items = flaggedOnly ? allItems.filter((t) => t.flagged) : allItems;
 
   return (
     <div className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 overflow-hidden">
@@ -65,11 +33,11 @@ export default function LiveTransactionFeed({ flaggedOnly = false }: { flaggedOn
             Live transaction feed
           </h2>
           <span className="text-xs text-gray-400">
-            {running ? "streaming · 5s" : "paused"}
+            {!running ? "paused" : connected ? "live · streaming" : "reconnecting…"}
           </span>
         </div>
         <button
-          onClick={() => setRunning((r) => !r)}
+          onClick={() => (running ? stop() : start())}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
             running
               ? "bg-gray-100 dark:bg-navy-600 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-navy-500"

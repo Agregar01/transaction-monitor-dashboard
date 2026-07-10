@@ -302,6 +302,58 @@ async function proxyRequest(req: NextRequest) {
     }
   }
 
+  // ── SSE passthrough: stream the upstream body straight through. The standard
+  // path below buffers via .text() (fatal for an infinite stream) and caps at
+  // 30s; here we pipe upstream.body and tie its lifetime to the client request
+  // (browser closes EventSource → req.signal aborts → backend disconnects).
+  if (req.method === "GET" && path === "/api/v1/transactions/stream") {
+    const connect = (token: string | null) => {
+      const h: Record<string, string> = { Accept: "text/event-stream" };
+      if (token) h["Authorization"] = `Bearer ${token}`;
+      return fetch(`${BACKEND_URL}${path}${url.search}`, {
+        method: "GET",
+        headers: h,
+        redirect: "manual",
+        signal: req.signal,
+      }).catch(() => null);
+    };
+
+    let token = accessCookie;
+    let upstream = await connect(token);
+    let rotated: { access: string; refresh: string } | null = null;
+
+    if (upstream && upstream.status === 401 && refreshCookie) {
+      rotated = await rotateTokens(refreshCookie);
+      if (rotated) {
+        token = rotated.access;
+        upstream = await connect(token);
+      }
+    }
+
+    if (!upstream || !upstream.ok || !upstream.body) {
+      return NextResponse.json(
+        { detail: "Stream unavailable" },
+        { status: upstream?.status ?? 502 },
+      );
+    }
+
+    const res = new NextResponse(upstream.body, {
+      status: 200,
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache, no-transform",
+        Connection: "keep-alive",
+        "X-Accel-Buffering": "no",
+      },
+    });
+    if (rotated) {
+      const base = cookieOpts(process.env.NODE_ENV === "production");
+      res.cookies.set(ACCESS_COOKIE, rotated.access, { ...base, maxAge: ACCESS_MAX_AGE });
+      res.cookies.set(REFRESH_COOKIE, rotated.refresh, { ...base, maxAge: REFRESH_MAX_AGE });
+    }
+    return res;
+  }
+
   // Read body once so we can replay on a 401 retry.
   const contentType = req.headers.get("Content-Type") ?? "";
   let bodyBuffer: ArrayBuffer | null = null;
@@ -457,6 +509,12 @@ async function proxyRequest(req: NextRequest) {
     headers: buildResponseHeaders(firstAttempt),
   });
 }
+
+// Never statically optimize: this proxies live data (incl. the SSE stream).
+export const dynamic = "force-dynamic";
+// Allow long-lived SSE connections where the platform honors it (Netlify caps
+// serverless duration; EventSource auto-reconnects when a connection is cut).
+export const maxDuration = 300;
 
 export const GET = proxyRequest;
 export const POST = proxyRequest;
