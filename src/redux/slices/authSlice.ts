@@ -50,6 +50,14 @@ const initialState: AuthState = {
   institutionName: null,
 };
 
+interface RefreshProfilePayload {
+  roles: string[];
+  permissions: string[];
+  fullName: string | null;
+  institutionId: string | null;
+  institutionName: string | null;
+}
+
 interface SetCredentialsPayload {
   userId: string;
   email: string;
@@ -87,6 +95,18 @@ const authSlice = createSlice({
     setActivePersona(state, action: PayloadAction<string | null>) {
       state.activePersona = action.payload;
     },
+    /** Sync roles/permissions/institution from a fresh GET /auth/me, without
+     * touching csrfToken/jurisdiction/features/activePersona — this is a
+     * background refresh, not a new login. Fixes newly-granted permissions
+     * (e.g. a role gaining a permission after a backend seed) sitting stale
+     * in persisted state until the next full login. */
+    refreshProfile(state, action: PayloadAction<RefreshProfilePayload>) {
+      state.roles = action.payload.roles;
+      state.permissions = action.payload.permissions;
+      state.fullName = action.payload.fullName;
+      state.institutionId = action.payload.institutionId;
+      state.institutionName = action.payload.institutionName;
+    },
     logout(state) {
       state.userId = null;
       state.email = null;
@@ -105,5 +125,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { setCredentials, setActivePersona, logout } = authSlice.actions;
+export const { setCredentials, setActivePersona, logout, refreshProfile } = authSlice.actions;
 export default authSlice.reducer;

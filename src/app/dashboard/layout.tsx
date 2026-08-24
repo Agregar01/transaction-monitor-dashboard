@@ -3,8 +3,9 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAppSelector, useAppDispatch } from "@/redux/store";
-import { logout } from "@/redux/slices/authSlice";
+import { logout, refreshProfile } from "@/redux/slices/authSlice";
 import { baseApi } from "@/redux/slices/api/baseApi";
+import { useMeQuery } from "@/redux/slices/api/authApi";
 import Sidebar from "@/components/Sidebar";
 import TopBar from "@/components/TopBar";
 import ErrorBoundary from "@/components/ErrorBoundary";
@@ -20,6 +21,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname();
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [sessionExpired, setSessionExpired] = useState(false);
+
+  // Login only sets roles/permissions once; nothing else ever refreshes them,
+  // so a permission granted to your role after you logged in sits stale in
+  // persisted state until the next full login. Refetch once per app load
+  // (this layout mounts once and persists across dashboard navigation) so a
+  // reload is enough to pick up a newly-granted permission — no logout needed.
+  const { data: me } = useMeQuery(undefined, { skip: !isAuthenticated });
+  useEffect(() => {
+    if (!me) return;
+    dispatch(
+      refreshProfile({
+        roles: me.roles,
+        permissions: me.permissions,
+        fullName: me.full_name,
+        institutionId: me.institution_id,
+        institutionName: me.institution_name,
+      }),
+    );
+  }, [me, dispatch]);
 
   const resetTimer = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);

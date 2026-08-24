@@ -42,6 +42,19 @@ export interface Role {
   permissions: string[];
 }
 
+/** GET /auth/me — the caller's own profile, roles, and flat permission list.
+ * Distinct from `User` (the user-management shape) since this also carries
+ * the resolved permissions + institution that drive the frontend's RBAC gates. */
+export interface MeResponse {
+  user_id: string;
+  email: string;
+  full_name: string | null;
+  roles: string[];
+  permissions: string[];
+  institution_id: string | null;
+  institution_name: string | null;
+}
+
 // ─── Tenant ─────────────────────────────────────────────────────────────────
 
 export type JurisdictionCode = "GHA" | "NGA" | "KEN" | "ZAF";

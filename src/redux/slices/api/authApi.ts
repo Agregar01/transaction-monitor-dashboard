@@ -1,9 +1,9 @@
 import { baseApi } from "./baseApi";
-import type { User, Role } from "@/types/api";
+import type { User, Role, MeResponse } from "@/types/api";
 
 export const authApi = baseApi.injectEndpoints({
   endpoints: (b) => ({
-    me: b.query<User, void>({
+    me: b.query<MeResponse, void>({
       query: () => "/auth/me",
       providesTags: [{ type: "Auth", id: "ME" }],
     }),
