@@ -90,4 +90,6 @@ export const {
   useGetCustomerTransactionsQuery,
   useGetCustomerAlertsQuery,
   useGetCustomerRiskProfileQuery,
+  useLazyGetCustomerRiskProfileQuery,
+  useLazyGetCustomerBaselineQuery,
 } = customersApi;

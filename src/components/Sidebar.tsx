@@ -40,6 +40,7 @@ import {
   CloudArrowUpIcon,
   EyeIcon,
   IdentificationIcon,
+  BeakerIcon,
   CircleStackIcon,
   PresentationChartLineIcon,
 } from "@heroicons/react/24/outline";
@@ -63,6 +64,7 @@ const NAV = {
   ingestion: { name: "Batch Upload", href: "/dashboard/ingestion", icon: CloudArrowUpIcon },
   customers: { name: "Customers", href: "/dashboard/customers", icon: UsersIcon },
   kyc: { name: "Identity Verification", href: "/dashboard/kyc", icon: IdentificationIcon },
+  simulator: { name: "Transaction Simulator", href: "/dashboard/simulator", icon: BeakerIcon },
   str: { name: "STR Reports", href: "/dashboard/str", icon: DocumentTextIcon },
   ctr: { name: "CTR Reports", href: "/dashboard/ctr", icon: DocumentDuplicateIcon },
   approvals: { name: "Approvals", href: "/dashboard/approvals", icon: CheckBadgeIcon },
@@ -109,7 +111,7 @@ const PERSONA_SECTIONS: Record<Persona, NavSectionDef[]> = {
     { label: "Account", items: [NAV.settings] },
   ],
   client_admin: [
-    { label: "Monitor", items: [NAV.overview, NAV.alerts, NAV.cases, NAV.transactions, NAV.customers, NAV.kyc] },
+    { label: "Monitor", items: [NAV.overview, NAV.alerts, NAV.cases, NAV.transactions, NAV.customers, NAV.kyc, NAV.simulator] },
     { label: "Compliance", items: [NAV.str, NAV.ctr, NAV.approvals, NAV.reports, NAV.executive, NAV.behavioral, NAV.geo, NAV.watchlists, NAV.sanctions] },
     // Tenants can view + tune detection rules for their own institution (backend
     // scopes the edit). ML Ops (shadow/models/drift) stays Agregar-only.
@@ -117,12 +119,12 @@ const PERSONA_SECTIONS: Record<Persona, NavSectionDef[]> = {
     { label: "Admin", items: [NAV.ingestion, NAV.team, NAV.apiKeys, NAV.users, NAV.institutionPolicy, NAV.privacy, NAV.audit, NAV.health, NAV.settings] },
   ],
   compliance: [
-    { label: "Monitor", items: [NAV.overview, NAV.alerts, NAV.cases, NAV.kyc] },
+    { label: "Monitor", items: [NAV.overview, NAV.alerts, NAV.cases, NAV.kyc, NAV.simulator] },
     { label: "Compliance", items: [NAV.str, NAV.ctr, NAV.approvals, NAV.reports, NAV.behavioral, NAV.watchlists, NAV.sanctions] },
     { label: "Account", items: [NAV.audit, NAV.settings] },
   ],
   supervisor: [
-    { label: "Team", items: [NAV.overview, NAV.alerts, NAV.cases, NAV.transactions, NAV.customers, NAV.kyc] },
+    { label: "Team", items: [NAV.overview, NAV.alerts, NAV.cases, NAV.transactions, NAV.customers, NAV.kyc, NAV.simulator] },
     // Supervisors review filed STR/CTR reports (read/file STR via FILE_STR; CTR read-only via VIEW_CASES).
     { label: "Compliance", items: [NAV.str, NAV.ctr] },
     { label: "Analytics", items: [NAV.reports, NAV.executive, NAV.behavioral, NAV.geo] },
@@ -142,7 +144,7 @@ const PERSONA_SECTIONS: Record<Persona, NavSectionDef[]> = {
     { label: "Account", items: [NAV.settings] },
   ],
   analyst: [
-    { label: "My Work", items: [NAV.overview, NAV.alerts, NAV.cases, NAV.transactions, NAV.customers, NAV.kyc] },
+    { label: "My Work", items: [NAV.overview, NAV.alerts, NAV.cases, NAV.transactions, NAV.customers, NAV.kyc, NAV.simulator] },
     { label: "Account", items: [NAV.settings] },
   ],
   default: [
@@ -168,6 +170,7 @@ const PERMISSION_NAV_MAP: Record<string, string[]> = {
   "/dashboard/transactions":  ["view_cases", "access_audit_trail"],
   "/dashboard/customers":     ["view_cases", "access_audit_trail"],
   "/dashboard/kyc":           ["view_cases"],
+  "/dashboard/simulator":     ["simulate_transaction"],
   "/dashboard/str":           ["file_str"],
   "/dashboard/ctr":           ["view_cases", "approve_action", "configure_thresholds"],  // backend GET requires only VIEW_CASES; filing actions are gated in-page
   "/dashboard/approvals":     ["approve_action"],

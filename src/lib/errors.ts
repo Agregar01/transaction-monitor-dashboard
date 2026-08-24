@@ -22,6 +22,11 @@ export function errorMessage(err: unknown, fallback = "Request failed"): string 
         const first = detail[0] as Record<string, unknown>;
         if (typeof first?.msg === "string") return first.msg;
       }
+      if (detail && typeof detail === "object") {
+        // custom exception shape: { message, errors: [...] } (e.g. SimulationError)
+        const d = detail as Record<string, unknown>;
+        if (typeof d.message === "string" && d.message) return d.message;
+      }
     }
     if (typeof e.error === "string" && e.error) return e.error;
     if (typeof e.message === "string" && e.message) return e.message;
