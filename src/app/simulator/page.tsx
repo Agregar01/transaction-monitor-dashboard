@@ -16,20 +16,26 @@ import TransactionSimulator from "@/components/simulator/TransactionSimulator";
  * reuse against anything else in the app.
  */
 export default function PublicSimulatorPage() {
+  // Force dark on this isolated public surface: it has no theme toggle and a
+  // public visitor carries no `localStorage.theme`, so the layout's theme script
+  // would otherwise default it to light. `dark` on this wrapper makes every
+  // `dark:` class below resolve (darkMode: "class" matches a .dark ancestor).
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-navy-900">
-      <div className="border-b border-gray-100 dark:border-navy-600 bg-white dark:bg-navy-700">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-2">
-          <div className="w-6 h-6 rounded-md bg-primary flex items-center justify-center text-white text-[10px] font-extrabold">
-            TM
+    <div className="dark">
+      <div className="min-h-screen bg-gray-50 dark:bg-navy-900">
+        <div className="border-b border-gray-100 dark:border-navy-600 bg-white dark:bg-navy-700">
+          <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-2">
+            <div className="w-6 h-6 rounded-md bg-primary flex items-center justify-center text-white text-[10px] font-extrabold">
+              TM
+            </div>
+            <span className="text-sm font-semibold text-gray-900 dark:text-white">
+              Transaction Monitor — Simulator
+            </span>
           </div>
-          <span className="text-sm font-semibold text-gray-900 dark:text-white">
-            Transaction Monitor — Simulator
-          </span>
         </div>
-      </div>
-      <div className="max-w-5xl mx-auto px-4 py-8">
-        <TransactionSimulator canUse publicMode />
+        <div className="max-w-5xl mx-auto px-4 py-8">
+          <TransactionSimulator canUse publicMode />
+        </div>
       </div>
     </div>
   );
