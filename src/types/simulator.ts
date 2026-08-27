@@ -70,3 +70,62 @@ export interface SimulationResult {
 
 /** Frontend-only: tags whether a result came from the live endpoint or the offline fallback. */
 export type SimulationViewResult = SimulationResult & { source: "live" | "local_estimate" };
+
+// ── Multi-leg scenarios (backend: POST /simulations/scenarios, GET /simulations/templates) ──
+
+export interface TemplateInfo {
+  name: string;
+  description: string;
+  /** param name → default value (string | number | boolean | list). */
+  params: Record<string, unknown>;
+}
+
+export interface ScenarioLegResult {
+  index: number;
+  customer_ref: string;
+  label: string | null;
+  simulated_transaction_id: string;
+  combined_risk_score: number;
+  risk_band: string;
+  disposition: string; // approved | held_for_review | blocked | not_scored
+  triggered_rules: SimulationRuleHit[];
+  error: string | null;
+}
+
+export interface ScenarioAggregate {
+  legs: number;
+  legs_scored: number;
+  max_score: number;
+  dispositions: Record<string, number>;
+  alerts_opened: number;
+  cases_opened: number;
+  cases_by_type: Record<string, number>;
+  ctrs_created: number;
+  rules_fired: string[];
+}
+
+export interface ExpectationCheck {
+  check: string;
+  expected: unknown;
+  actual: unknown;
+  ok: boolean;
+}
+
+export interface ExpectationOutcome {
+  passed: boolean;
+  checks: ExpectationCheck[];
+}
+
+export interface ScenarioResult {
+  scenario: string;
+  window_minutes: number;
+  leg_results: ScenarioLegResult[];
+  aggregate: ScenarioAggregate;
+  expectation: ExpectationOutcome | null;
+}
+
+export interface ScenarioRequest {
+  template: string;
+  params: Record<string, unknown>;
+  window_minutes?: number;
+}

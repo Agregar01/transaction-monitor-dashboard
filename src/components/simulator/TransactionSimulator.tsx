@@ -7,6 +7,7 @@ import {
 } from "@/redux/slices/api/customersApi";
 import { useSimulateTransactionMutation } from "@/redux/slices/api/simulationApi";
 import { estimateSimulation, type EstimateProfileInput } from "@/lib/simulatorEstimate";
+import ScenarioSimulator from "@/components/simulator/ScenarioSimulator";
 import { errorMessage } from "@/lib/errors";
 import RiskBadge from "@/components/RiskBadge";
 import ActionBadge from "@/components/ActionBadge";
@@ -169,6 +170,7 @@ interface TransactionSimulatorProps {
 }
 
 export default function TransactionSimulator({ canUse, publicMode = false }: TransactionSimulatorProps) {
+  const [view, setView] = useState<"single" | "scenario">("single");
   const [mode, setMode] = useState<CustomerMode>(publicMode ? "synthetic" : "real");
 
   // Real customer (dashboard-only; not rendered in publicMode)
@@ -336,6 +338,14 @@ export default function TransactionSimulator({ canUse, publicMode = false }: Tra
         </span>
       </div>
 
+      <div className="flex gap-2">
+        <Pill active={view === "single"} onClick={() => setView("single")}>Single transaction</Pill>
+        <Pill active={view === "scenario"} onClick={() => setView("scenario")}>Scenario (multi-leg)</Pill>
+      </div>
+
+      {view === "scenario" ? (
+        <ScenarioSimulator />
+      ) : (
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] gap-5 items-start">
         {/* FORM */}
         <div className={cardCls}>
@@ -660,6 +670,7 @@ export default function TransactionSimulator({ canUse, publicMode = false }: Tra
           )}
         </div>
       </div>
+      )}
     </div>
   );
 }

@@ -2,9 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { forwardToSim, rateLimited } from "@/lib/simulatorProxy";
 
 /**
- * Public simulator — single-transaction dry-run.
- * POST /api/public-simulator → backend POST /simulations/transactions.
- * Service credential stays server-side (see lib/simulatorProxy).
+ * Public simulator — multi-leg scenario dry-run.
+ * POST /api/public-simulator/scenarios → backend POST /simulations/scenarios.
  */
 export async function POST(req: NextRequest) {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
@@ -17,7 +16,7 @@ export async function POST(req: NextRequest) {
   } catch {
     return NextResponse.json({ detail: "Invalid request body" }, { status: 400 });
   }
-  const { status, text } = await forwardToSim("/simulations/transactions", "POST", bodyText);
+  const { status, text } = await forwardToSim("/simulations/scenarios", "POST", bodyText);
   return new NextResponse(text, { status, headers: { "Content-Type": "application/json" } });
 }
 
