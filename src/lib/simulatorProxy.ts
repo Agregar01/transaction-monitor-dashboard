@@ -28,15 +28,24 @@ const ALLOWED_PATHS = new Set([
 const TOKEN_TTL_MS = 25 * 60 * 1000; // access tokens live 30 min server-side; refresh early
 let cachedToken: { token: string; expiresAt: number } | null = null;
 
-async function getServiceToken(forceRefresh = false): Promise<string | null> {
+type TokenResult = { token: string } | { error: string };
+
+/** Returns a service token, or a precise (secret-free) reason it couldn't get
+ * one — env-var name(s) missing, or the login HTTP status — so a 503 can say
+ * exactly what to fix instead of a vague "unavailable". */
+async function getServiceToken(forceRefresh = false): Promise<TokenResult> {
   if (!forceRefresh && cachedToken && cachedToken.expiresAt > Date.now()) {
-    return cachedToken.token;
+    return { token: cachedToken.token };
   }
-  if (!BACKEND_URL || !DEMO_EMAIL || !DEMO_PASSWORD) return null;
+  const missing: string[] = [];
+  if (!BACKEND_URL) missing.push("BACKEND_URL");
+  if (!DEMO_EMAIL) missing.push("SIMULATOR_ADMIN_EMAIL");
+  if (!DEMO_PASSWORD) missing.push("SIMULATOR_ADMIN_PASSWORD");
+  if (missing.length) return { error: `not configured — missing env var(s): ${missing.join(", ")}` };
 
   const form = new URLSearchParams();
-  form.set("username", DEMO_EMAIL);
-  form.set("password", DEMO_PASSWORD);
+  form.set("username", DEMO_EMAIL as string);
+  form.set("password", DEMO_PASSWORD as string);
   try {
     const res = await fetch(`${BACKEND_URL}/api/v1/auth/login`, {
       method: "POST",
@@ -44,13 +53,13 @@ async function getServiceToken(forceRefresh = false): Promise<string | null> {
       body: form.toString(),
       signal: AbortSignal.timeout(15000),
     });
-    if (!res.ok) return null;
+    if (!res.ok) return { error: `service login rejected (HTTP ${res.status}) — check SIMULATOR_ADMIN_EMAIL/PASSWORD values` };
     const data = (await res.json()) as { access_token?: string };
-    if (!data.access_token) return null;
+    if (!data.access_token) return { error: "service login returned no access_token" };
     cachedToken = { token: data.access_token, expiresAt: Date.now() + TOKEN_TTL_MS };
-    return cachedToken.token;
+    return { token: data.access_token };
   } catch {
-    return null;
+    return { error: "service login request failed (backend unreachable from Netlify)" };
   }
 }
 
@@ -89,10 +98,9 @@ export async function forwardToSim(
   bodyText: string | null,
 ): Promise<ForwardResult> {
   if (!ALLOWED_PATHS.has(path)) return json("Unknown endpoint", 404);
-  if (!BACKEND_URL) return json("Server misconfiguration: BACKEND_URL not set", 503);
 
-  const token = await getServiceToken();
-  if (!token) return json("Simulator is temporarily unavailable", 503);
+  const tok = await getServiceToken();
+  if ("error" in tok) return json(`Simulator ${tok.error}`, 503);
 
   const call = (accessToken: string) =>
     fetch(`${BACKEND_URL}/api/v1${path}`, {
@@ -104,15 +112,15 @@ export async function forwardToSim(
 
   let upstream: Response;
   try {
-    upstream = await call(token);
+    upstream = await call(tok.token);
   } catch {
     return json("Backend unreachable", 502);
   }
   if (upstream.status === 401) {
     const fresh = await getServiceToken(true);
-    if (fresh) {
+    if ("token" in fresh) {
       try {
-        upstream = await call(fresh);
+        upstream = await call(fresh.token);
       } catch {
         return json("Backend unreachable", 502);
       }
