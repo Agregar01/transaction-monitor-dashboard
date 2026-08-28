@@ -46,3 +46,6 @@ plan.md
 
 # playwright-mcp exploratory traces (interactive browser sessions)
 .playwright-mcp/
+
+# Local Netlify folder
+.netlify
