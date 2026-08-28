@@ -12,9 +12,11 @@
  *   SIMULATOR_ADMIN_EMAIL, SIMULATOR_ADMIN_PASSWORD, BACKEND_URL
  */
 
-const BACKEND_URL = process.env.BACKEND_URL;
-const DEMO_EMAIL = process.env.SIMULATOR_ADMIN_EMAIL;
-const DEMO_PASSWORD = process.env.SIMULATOR_ADMIN_PASSWORD;
+// Trim env values: pasting into the Netlify UI commonly appends a trailing
+// space/newline, which makes an otherwise-correct credential fail login.
+const BACKEND_URL = process.env.BACKEND_URL?.trim();
+const DEMO_EMAIL = process.env.SIMULATOR_ADMIN_EMAIL?.trim();
+const DEMO_PASSWORD = process.env.SIMULATOR_ADMIN_PASSWORD?.trim();
 
 // Only these backend paths are reachable through the public proxy. The service
 // token is scoped to simulate_transaction, but allow-listing keeps it from
@@ -53,7 +55,13 @@ async function getServiceToken(forceRefresh = false): Promise<TokenResult> {
       body: form.toString(),
       signal: AbortSignal.timeout(15000),
     });
-    if (!res.ok) return { error: `service login rejected (HTTP ${res.status}) — check SIMULATOR_ADMIN_EMAIL/PASSWORD values` };
+    if (!res.ok)
+      return {
+        error:
+          `service login rejected (HTTP ${res.status}) — the configured ` +
+          `SIMULATOR_ADMIN_* values don't authenticate. Stored: email=${(DEMO_EMAIL as string).length} chars, ` +
+          `password=${(DEMO_PASSWORD as string).length} chars (after trim). Redeploy after changing env vars.`,
+      };
     const data = (await res.json()) as { access_token?: string };
     if (!data.access_token) return { error: "service login returned no access_token" };
     cachedToken = { token: data.access_token, expiresAt: Date.now() + TOKEN_TTL_MS };
