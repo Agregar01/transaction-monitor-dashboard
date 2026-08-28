@@ -228,7 +228,15 @@ export default function ScenarioSimulator() {
     (async () => {
       try {
         const res = await fetch("/api/public-simulator/templates");
-        if (!res.ok) throw new Error(`templates ${res.status}`);
+        if (!res.ok) {
+          if (!alive) return;
+          setLoadErr(
+            res.status === 404
+              ? "Scenario API not found (HTTP 404) — this deploy is missing the /api/public-simulator/templates route. Redeploy the site (Clear cache and deploy)."
+              : `Could not load scenario templates (HTTP ${res.status}) — the simulator backend may be unavailable.`,
+          );
+          return;
+        }
         const data = (await res.json()) as TemplateInfo[];
         if (!alive) return;
         setTemplates(data);
@@ -237,7 +245,7 @@ export default function ScenarioSimulator() {
           setParams({ ...data[0].params });
         }
       } catch {
-        if (alive) setLoadErr("Could not load scenario templates — the simulator backend may be unavailable.");
+        if (alive) setLoadErr("Could not reach the scenario API (network error).");
       }
     })();
     return () => {
