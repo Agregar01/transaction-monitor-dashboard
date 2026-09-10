@@ -70,5 +70,7 @@ export const {
   useFileSTRMutation,
 } = strApi;
 
-/** Helper to download the goAML XML for a filed STR. */
-export const strXmlUrl = (id: string) => `/api/proxy/api/v1/str-reports/${id}/xml`;
+/** Helper to download the goAML XML for a filed STR.
+ * Path must match the backend route `/str-reports/{id}/goaml-xml` — a bare
+ * `/xml` 404s (the browser then saves the error as `xml.json`). */
+export const strXmlUrl = (id: string) => `/api/proxy/api/v1/str-reports/${id}/goaml-xml`;

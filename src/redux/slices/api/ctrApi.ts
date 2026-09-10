@@ -51,4 +51,6 @@ export const {
   useExemptCTRMutation,
 } = ctrApi;
 
-export const ctrXmlUrl = (id: string) => `/api/proxy/api/v1/ctr-reports/${id}/xml`;
+// Path must match the backend route `/ctr-reports/{id}/goaml-xml` — a bare
+// `/xml` 404s (the browser then saves the error as `xml.json`).
+export const ctrXmlUrl = (id: string) => `/api/proxy/api/v1/ctr-reports/${id}/goaml-xml`;
