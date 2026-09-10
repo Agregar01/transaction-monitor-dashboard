@@ -277,6 +277,11 @@ export default function TransactionSimulator({ canUse, publicMode = false }: Tra
     result.breakdown.ml_risk === 0;
 
   // The engine's own band wins over a locally-derived one. See bandOf().
+  // Drives the layout: with nothing to show on the right, the controls take
+  // the full width and lay their groups out side by side, instead of leaving
+  // half the viewport empty next to them.
+  const showsResult = !!result || !!runError;
+
   const band = result ? bandOf(result.combined_risk_score, result.risk_band) : null;
   const leadLayer = result
     ? (["customer_risk", "transaction_risk", "behavioral_risk", "ml_risk"] as const).reduce((a, b) =>
@@ -321,7 +326,13 @@ export default function TransactionSimulator({ canUse, publicMode = false }: Tra
             <DecisionScale score={result ? result.combined_risk_score : null} band={band} />
           </section>
 
-          <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1fr)]">
+          <div
+            className={
+              showsResult
+                ? "grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1fr)]"
+                : ""
+            }
+          >
             {/* CONTROLS */}
             <div className={`${panelCls} p-5 sm:p-6`}>
               {!publicMode && (
@@ -340,6 +351,8 @@ export default function TransactionSimulator({ canUse, publicMode = false }: Tra
                 </div>
               )}
 
+              <div className={showsResult ? "" : "grid gap-x-10 gap-y-6 lg:grid-cols-2"}>
+              <div>
               <SectionHeading>Sender</SectionHeading>
               {effectiveMode === "real" ? (
                 <div className="space-y-3">
@@ -427,7 +440,9 @@ export default function TransactionSimulator({ canUse, publicMode = false }: Tra
                 </div>
               )}
 
-              <div className="mt-6">
+              </div>
+
+              <div className={showsResult ? "mt-6" : ""}>
                 <SectionHeading>Payment</SectionHeading>
                 <div className="mb-4 flex flex-wrap gap-2">
                   {(Object.keys(SCENARIOS) as ScenarioKey[]).map((key) => (
@@ -497,7 +512,7 @@ export default function TransactionSimulator({ canUse, publicMode = false }: Tra
                 </div>
               </div>
 
-              <div className="mt-6">
+              <div className={showsResult ? "mt-6" : "lg:col-span-2"}>
                 <SectionHeading aside="Optional">Device</SectionHeading>
                 <p className="-mt-1 mb-3 text-[11px] leading-snug text-[#666C99]">
                   USSD payments carry neither signal. The rules degrade gracefully when they are absent.
@@ -524,6 +539,8 @@ export default function TransactionSimulator({ canUse, publicMode = false }: Tra
                 </div>
               </div>
 
+              </div>
+
               <div className="mt-7 border-t border-white/[0.07] pt-5">
                 <RunButton onClick={handleRun} busy={isRunning} disabled={!canSubmit}>
                   Run simulation
@@ -535,33 +552,11 @@ export default function TransactionSimulator({ canUse, publicMode = false }: Tra
             </div>
 
             {/* WHY */}
+            {showsResult && (
             <div className={`${panelCls} p-5 sm:p-6`}>
               {runError ? (
                 <Notice tone="error">{runError}</Notice>
-              ) : !result ? (
-                <div>
-                  <SectionHeading>How the score is built</SectionHeading>
-                  <p className="text-[13px] leading-relaxed text-[#9FA3C4]">
-                    Every payment is scored on three layers and an ML ensemble, then summed to a
-                    single figure between 0 and 300. Where that figure lands decides whether the
-                    payment is allowed, flagged for an analyst, sent for step-up identity checks,
-                    held, or blocked outright.
-                  </p>
-                  <dl className="mt-5 divide-y divide-white/[0.07] border-t border-white/[0.07]">
-                    {[
-                      ["Customer risk", "Who is sending: history, KYC depth, political exposure, prior alerts."],
-                      ["Transaction risk", "The payment itself: amount, channel, corridor, timing."],
-                      ["Behavioural risk", "How it compares to this sender's own pattern, across 111 rules."],
-                      ["ML signal", "An ensemble trained on labelled mobile money fraud."],
-                    ].map(([name, desc]) => (
-                      <div key={name} className="py-3">
-                        <dt className="text-[13px] font-medium text-[#C9CCE8]">{name}</dt>
-                        <dd className="mt-0.5 text-[12px] leading-snug text-[#767CAB]">{desc}</dd>
-                      </div>
-                    ))}
-                  </dl>
-                </div>
-              ) : (
+              ) : !result ? null : (
                 <div className="space-y-6">
                   {result.source === "local_estimate" && (
                     <Notice tone="warn">
@@ -654,6 +649,7 @@ export default function TransactionSimulator({ canUse, publicMode = false }: Tra
                 </div>
               )}
             </div>
+            )}
           </div>
         </div>
       )}

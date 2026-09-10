@@ -95,7 +95,7 @@ export function DecisionScale({ score, band = null }: { score: number | null; ba
                 background: riskBandColors[s.band],
                 // At rest every band is legible: the scale is the explainer.
                 // Once a score lands the others recede so the eye goes to one.
-                opacity: score === null ? 0.8 : live ? 1 : 0.14,
+                opacity: score === null ? 0.7 : live ? 1 : 0.14,
                 boxShadow: live ? `0 0 0 1px ${riskBandColors[s.band]}66, 0 6px 22px -8px ${riskBandColors[s.band]}` : undefined,
               }}
             />
