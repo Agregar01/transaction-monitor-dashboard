@@ -8,6 +8,7 @@ import {
 import { useSimulateTransactionMutation } from "@/redux/slices/api/simulationApi";
 import { estimateSimulation, type EstimateProfileInput } from "@/lib/simulatorEstimate";
 import ScenarioSimulator from "@/components/simulator/ScenarioSimulator";
+import AnalystWorkflow, { type TxnSummary } from "@/components/simulator/AnalystWorkflow";
 import { errorMessage } from "@/lib/errors";
 import ActionBadge from "@/components/ActionBadge";
 import { RULE_CATALOG } from "@/config/ruleCatalog";
@@ -127,6 +128,7 @@ interface TransactionSimulatorProps {
 
 export default function TransactionSimulator({ canUse, publicMode = false }: TransactionSimulatorProps) {
   const [view, setView] = useState<"single" | "scenario">("single");
+  const [analystMode, setAnalystMode] = useState(false);
   const [mode, setMode] = useState<CustomerMode>(publicMode ? "synthetic" : "real");
 
   // Real customer (dashboard-only; not rendered in publicMode)
@@ -304,6 +306,23 @@ export default function TransactionSimulator({ canUse, publicMode = false }: Tra
 
       {view === "scenario" ? (
         <ScenarioSimulator />
+      ) : analystMode && result ? (
+        <AnalystWorkflow
+          result={result}
+          txn={
+            {
+              amount,
+              transaction_type: transactionType,
+              channel,
+              receiver_country: country,
+              sender:
+                effectiveMode === "synthetic"
+                  ? `Made-up sender · ${synthRiskLevel} risk`
+                  : loadedCustomerId ?? "Customer",
+            } as TxnSummary
+          }
+          onExit={() => setAnalystMode(false)}
+        />
       ) : (
         <div className="space-y-6">
           {/* VERDICT */}
@@ -324,6 +343,15 @@ export default function TransactionSimulator({ canUse, publicMode = false }: Tra
               asideSub={result ? "Rolled back, nothing persisted" : undefined}
             />
             <DecisionScale score={result ? result.combined_risk_score : null} band={band} />
+            {result && result.would_trigger.case_opened && (
+              <button
+                type="button"
+                onClick={() => setAnalystMode(true)}
+                className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-[#E06030] px-4 py-3 text-[13px] font-semibold text-white transition-colors hover:bg-[#c9542a]"
+              >
+                This raised an alert — work it as an L1 analyst →
+              </button>
+            )}
           </section>
 
           <div
