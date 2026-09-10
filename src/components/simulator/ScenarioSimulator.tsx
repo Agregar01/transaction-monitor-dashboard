@@ -1,52 +1,169 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { ArrowPathIcon, CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { riskBandColors } from "@/config/constants";
 import type {
   ScenarioAggregate,
   ScenarioLegResult,
   ScenarioResult,
   TemplateInfo,
 } from "@/types/simulator";
+import {
+  BAND_LABEL,
+  DecisionScale,
+  bandOf,
+  Notice,
+  RunButton,
+  SectionHeading,
+  VerdictHeader,
+  revealVerdict,
+  inputCls,
+  monoCls,
+  panelCls,
+  wellCls,
+} from "@/components/simulator/ui";
 
-const cardCls =
-  "bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 shadow-sm";
-const inputCls =
-  "text-sm rounded-lg border border-gray-200 dark:border-navy-500 bg-white dark:bg-navy-800 text-gray-900 dark:text-white px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-primary/40";
+/**
+ * Plain-English names for the backend's typology templates.
+ *
+ * The API returns machine identifiers (`structuring_burst`) and terse
+ * descriptions written for engineers. This page is read by compliance and
+ * fraud people, so it needs the typology's actual name and a sentence that
+ * says what the money is doing. Anything the backend adds that isn't listed
+ * here still renders, using the API's own name and description.
+ */
+const TYPOLOGY: Record<string, { title: string; blurb: string }> = {
+  structuring_burst: {
+    title: "Structuring",
+    blurb: "Repeated payments deliberately kept under the cash reporting line, inside one window.",
+  },
+  smurfing_fanout: {
+    title: "Smurfing",
+    blurb: "One source spreads a large sum across many nominees so no single leg stands out.",
+  },
+  layering_chain: {
+    title: "Layering",
+    blurb: "Funds hop through a chain of shell parties across jurisdictions to break the trail.",
+  },
+  velocity_spike: {
+    title: "Velocity spike",
+    blurb: "A burst of payments far faster than the account has ever moved money before.",
+  },
+  device_farming_ring: {
+    title: "Device farming",
+    blurb: "Several wallets transacting from one handset, the usual shape of a mule ring.",
+  },
+  pep_bribe: {
+    title: "Politically exposed sender",
+    blurb: "A payment from a name that matches the politically exposed persons list.",
+  },
+  sanctions_hit: {
+    title: "Sanctions match",
+    blurb: "A payment from a name that matches a sanctions list, which screening should catch.",
+  },
+};
+
+/** Human labels for template parameters. Unlisted keys fall back to the key
+ *  with underscores opened up, so a new backend parameter is still legible. */
+const PARAM_LABEL: Record<string, string> = {
+  n_legs: "Payments",
+  n_wallets: "Wallets",
+  n_recipients: "Recipients",
+  hops: "Hops in the chain",
+  amount: "Amount each (GHS)",
+  per_amount: "Amount each (GHS)",
+  under_ctr_amount: "Amount each (GHS)",
+  start_amount: "Starting amount (GHS)",
+  decay: "Share kept per hop",
+  interval_minutes: "Minutes between payments",
+  countries: "Route",
+  country: "Country",
+  channel: "Channel",
+  official_name: "Sender name",
+  name: "Sender name",
+  device_id: "Device ID",
+  iccid: "SIM (ICCID)",
+  imei: "Handset (IMEI)",
+};
+
+function paramLabel(key: string) {
+  const known = PARAM_LABEL[key];
+  if (known) return known;
+  const opened = key.replace(/_/g, " ");
+  return opened.charAt(0).toUpperCase() + opened.slice(1);
+}
+
+function typology(t: TemplateInfo) {
+  return TYPOLOGY[t.name] ?? { title: typologyTitle(t.name), blurb: t.description };
+}
+
+/** Title only, for places that have the template's name but not the record
+ *  (a finished run reports `scenario`, not the template it came from). */
+function typologyTitle(name: string) {
+  const known = TYPOLOGY[name];
+  if (known) return known.title;
+  const opened = name.replace(/_/g, " ");
+  return opened.charAt(0).toUpperCase() + opened.slice(1);
+}
+
+/**
+ * Display order, strongest first.
+ *
+ * The API sorts alphabetically, which happens to open on device farming, the
+ * weakest of the seven to lead with. Structuring and smurfing are the ones a
+ * compliance audience recognises immediately, so they go first. Anything not
+ * listed keeps its API position, appended after these.
+ */
+const TYPOLOGY_ORDER = [
+  "structuring_burst",
+  "smurfing_fanout",
+  "layering_chain",
+  "velocity_spike",
+  "sanctions_hit",
+  "pep_bribe",
+  "device_farming_ring",
+];
+
+function inDisplayOrder(list: TemplateInfo[]): TemplateInfo[] {
+  const rank = (n: string) => {
+    const i = TYPOLOGY_ORDER.indexOf(n);
+    return i === -1 ? TYPOLOGY_ORDER.length : i;
+  };
+  return [...list].sort((a, b) => rank(a.name) - rank(b.name));
+}
+
+/** Values the backend uses as "leave it to me". Shown as placeholder text so
+ *  the box reads as empty-and-optional rather than pre-filled with literals. */
+const PLACEHOLDERS = new Set(["<auto>", "<default>"]);
 
 const DISPOSITION = {
-  approved: { label: "Approved", dot: "#16a34a", chip: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200" },
-  held_for_review: { label: "Held", dot: "#d97706", chip: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200" },
-  blocked: { label: "Blocked", dot: "#dc2626", chip: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-200" },
-  not_scored: { label: "Not scored", dot: "#9ca3af", chip: "bg-gray-100 text-gray-500 dark:bg-navy-800 dark:text-navy-300" },
+  approved: { label: "Approved", color: riskBandColors.ALLOW },
+  held_for_review: { label: "Held", color: riskBandColors.HOLD },
+  blocked: { label: "Blocked", color: riskBandColors.BLOCK },
+  not_scored: { label: "Not scored", color: "#3A3F6B" },
 } as const;
 
 function dispo(d: string) {
   return DISPOSITION[d as keyof typeof DISPOSITION] ?? DISPOSITION.not_scored;
 }
 
-// ── param editor ─────────────────────────────────────────────────────────────
+/* ── param editor ────────────────────────────────────────────────────────── */
 
-function ParamInput({
-  value,
-  onChange,
-}: {
-  value: unknown;
-  onChange: (v: unknown) => void;
-}) {
+function ParamInput({ value, onChange }: { value: unknown; onChange: (v: unknown) => void }) {
   if (typeof value === "boolean") {
     return (
       <button
         type="button"
+        aria-pressed={value}
         onClick={() => onChange(!value)}
-        className={`text-xs font-medium px-3 py-2 rounded-lg border flex items-center gap-2 ${
+        className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
           value
-            ? "border-primary bg-primary-50 dark:bg-primary-900/25 text-primary-700 dark:text-primary-200"
-            : "border-gray-200 dark:border-navy-500 bg-gray-50 dark:bg-navy-800 text-gray-600 dark:text-gray-300"
+            ? "border-primary/60 bg-primary/[0.12] text-[#F5C0A5]"
+            : "border-white/10 bg-[#0B0B24] text-[#9FA3C4]"
         }`}
       >
-        <span className={`w-2 h-2 rounded-full ${value ? "bg-primary" : "bg-gray-300 dark:bg-navy-500"}`} />
-        {value ? "on" : "off"}
+        <span className="h-1.5 w-1.5 rounded-full" style={{ background: value ? "#E06030" : "#3A3F6B" }} />
+        {value ? "On" : "Off"}
       </button>
     );
   }
@@ -56,7 +173,7 @@ function ParamInput({
         type="number"
         value={value}
         onChange={(e) => onChange(e.target.value === "" ? 0 : Number(e.target.value))}
-        className={`${inputCls} font-mono`}
+        className={`${inputCls} ${monoCls}`}
       />
     );
   }
@@ -66,46 +183,58 @@ function ParamInput({
         type="text"
         value={value.join(", ")}
         onChange={(e) => onChange(e.target.value.split(",").map((s) => s.trim()).filter(Boolean))}
-        placeholder="comma-separated"
+        placeholder="GH, AE, GH"
         className={inputCls}
       />
     );
   }
+  const raw = String(value ?? "");
+  const isPlaceholder = PLACEHOLDERS.has(raw);
   return (
     <input
       type="text"
-      value={String(value ?? "")}
+      value={isPlaceholder ? "" : raw}
+      placeholder={isPlaceholder ? "Generated for you" : undefined}
       onChange={(e) => onChange(e.target.value)}
       className={inputCls}
     />
   );
 }
 
-// ── result panels ────────────────────────────────────────────────────────────
+/* ── result panels ───────────────────────────────────────────────────────── */
 
-function AggregatePanel({ agg }: { agg: ScenarioAggregate }) {
+function Aggregate({ agg }: { agg: ScenarioAggregate }) {
   const cases = Object.entries(agg.cases_by_type);
   const dispositions = Object.entries(agg.dispositions);
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-      <Stat label="Max score" value={String(agg.max_score)} accent />
-      <Stat label="Alerts" value={String(agg.alerts_opened)} />
-      <Stat label="CTRs" value={String(agg.ctrs_created)} />
-      <Stat label="Legs scored" value={`${agg.legs_scored}/${agg.legs}`} />
-      <div className="col-span-2 sm:col-span-4 flex flex-wrap gap-2">
+    <div className="space-y-4">
+      <div className="grid grid-cols-3 gap-3">
+        <Stat label="Alerts raised" value={String(agg.alerts_opened)} />
+        <Stat label="Cash reports" value={String(agg.ctrs_created)} />
+        <Stat label="Legs scored" value={`${agg.legs_scored}/${agg.legs}`} />
+      </div>
+      <div className="flex flex-wrap gap-2">
         {cases.length === 0 ? (
-          <span className="text-[11px] text-gray-400 dark:text-navy-400">No cases would open</span>
+          <span className="text-[12px] text-[#767CAB]">No case would open.</span>
         ) : (
           cases.map(([t, n]) => (
-            <span key={t} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-200">
-              {t} case × {n}
+            <span
+              key={t}
+              className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold"
+              style={{ background: `${riskBandColors.HOLD}1F`, color: riskBandColors.HOLD }}
+            >
+              {n} {t.toLowerCase()} {n === 1 ? "case" : "cases"}
             </span>
           ))
         )}
         {dispositions.map(([d, n]) => (
-          <span key={d} className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${dispo(d).chip}`}>
-            <span className="w-1.5 h-1.5 rounded-full" style={{ background: dispo(d).dot }} />
-            {dispo(d).label} × {n}
+          <span
+            key={d}
+            className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium"
+            style={{ background: `${dispo(d).color}1A`, color: dispo(d).color }}
+          >
+            <span className="h-1.5 w-1.5 rounded-full" style={{ background: dispo(d).color }} />
+            {n} {dispo(d).label.toLowerCase()}
           </span>
         ))}
       </div>
@@ -113,66 +242,71 @@ function AggregatePanel({ agg }: { agg: ScenarioAggregate }) {
   );
 }
 
-function Stat({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-gray-100 dark:border-navy-600 bg-gray-50 dark:bg-navy-800 px-3 py-2">
-      <div className={`text-lg font-bold font-mono ${accent ? "text-primary" : "text-gray-900 dark:text-white"}`}>{value}</div>
-      <div className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-navy-400">{label}</div>
+    <div className={`${wellCls} px-3 py-2.5`}>
+      <div className={`text-[19px] font-semibold ${monoCls} text-[#F2F3FA]`}>{value}</div>
+      <div className="mt-0.5 text-[11px] leading-tight text-[#767CAB]">{label}</div>
     </div>
   );
 }
 
+/** The legs genuinely are an ordered sequence, so numbering them is carrying
+ *  information rather than decorating. */
 function Timeline({ legs }: { legs: ScenarioLegResult[] }) {
   const [open, setOpen] = useState<number | null>(null);
   return (
     <div>
-      <div className="flex items-stretch gap-0 overflow-x-auto pb-2">
+      <div className="flex items-stretch gap-1.5 overflow-x-auto pb-2">
         {legs.map((leg, i) => {
           const d = dispo(leg.disposition);
+          const active = open === i;
           return (
-            <div key={leg.index} className="flex items-center shrink-0">
-              <button
-                type="button"
-                onClick={() => setOpen(open === i ? null : i)}
-                className={`w-[92px] flex flex-col items-center gap-1 rounded-lg border px-2 py-2 transition-colors ${
-                  open === i ? "border-primary bg-primary-50/50 dark:bg-primary-900/20" : "border-gray-100 dark:border-navy-600 hover:border-gray-300 dark:hover:border-navy-400"
-                }`}
-                title={leg.label ?? undefined}
+            <button
+              key={leg.index}
+              type="button"
+              onClick={() => setOpen(active ? null : i)}
+              title={leg.label ?? undefined}
+              className={`flex w-[84px] shrink-0 flex-col items-center gap-1.5 rounded-lg border px-2 py-2.5 transition-colors ${
+                active ? "border-white/25 bg-white/[0.04]" : "border-white/[0.07] hover:border-white/20"
+              }`}
+            >
+              <span className={`text-[10px] ${monoCls} text-[#5B6091]`}>{i + 1}</span>
+              <span
+                className={`flex h-9 w-9 items-center justify-center rounded-full text-[12px] font-bold ${monoCls}`}
+                style={{ background: `${d.color}22`, color: d.color, boxShadow: `inset 0 0 0 1px ${d.color}55` }}
               >
-                <span className="text-[10px] font-mono text-gray-500 dark:text-navy-300 truncate w-full text-center">{leg.customer_ref}</span>
-                <span
-                  className="w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-bold text-white"
-                  style={{ background: d.dot }}
-                >
-                  {leg.error ? "—" : leg.combined_risk_score}
-                </span>
-                <span className="text-[9px] font-semibold uppercase tracking-wide" style={{ color: d.dot }}>{d.label}</span>
-              </button>
-              {i < legs.length - 1 && (
-                <div className="w-4 h-px bg-gray-200 dark:bg-navy-500 shrink-0" />
-              )}
-            </div>
+                {leg.error ? "?" : leg.combined_risk_score}
+              </span>
+              <span className="text-[10px] font-medium" style={{ color: d.color }}>
+                {d.label}
+              </span>
+            </button>
           );
         })}
       </div>
       {open !== null && legs[open] && (
-        <div className="mt-2 rounded-lg border border-gray-100 dark:border-navy-600 bg-gray-50 dark:bg-navy-800 p-3">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-gray-900 dark:text-white">
-              Leg {legs[open].index + 1} · {legs[open].customer_ref}
-              {legs[open].label ? ` — ${legs[open].label}` : ""}
+        <div className={`${wellCls} mt-2 p-3`}>
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <span className="text-xs font-semibold text-[#F2F3FA]">
+              Payment {legs[open].index + 1}
+              {legs[open].label ? `: ${legs[open].label}` : ""}
             </span>
-            <span className="text-[11px] font-mono text-gray-400 dark:text-navy-400">{legs[open].simulated_transaction_id}</span>
+            <span className={`text-[11px] ${monoCls} text-[#5B6091]`}>{legs[open].simulated_transaction_id}</span>
           </div>
           {legs[open].error ? (
-            <p className="text-[11px] text-red-600 dark:text-red-300">{legs[open].error}</p>
+            <p className="text-[12px] text-red-300">{legs[open].error}</p>
           ) : legs[open].triggered_rules.length === 0 ? (
-            <p className="text-[11px] text-gray-400 dark:text-navy-400">No rules triggered.</p>
+            <p className="text-[12px] text-[#767CAB]">No rule fired on this payment.</p>
           ) : (
             <div className="flex flex-wrap gap-1.5">
               {legs[open].triggered_rules.map((r, i) => (
-                <span key={`${r.rule_id}-${i}`} className="text-[11px] px-2 py-0.5 rounded border border-gray-200 dark:border-navy-500 text-gray-600 dark:text-gray-300">
-                  {r.name}{r.contribution ? ` +${r.contribution}` : ""}
+                <span
+                  key={`${r.rule_id}-${i}`}
+                  className="rounded border border-white/10 px-2 py-0.5 text-[11px] text-[#C9CCE8]"
+                >
+                  {r.name}
+                  {r.contribution ? <span className={`ml-1 ${monoCls} text-[#767CAB]`}>+{r.contribution}</span> : null}
                 </span>
               ))}
             </div>
@@ -183,36 +317,7 @@ function Timeline({ legs }: { legs: ScenarioLegResult[] }) {
   );
 }
 
-function ExpectationBadge({ result }: { result: ScenarioResult }) {
-  const exp = result.expectation;
-  if (!exp) return null;
-  const failed = exp.checks.filter((c) => !c.ok);
-  return (
-    <div
-      className={`rounded-lg border px-3 py-2.5 text-xs ${
-        exp.passed
-          ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300"
-          : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300"
-      }`}
-    >
-      <div className="flex items-center gap-2 font-semibold">
-        {exp.passed ? <CheckCircleIcon className="h-4 w-4" /> : <XCircleIcon className="h-4 w-4" />}
-        {exp.passed ? "Expectation passed — the system caught this typology" : "Expectation failed"}
-      </div>
-      {!exp.passed && failed.length > 0 && (
-        <ul className="mt-1.5 space-y-0.5">
-          {failed.map((c, i) => (
-            <li key={i} className="font-mono text-[11px]">
-              {c.check}: expected {JSON.stringify(c.expected)}, got {JSON.stringify(c.actual)}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
-
-// ── main ─────────────────────────────────────────────────────────────────────
+/* ── main ────────────────────────────────────────────────────────────────── */
 
 export default function ScenarioSimulator() {
   const [templates, setTemplates] = useState<TemplateInfo[] | null>(null);
@@ -222,6 +327,7 @@ export default function ScenarioSimulator() {
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<ScenarioResult | null>(null);
   const [runErr, setRunErr] = useState<string | null>(null);
+  const verdictRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -232,12 +338,12 @@ export default function ScenarioSimulator() {
           if (!alive) return;
           setLoadErr(
             res.status === 404
-              ? "Scenario API not found (HTTP 404) — this deploy is missing the /api/public-simulator/templates route. Redeploy the site (Clear cache and deploy)."
-              : `Could not load scenario templates (HTTP ${res.status}) — the simulator backend may be unavailable.`,
+              ? "The scenario API is missing from this deploy (HTTP 404). Redeploy the site with the cache cleared."
+              : `The scenario templates did not load (HTTP ${res.status}). The simulator backend may be down.`,
           );
           return;
         }
-        const data = (await res.json()) as TemplateInfo[];
+        const data = inDisplayOrder((await res.json()) as TemplateInfo[]);
         if (!alive) return;
         setTemplates(data);
         if (data.length) {
@@ -245,7 +351,7 @@ export default function ScenarioSimulator() {
           setParams({ ...data[0].params });
         }
       } catch {
-        if (alive) setLoadErr("Could not reach the scenario API (network error).");
+        if (alive) setLoadErr("The scenario API could not be reached. Check the connection and try again.");
       }
     })();
     return () => {
@@ -253,10 +359,7 @@ export default function ScenarioSimulator() {
     };
   }, []);
 
-  const current = useMemo(
-    () => templates?.find((t) => t.name === selected) ?? null,
-    [templates, selected],
-  );
+  const current = useMemo(() => templates?.find((t) => t.name === selected) ?? null, [templates, selected]);
 
   function pickTemplate(name: string) {
     const t = templates?.find((x) => x.name === name);
@@ -271,10 +374,10 @@ export default function ScenarioSimulator() {
     setRunning(true);
     setRunErr(null);
     try {
-      // Drop placeholder "<auto>"/"<default>" so the backend uses its own defaults.
+      // Drop the placeholder values so the backend applies its own defaults.
       const clean: Record<string, unknown> = {};
       for (const [k, v] of Object.entries(params)) {
-        if (typeof v === "string" && (v === "<auto>" || v === "<default>" || v === "")) continue;
+        if (typeof v === "string" && (PLACEHOLDERS.has(v) || v === "")) continue;
         clean[k] = v;
       }
       const res = await fetch("/api/public-simulator/scenarios", {
@@ -286,12 +389,15 @@ export default function ScenarioSimulator() {
       if (!res.ok) {
         const detail = (data as { detail?: unknown })?.detail;
         throw new Error(
-          typeof detail === "string" ? detail : (detail as { message?: string })?.message || `Scenario failed (${res.status})`,
+          typeof detail === "string"
+            ? detail
+            : (detail as { message?: string })?.message || `The scenario did not run (${res.status}).`,
         );
       }
       setResult(data as ScenarioResult);
+      revealVerdict(verdictRef.current);
     } catch (e) {
-      setRunErr(e instanceof Error ? e.message : "Scenario failed");
+      setRunErr(e instanceof Error ? e.message : "The scenario did not run.");
       setResult(null);
     } finally {
       setRunning(false);
@@ -300,116 +406,183 @@ export default function ScenarioSimulator() {
 
   if (loadErr) {
     return (
-      <div className="p-6 text-sm text-gray-500 dark:text-gray-400 rounded-xl border border-gray-100 dark:border-navy-600 bg-white dark:bg-navy-700">
-        {loadErr}
+      <div className={`${panelCls} p-6`}>
+        <Notice tone="error">{loadErr}</Notice>
       </div>
     );
   }
 
+  const peak = result ? result.aggregate.max_score : null;
+  // Take the band from the leg that produced the peak, so the headline agrees
+  // with the engine rather than with a locally-derived threshold table.
+  const peakLeg = result
+    ? result.leg_results.reduce<ScenarioLegResult | null>(
+        (a, b) => (a && a.combined_risk_score >= b.combined_risk_score ? a : b),
+        null,
+      )
+    : null;
+  const band = peak !== null ? bandOf(peak, peakLeg?.risk_band) : null;
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.3fr)] gap-5 items-start">
-      {/* CONFIG */}
-      <div className={cardCls}>
-        <div className="px-5 py-4 border-b border-gray-100 dark:border-navy-600">
-          <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Scenario</h2>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-            Pick a laundering / fraud typology and tune it — it runs as a sequence through the real pipeline.
-          </p>
-        </div>
-        <div className="p-5 space-y-5">
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-gray-600 dark:text-gray-300">Template</label>
-            <select value={selected} onChange={(e) => pickTemplate(e.target.value)} className={inputCls} disabled={!templates}>
-              {!templates && <option>Loading…</option>}
-              {templates?.map((t) => (
-                <option key={t.name} value={t.name}>{t.name}</option>
-              ))}
-            </select>
-            {current && <p className="text-[11px] text-gray-400 dark:text-navy-400">{current.description}</p>}
-          </div>
+    <div className="space-y-6">
+      {/* VERDICT */}
+      <section ref={verdictRef} className={`${panelCls} scroll-mt-4 p-6 sm:p-7`}>
+        <VerdictHeader
+          score={peak}
+          band={band}
+          headline={band ? `Peaks at ${BAND_LABEL[band].toLowerCase()}` : "No sequence run yet"}
+          sub={
+            result
+              ? `Highest of ${result.leg_results.length} payments in the sequence`
+              : "Pick a typology below and run it"
+          }
+          aside={result ? typologyTitle(result.scenario) : undefined}
+          asideSub={result ? "Rolled back, nothing persisted" : undefined}
+        />
+        <DecisionScale score={peak} band={band} />
+      </section>
+
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1fr)]">
+        {/* CONFIG */}
+        <div className={`${panelCls} p-5 sm:p-6`}>
+          <SectionHeading aside={templates ? `${templates.length} typologies` : undefined}>
+            Choose a typology
+          </SectionHeading>
+          {!templates ? (
+            <p className="text-[13px] text-[#767CAB]">Loading typologies.</p>
+          ) : (
+            <div className="space-y-1.5">
+              {templates.map((t) => {
+                const meta = typology(t);
+                const active = selected === t.name;
+                return (
+                  <button
+                    key={t.name}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => pickTemplate(t.name)}
+                    className={`w-full rounded-lg border px-3.5 py-2.5 text-left transition-colors ${
+                      active
+                        ? "border-primary/50 bg-primary/[0.09]"
+                        : "border-white/[0.07] hover:border-white/20 hover:bg-white/[0.02]"
+                    }`}
+                  >
+                    <div className={`text-[13px] font-semibold ${active ? "text-[#F5C0A5]" : "text-[#C9CCE8]"}`}>
+                      {meta.title}
+                    </div>
+                    {/* Only the selection carries its explanation. Seven blurbs
+                        at once pushed the run button below the fold on a
+                        laptop, which is where this gets demonstrated. */}
+                    {active && (
+                      <div className="mt-1 text-[12px] leading-snug text-[#9FA3C4]">{meta.blurb}</div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
           {current && Object.keys(current.params).length > 0 && (
-            <div>
-              <label className="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-2 block">Parameters</label>
-              <div className="grid grid-cols-2 gap-3">
-                {Object.entries(current.params).map(([key]) => (
-                  <div key={key} className="flex flex-col gap-1.5">
-                    <label className="text-[11px] font-medium text-gray-500 dark:text-navy-300 font-mono">{key}</label>
-                    <ParamInput
-                      value={params[key]}
-                      onChange={(v) => setParams((p) => ({ ...p, [key]: v }))}
-                    />
+            <div className="mt-6">
+              <SectionHeading>Tune it</SectionHeading>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-4">
+                {Object.keys(current.params).map((key) => (
+                  <div key={key} className="flex min-w-0 flex-col gap-1.5">
+                    <label className="text-xs font-medium text-[#9FA3C4]">{paramLabel(key)}</label>
+                    <ParamInput value={params[key]} onChange={(v) => setParams((p) => ({ ...p, [key]: v }))} />
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          <button
-            type="button"
-            onClick={run}
-            disabled={running || !selected}
-            className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary-600 disabled:opacity-50 text-white text-sm font-semibold py-2.5 rounded-lg transition-colors"
-          >
-            {running && <ArrowPathIcon className="h-4 w-4 animate-spin" />}
-            Run scenario
-          </button>
-          {running && (
-            <p className="text-[11px] text-gray-400 dark:text-navy-400 -mt-3 text-center">
-              Running every leg through the pipeline — this can take a few seconds.
-            </p>
+          <div className="mt-7 border-t border-white/[0.07] pt-5">
+            <RunButton onClick={run} busy={running} disabled={!selected}>
+              Run the sequence
+            </RunButton>
+            {running && (
+              <p className="mt-2 text-center text-[11px] text-[#666C99]">
+                Every payment goes through the pipeline in order. This takes a few seconds.
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* OUTCOME */}
+        <div className={`${panelCls} p-5 sm:p-6`}>
+          {runErr ? (
+            <Notice tone="error">{runErr}</Notice>
+          ) : !result ? (
+            <div>
+              <SectionHeading>What a sequence proves</SectionHeading>
+              <p className="text-[13px] leading-relaxed text-[#9FA3C4]">
+                A single payment rarely looks criminal. Laundering shows up in the shape of several
+                payments together: how close they sit to a reporting threshold, how fast they arrive,
+                how many parties they touch, whether one handset sits behind all of them.
+              </p>
+              <p className="mt-3 text-[13px] leading-relaxed text-[#9FA3C4]">
+                Each typology here runs as an ordered sequence through the same pipeline a real
+                payment takes, with each leg visible to the next. You get the score for every leg,
+                the rules each one tripped, and what the system would have opened at the end.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {result.expectation && (
+                <Notice tone={result.expectation.passed ? "ok" : "error"}>
+                  {result.expectation.passed ? (
+                    "The engine caught this typology, as expected."
+                  ) : (
+                    <>
+                      The engine did not catch this typology.
+                      <ul className="mt-1.5 space-y-0.5">
+                        {result.expectation.checks
+                          .filter((c) => !c.ok)
+                          .map((c, i) => (
+                            <li key={i} className={`${monoCls} text-[11px]`}>
+                              {c.check}: expected {JSON.stringify(c.expected)}, got {JSON.stringify(c.actual)}
+                            </li>
+                          ))}
+                      </ul>
+                    </>
+                  )}
+                </Notice>
+              )}
+
+              <div>
+                <SectionHeading>Across the sequence</SectionHeading>
+                <Aggregate agg={result.aggregate} />
+              </div>
+
+              <div>
+                <SectionHeading aside="Select one for its rules">
+                  Payment by payment
+                </SectionHeading>
+                <Timeline legs={result.leg_results} />
+              </div>
+
+              {result.aggregate.rules_fired.length > 0 && (
+                <div>
+                  <SectionHeading aside={`${result.aggregate.rules_fired.length} of 111`}>
+                    Rules that fired
+                  </SectionHeading>
+                  <div className="flex flex-wrap gap-1.5">
+                    {result.aggregate.rules_fired.map((r) => (
+                      <span
+                        key={r}
+                        className="rounded border border-white/10 px-2 py-0.5 text-[11px] text-[#C9CCE8]"
+                      >
+                        {r}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <Notice tone="ok">No case opened, no report filed, no data saved.</Notice>
+            </div>
           )}
         </div>
-      </div>
-
-      {/* RESULT */}
-      <div className={cardCls}>
-        <div className="px-5 py-4 border-b border-gray-100 dark:border-navy-600 flex items-center justify-between">
-          <div>
-            <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Outcome</h2>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-              {result ? `${result.scenario} — nothing persisted` : "Run a scenario to see what the system would do"}
-            </p>
-          </div>
-        </div>
-
-        {runErr ? (
-          <div className="p-5">
-            <div className="text-xs px-3 py-2.5 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800">
-              {runErr}
-            </div>
-          </div>
-        ) : !result ? (
-          <div className="p-10 text-center text-sm text-gray-400 dark:text-navy-400">No scenario run yet.</div>
-        ) : (
-          <div className="p-5 space-y-5">
-            <ExpectationBadge result={result} />
-            <AggregatePanel agg={result.aggregate} />
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-navy-400 mb-2">
-                Sequence ({result.leg_results.length} legs) — click a leg for its rules
-              </p>
-              <Timeline legs={result.leg_results} />
-            </div>
-            {result.aggregate.rules_fired.length > 0 && (
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-navy-400 mb-2">
-                  Rules fired across the scenario
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {result.aggregate.rules_fired.map((r) => (
-                    <span key={r} className="text-[11px] px-2 py-0.5 rounded border border-gray-200 dark:border-navy-500 text-gray-600 dark:text-gray-300">
-                      {r}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-            <div className="flex items-center gap-2 text-xs text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg px-3 py-2">
-              ✓ Simulated — no case opened, no report filed, no data saved.
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
