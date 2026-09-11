@@ -9,6 +9,8 @@
  * looking products, which is the thing a visitor notices first.
  */
 
+import { useState } from "react";
+
 import { riskBand, riskBandColors, type RiskBand } from "@/config/constants";
 
 /* ── tokens ──────────────────────────────────────────────────────────────── */
@@ -332,4 +334,58 @@ export function Notice({ tone, children }: { tone: "error" | "warn" | "ok"; chil
     ok: "border-emerald-500/25 bg-emerald-500/[0.06] text-emerald-200/90",
   } as const;
   return <div className={`rounded-lg border px-3 py-2.5 text-xs leading-relaxed ${tones[tone]}`}>{children}</div>;
+}
+
+/** A copyable list of the real IDs a persisted run created, so a user can grab
+ *  an alert ID and go find it in the dashboard to work / escalate it. Each row
+ *  copies one ID; "Copy all" copies the newline-joined set.
+ *
+ *  Shared: both a single payment and a sequence can persist now, and both need
+ *  to hand the viewer the same thing — the id to search for. */
+export function CopyableIds({ label, ids }: { label: string; ids: string[] }) {
+  const [copied, setCopied] = useState<string | null>(null);
+  const copy = async (text: string, key: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(key);
+      setTimeout(() => setCopied((c) => (c === key ? null : c)), 1200);
+    } catch {
+      /* clipboard blocked (e.g. insecure context) — no-op */
+    }
+  };
+  return (
+    <div className="mt-3">
+      <div className="mb-1.5 flex items-center justify-between">
+        <span className="text-[11px] font-semibold uppercase tracking-wide text-[#5BA88C]">
+          {label} ({ids.length})
+        </span>
+        {ids.length > 1 && (
+          <button
+            type="button"
+            onClick={() => copy(ids.join("\n"), "__all__")}
+            className="text-[11px] font-medium text-[#8EEFC7] hover:underline"
+          >
+            {copied === "__all__" ? "Copied ✓" : "Copy all"}
+          </button>
+        )}
+      </div>
+      <ul className="space-y-1">
+        {ids.map((id) => (
+          <li
+            key={id}
+            className="flex items-center justify-between gap-2 rounded-md border border-emerald-400/15 bg-emerald-400/[0.04] px-2.5 py-1.5"
+          >
+            <code className="truncate font-mono text-[11px] text-[#8EEFC7]">{id}</code>
+            <button
+              type="button"
+              onClick={() => copy(id, id)}
+              className="shrink-0 text-[11px] font-medium text-[#5BA88C] transition-colors hover:text-[#8EEFC7]"
+            >
+              {copied === id ? "Copied ✓" : "Copy"}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }

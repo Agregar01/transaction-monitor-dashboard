@@ -21,8 +21,8 @@ import {
   monoCls,
   panelCls,
   wellCls,
+  CopyableIds,
 } from "@/components/simulator/ui";
-import AnalystWorkflow, { type AlertInput } from "@/components/simulator/AnalystWorkflow";
 import {
   useListScenarioTemplatesQuery,
   useSimulateScenarioMutation,
@@ -344,7 +344,6 @@ export default function ScenarioSimulator({ publicMode = false }: { publicMode?:
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<ScenarioResult | null>(null);
   const [runErr, setRunErr] = useState<string | null>(null);
-  const [analystMode, setAnalystMode] = useState(false);
   const verdictRef = useRef<HTMLElement | null>(null);
 
   // Authenticated console: RTK Query loads the templates through the normal
@@ -482,42 +481,6 @@ export default function ScenarioSimulator({ publicMode = false }: { publicMode?:
     : null;
   const band = peak !== null ? bandOf(peak, peakLeg?.risk_band) : null;
 
-  // Normalize the sequence's outcome into the shared analyst-workflow input.
-  const cases = result ? Object.entries(result.aggregate.cases_by_type) : [];
-  const amtParam = params.amount ?? params.per_amount ?? params.under_ctr_amount ?? params.start_amount;
-  const perAmount = Number(amtParam) || 0;
-  const scenarioAlert: AlertInput | null = result
-    ? {
-        score: result.aggregate.max_score,
-        rules: result.aggregate.rules_fired,
-        subject: `${typologyTitle(result.scenario)} — sequence`,
-        txnNumber: (peakLeg?.simulated_transaction_id ?? "SIM-SEQ").replace(/^SIM-/, "TXN-").slice(0, 20),
-        primaryAmount: perAmount > 0 ? perAmount * (result.aggregate.legs || 1) : undefined,
-        summaryLine: `${typologyTitle(result.scenario)} · ${result.aggregate.legs} payments`,
-        detailRows: [
-          { k: "Typology", v: typologyTitle(result.scenario) },
-          { k: "Payments", v: String(result.aggregate.legs) },
-          { k: "Alerts raised", v: String(result.aggregate.alerts_opened) },
-          { k: "Cases opened", v: cases.length ? cases.map(([t, n]) => `${t} × ${n}`).join(", ") : "—" },
-          { k: "Cash reports", v: String(result.aggregate.ctrs_created) },
-        ],
-        caseType: cases.length ? cases[0][0] : "AML",
-        fromAlerts: result.aggregate.alerts_opened,
-        persistedAlertIds: result.alert_ids ?? [],
-        persistedCaseIds: result.case_ids ?? [],
-      }
-    : null;
-
-  if (analystMode && scenarioAlert) {
-    return (
-      <AnalystWorkflow
-        alert={scenarioAlert}
-        allowFiling={!publicMode}
-        onExit={() => setAnalystMode(false)}
-      />
-    );
-  }
-
   return (
     <div className="space-y-6">
       {/* VERDICT */}
@@ -542,26 +505,13 @@ export default function ScenarioSimulator({ publicMode = false }: { publicMode?:
             {result.case_ids?.length
               ? ` and ${result.case_ids.length} case${result.case_ids.length === 1 ? "" : "s"}`
               : ""}{" "}
-            created in Sample Org 1 — open the main dashboard to track{" "}
-            {(result.alert_ids?.length ?? 0) === 1 ? "it" : "them"}.
-            {result.alert_ids?.length ? (
-              <span className="mt-1 block font-mono text-[11px] text-[#5BA88C]">
-                {result.alert_ids.slice(0, 3).join("   ")}
-                {result.alert_ids.length > 3 ? "   …" : ""}
-              </span>
-            ) : null}
+            created in Sample Org 1 — open the main dashboard to work{" "}
+            {(result.alert_ids?.length ?? 0) === 1 ? "it" : "them"}. Copy an alert ID
+            below to find it there, then <span className="font-semibold">Escalate</span> to open its case.
+            {result.alert_ids?.length ? <CopyableIds label="Alert IDs" ids={result.alert_ids} /> : null}
+            {result.case_ids?.length ? <CopyableIds label="Case IDs" ids={result.case_ids} /> : null}
           </div>
         ) : null}
-        {result && result.aggregate.alerts_opened > 0 && (
-          <button
-            type="button"
-            onClick={() => setAnalystMode(true)}
-            className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-[#E06030] px-4 py-3 text-[13px] font-semibold text-white transition-colors hover:bg-[#c9542a]"
-          >
-            This raised {result.aggregate.alerts_opened} alert{result.aggregate.alerts_opened > 1 ? "s" : ""} —{" "}
-            {publicMode ? "see what the bank does with it" : "work it as an L1 analyst"} →
-          </button>
-        )}
       </section>
 
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1fr)]">

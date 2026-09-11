@@ -8,7 +8,6 @@ import {
 import { useSimulateTransactionMutation } from "@/redux/slices/api/simulationApi";
 import { estimateSimulation, type EstimateProfileInput } from "@/lib/simulatorEstimate";
 import ScenarioSimulator from "@/components/simulator/ScenarioSimulator";
-import AnalystWorkflow from "@/components/simulator/AnalystWorkflow";
 import { errorMessage } from "@/lib/errors";
 import ActionBadge from "@/components/ActionBadge";
 import { RULE_CATALOG } from "@/config/ruleCatalog";
@@ -31,6 +30,7 @@ import {
   monoCls,
   panelCls,
   wellCls,
+  CopyableIds,
 } from "@/components/simulator/ui";
 
 const COUNTRIES = [
@@ -148,7 +148,6 @@ interface TransactionSimulatorProps {
 
 export default function TransactionSimulator({ canUse, publicMode = false }: TransactionSimulatorProps) {
   const [view, setView] = useState<"single" | "scenario">("single");
-  const [analystMode, setAnalystMode] = useState(false);
   const [mode, setMode] = useState<CustomerMode>(publicMode ? "synthetic" : "real");
 
   // Real customer (dashboard-only; not rendered in publicMode)
@@ -337,44 +336,6 @@ export default function TransactionSimulator({ canUse, publicMode = false }: Tra
 
       {view === "scenario" ? (
         <ScenarioSimulator publicMode={publicMode} />
-      ) : analystMode && result ? (
-        <AnalystWorkflow
-          alert={{
-            score: result.combined_risk_score,
-            rules: result.triggered_rules.map((r) => r.name),
-            breakdown:
-              result.breakdown.customer_risk + result.breakdown.transaction_risk + result.breakdown.behavioral_risk > 0
-                ? {
-                    customer: result.breakdown.customer_risk,
-                    transaction: result.breakdown.transaction_risk,
-                    behavioral: result.breakdown.behavioral_risk,
-                  }
-                : undefined,
-            subject:
-              effectiveMode === "synthetic" ? `Made-up sender · ${synthRiskLevel} risk` : loadedCustomerId ?? "Customer",
-            txnNumber: result.simulated_transaction_id.replace(/^SIM-/, "TXN-").slice(0, 20),
-            primaryAmount: amount,
-            summaryLine: `${transactionType} · ${channel} · ${country}`,
-            detailRows: [
-              { k: "Amount", v: `GHS ${amount.toLocaleString()}`, mono: true },
-              { k: "Type / channel", v: `${transactionType} · ${channel}` },
-              { k: "Destination", v: country },
-              {
-                k: "Sender",
-                v: effectiveMode === "synthetic" ? `Made-up · ${synthRiskLevel} risk` : loadedCustomerId ?? "Customer",
-              },
-            ],
-            caseType: "AML",
-            fromAlerts: 1,
-            persistedAlertIds: result.alert_ids ?? [],
-            persistedCaseIds: result.case_ids ?? [],
-          }}
-          // The public surface is the customer side: it stops at escalation.
-          // Investigating and filing the STR is the client's job, done for real
-          // in the console.
-          allowFiling={!publicMode}
-          onExit={() => setAnalystMode(false)}
-        />
       ) : (
         <div className="space-y-6">
           {/* VERDICT */}
@@ -401,17 +362,24 @@ export default function TransactionSimulator({ canUse, publicMode = false }: Tra
               }
             />
             <DecisionScale score={result ? result.combined_risk_score : null} band={band} />
-            {result && result.would_trigger.case_opened && (
-              <button
-                type="button"
-                onClick={() => setAnalystMode(true)}
-                className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-[#E06030] px-4 py-3 text-[13px] font-semibold text-white transition-colors hover:bg-[#c9542a]"
-              >
-                {publicMode
-                  ? "This raised an alert — see what the bank does with it →"
-                  : "This raised an alert — work it as an L1 analyst →"}
-              </button>
-            )}
+            {/* A persisted payment is only useful to the viewer if they can find
+                it again. Same treatment the sequence tab gives its run: name the
+                real ids and make them copyable, so the alert can be located in
+                the console and worked there. */}
+            {result?.persisted && (result.alert_ids?.length || result.case_ids?.length) ? (
+              <div className="mt-4 rounded-lg border border-emerald-400/20 bg-emerald-400/[0.06] px-4 py-3 text-[13px] text-[#8EEFC7]">
+                <span className="font-semibold">Sent to the dashboard.</span>{" "}
+                {result.alert_ids?.length ?? 0} alert{(result.alert_ids?.length ?? 0) === 1 ? "" : "s"}
+                {result.case_ids?.length
+                  ? ` and ${result.case_ids.length} case${result.case_ids.length === 1 ? "" : "s"}`
+                  : ""}{" "}
+                created in Sample Org 1 — open the main dashboard to work{" "}
+                {(result.alert_ids?.length ?? 0) === 1 ? "it" : "them"}. Copy an alert ID
+                below to find it there, then <span className="font-semibold">Escalate</span> to open its case.
+                {result.alert_ids?.length ? <CopyableIds label="Alert IDs" ids={result.alert_ids} /> : null}
+                {result.case_ids?.length ? <CopyableIds label="Case IDs" ids={result.case_ids} /> : null}
+              </div>
+            ) : null}
           </section>
 
           <div

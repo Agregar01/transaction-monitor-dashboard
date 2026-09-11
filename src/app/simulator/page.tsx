@@ -21,8 +21,11 @@ import TransactionSimulator from "@/components/simulator/TransactionSimulator";
  * is monitored, and whatever trips monitoring is written into a fixed demo
  * institution so the bank's own people can see it arrive in the Validar console.
  * What the visitor cannot do is the bank's compliance job — investigating and
- * filing an STR with the FIC. That is why TransactionSimulator runs here with
- * `publicMode`, which stops the guided walkthrough at escalation.
+ * filing an STR with the FIC. There is no replica of that here at all: the page
+ * hands back the real alert/case ids it created and stops, and the work happens
+ * in the console, by people who hold `file_str`. `publicMode` is what enforces
+ * the rest of the split (synthetic senders only, runs go through the
+ * credential-holding proxy, and they persist rather than roll back).
  */
 export default function PublicSimulatorPage() {
   // Force dark on this isolated public surface: it has no theme toggle and a
