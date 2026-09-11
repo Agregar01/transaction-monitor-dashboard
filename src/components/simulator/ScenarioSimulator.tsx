@@ -22,7 +22,6 @@ import {
   panelCls,
   wellCls,
 } from "@/components/simulator/ui";
-import AnalystWorkflow, { type AlertInput } from "@/components/simulator/AnalystWorkflow";
 
 /**
  * Plain-English names for the backend's typology templates.
@@ -328,7 +327,6 @@ export default function ScenarioSimulator() {
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<ScenarioResult | null>(null);
   const [runErr, setRunErr] = useState<string | null>(null);
-  const [analystMode, setAnalystMode] = useState(false);
   const verdictRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -425,34 +423,6 @@ export default function ScenarioSimulator() {
     : null;
   const band = peak !== null ? bandOf(peak, peakLeg?.risk_band) : null;
 
-  // Normalize the sequence's outcome into the shared analyst-workflow input.
-  const cases = result ? Object.entries(result.aggregate.cases_by_type) : [];
-  const amtParam = params.amount ?? params.per_amount ?? params.under_ctr_amount ?? params.start_amount;
-  const perAmount = Number(amtParam) || 0;
-  const scenarioAlert: AlertInput | null = result
-    ? {
-        score: result.aggregate.max_score,
-        rules: result.aggregate.rules_fired,
-        subject: `${typologyTitle(result.scenario)} — sequence`,
-        txnNumber: (peakLeg?.simulated_transaction_id ?? "SIM-SEQ").replace(/^SIM-/, "TXN-").slice(0, 20),
-        primaryAmount: perAmount > 0 ? perAmount * (result.aggregate.legs || 1) : undefined,
-        summaryLine: `${typologyTitle(result.scenario)} · ${result.aggregate.legs} payments`,
-        detailRows: [
-          { k: "Typology", v: typologyTitle(result.scenario) },
-          { k: "Payments", v: String(result.aggregate.legs) },
-          { k: "Alerts raised", v: String(result.aggregate.alerts_opened) },
-          { k: "Cases opened", v: cases.length ? cases.map(([t, n]) => `${t} × ${n}`).join(", ") : "—" },
-          { k: "Cash reports", v: String(result.aggregate.ctrs_created) },
-        ],
-        caseType: cases.length ? cases[0][0] : "AML",
-        fromAlerts: result.aggregate.alerts_opened,
-      }
-    : null;
-
-  if (analystMode && scenarioAlert) {
-    return <AnalystWorkflow alert={scenarioAlert} onExit={() => setAnalystMode(false)} />;
-  }
-
   return (
     <div className="space-y-6">
       {/* VERDICT */}
@@ -487,15 +457,6 @@ export default function ScenarioSimulator() {
             ) : null}
           </div>
         ) : null}
-        {result && result.aggregate.alerts_opened > 0 && (
-          <button
-            type="button"
-            onClick={() => setAnalystMode(true)}
-            className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-[#E06030] px-4 py-3 text-[13px] font-semibold text-white transition-colors hover:bg-[#c9542a]"
-          >
-            This raised {result.aggregate.alerts_opened} alert{result.aggregate.alerts_opened > 1 ? "s" : ""} — work it as an L1 analyst →
-          </button>
-        )}
       </section>
 
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1fr)]">
