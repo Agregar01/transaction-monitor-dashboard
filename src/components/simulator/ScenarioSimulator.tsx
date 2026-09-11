@@ -251,6 +251,57 @@ function Stat({ label, value }: { label: string; value: string }) {
   );
 }
 
+/** A copyable list of the real IDs a persisted run created, so a user can grab
+ *  an alert ID and go find it in the dashboard to work / escalate it. Each row
+ *  copies one ID; "Copy all" copies the newline-joined set. */
+function CopyableIds({ label, ids }: { label: string; ids: string[] }) {
+  const [copied, setCopied] = useState<string | null>(null);
+  const copy = async (text: string, key: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(key);
+      setTimeout(() => setCopied((c) => (c === key ? null : c)), 1200);
+    } catch {
+      /* clipboard blocked (e.g. insecure context) — no-op */
+    }
+  };
+  return (
+    <div className="mt-3">
+      <div className="mb-1.5 flex items-center justify-between">
+        <span className="text-[11px] font-semibold uppercase tracking-wide text-[#5BA88C]">
+          {label} ({ids.length})
+        </span>
+        {ids.length > 1 && (
+          <button
+            type="button"
+            onClick={() => copy(ids.join("\n"), "__all__")}
+            className="text-[11px] font-medium text-[#8EEFC7] hover:underline"
+          >
+            {copied === "__all__" ? "Copied ✓" : "Copy all"}
+          </button>
+        )}
+      </div>
+      <ul className="space-y-1">
+        {ids.map((id) => (
+          <li
+            key={id}
+            className="flex items-center justify-between gap-2 rounded-md border border-emerald-400/15 bg-emerald-400/[0.04] px-2.5 py-1.5"
+          >
+            <code className="truncate font-mono text-[11px] text-[#8EEFC7]">{id}</code>
+            <button
+              type="button"
+              onClick={() => copy(id, id)}
+              className="shrink-0 text-[11px] font-medium text-[#5BA88C] transition-colors hover:text-[#8EEFC7]"
+            >
+              {copied === id ? "Copied ✓" : "Copy"}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 /** The legs genuinely are an ordered sequence, so numbering them is carrying
  *  information rather than decorating. */
 function Timeline({ legs }: { legs: ScenarioLegResult[] }) {
@@ -447,14 +498,11 @@ export default function ScenarioSimulator() {
             {result.case_ids?.length
               ? ` and ${result.case_ids.length} case${result.case_ids.length === 1 ? "" : "s"}`
               : ""}{" "}
-            created in Sample Org 1 — open the main dashboard to track{" "}
-            {(result.alert_ids?.length ?? 0) === 1 ? "it" : "them"}.
-            {result.alert_ids?.length ? (
-              <span className="mt-1 block font-mono text-[11px] text-[#5BA88C]">
-                {result.alert_ids.slice(0, 3).join("   ")}
-                {result.alert_ids.length > 3 ? "   …" : ""}
-              </span>
-            ) : null}
+            created in Sample Org 1 — open the main dashboard to work{" "}
+            {(result.alert_ids?.length ?? 0) === 1 ? "it" : "them"}. Copy an alert ID
+            below to find it there, then <span className="font-semibold">Escalate</span> to open its case.
+            {result.alert_ids?.length ? <CopyableIds label="Alert IDs" ids={result.alert_ids} /> : null}
+            {result.case_ids?.length ? <CopyableIds label="Case IDs" ids={result.case_ids} /> : null}
           </div>
         ) : null}
       </section>
