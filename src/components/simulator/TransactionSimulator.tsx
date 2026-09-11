@@ -30,6 +30,7 @@ import {
   monoCls,
   panelCls,
   wellCls,
+  CopyableIds,
 } from "@/components/simulator/ui";
 
 const COUNTRIES = [
@@ -77,6 +78,26 @@ const DISPOSITION_LABEL: Record<string, string> = {
 
 function randomDeviceId() {
   return `SIM-DEV-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+/** Backend marker (app/services/simulation/service.py BUDGET_EXHAUSTED) meaning
+ *  the demo institution has spent its daily allowance of simulator writes. */
+const BUDGET_EXHAUSTED = "daily_budget_exhausted";
+
+function isBudgetExhausted(data: unknown): boolean {
+  const detail = (data as { detail?: unknown } | undefined)?.detail;
+  const errors = (detail as { errors?: unknown } | undefined)?.errors;
+  return Array.isArray(errors) && errors.includes(BUDGET_EXHAUSTED);
+}
+
+async function postPublic(url: string, request: SimulationRequest) {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(request),
+  });
+  const data = await res.json().catch(() => ({}));
+  return { ok: res.ok, status: res.status, data };
 }
 
 function PermissionDenied() {
@@ -246,18 +267,29 @@ export default function TransactionSimulator({ canUse, publicMode = false }: Tra
   }
 
   /** Public-mode call: hits the dedicated, credential-holding server route
-   * directly (no cookies, no Redux auth) instead of the RTK Query mutation. */
+   * directly (no cookies, no Redux auth) instead of the RTK Query mutation.
+   *
+   * It targets the PERSISTING endpoint. The public page stands in for the bank's
+   * customer channel, so a payment that trips monitoring has to actually land in
+   * the demo bank's alert queue — otherwise the compliance half of the demo has
+   * nothing to open. The sequence tab has worked this way for a while; a single
+   * payment used to dry-run and vanish.
+   *
+   * When the demo institution has spent its daily write budget the backend says
+   * so with a machine-readable code. Score the payment anyway via the dry-run
+   * endpoint rather than leaving the page dead for the rest of the day — the
+   * verdict is still real, it just doesn't reach the console, and the walkthrough
+   * says as much because the result carries no persisted ids. */
   async function runPublic(request: SimulationRequest) {
     setPublicRunning(true);
     try {
-      const res = await fetch("/api/public-simulator", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(request),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw { status: res.status, data };
-      return data;
+      const write = await postPublic("/api/public-simulator/transactions/persist", request);
+      if (write.ok) return write.data;
+      if (!isBudgetExhausted(write.data)) throw { status: write.status, data: write.data };
+
+      const dry = await postPublic("/api/public-simulator", request);
+      if (!dry.ok) throw { status: dry.status, data: dry.data };
+      return dry.data;
     } finally {
       setPublicRunning(false);
     }
@@ -303,7 +335,7 @@ export default function TransactionSimulator({ canUse, publicMode = false }: Tra
       />
 
       {view === "scenario" ? (
-        <ScenarioSimulator />
+        <ScenarioSimulator publicMode={publicMode} />
       ) : (
         <div className="space-y-6">
           {/* VERDICT */}
@@ -321,9 +353,33 @@ export default function TransactionSimulator({ canUse, publicMode = false }: Tra
               }
               aside={result ? result.simulated_transaction_id : undefined}
               asideMono
-              asideSub={result ? "Rolled back, nothing persisted" : undefined}
+              asideSub={
+                result
+                  ? result.persisted
+                    ? "Sent to the demo bank's console"
+                    : "Rolled back, nothing persisted"
+                  : undefined
+              }
             />
             <DecisionScale score={result ? result.combined_risk_score : null} band={band} />
+            {/* A persisted payment is only useful to the viewer if they can find
+                it again. Same treatment the sequence tab gives its run: name the
+                real ids and make them copyable, so the alert can be located in
+                the console and worked there. */}
+            {result?.persisted && (result.alert_ids?.length || result.case_ids?.length) ? (
+              <div className="mt-4 rounded-lg border border-emerald-400/20 bg-emerald-400/[0.06] px-4 py-3 text-[13px] text-[#8EEFC7]">
+                <span className="font-semibold">Sent to the dashboard.</span>{" "}
+                {result.alert_ids?.length ?? 0} alert{(result.alert_ids?.length ?? 0) === 1 ? "" : "s"}
+                {result.case_ids?.length
+                  ? ` and ${result.case_ids.length} case${result.case_ids.length === 1 ? "" : "s"}`
+                  : ""}{" "}
+                created in Sample Org 1 — open the main dashboard to work{" "}
+                {(result.alert_ids?.length ?? 0) === 1 ? "it" : "them"}. Copy an alert ID
+                below to find it there, then <span className="font-semibold">Escalate</span> to open its case.
+                {result.alert_ids?.length ? <CopyableIds label="Alert IDs" ids={result.alert_ids} /> : null}
+                {result.case_ids?.length ? <CopyableIds label="Case IDs" ids={result.case_ids} /> : null}
+              </div>
+            ) : null}
           </section>
 
           <div

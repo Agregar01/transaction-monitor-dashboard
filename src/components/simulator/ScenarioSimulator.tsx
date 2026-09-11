@@ -21,7 +21,13 @@ import {
   monoCls,
   panelCls,
   wellCls,
+  CopyableIds,
 } from "@/components/simulator/ui";
+import {
+  useListScenarioTemplatesQuery,
+  useSimulateScenarioMutation,
+} from "@/redux/slices/api/simulationApi";
+import { errorMessage } from "@/lib/errors";
 
 /**
  * Plain-English names for the backend's typology templates.
@@ -251,57 +257,6 @@ function Stat({ label, value }: { label: string; value: string }) {
   );
 }
 
-/** A copyable list of the real IDs a persisted run created, so a user can grab
- *  an alert ID and go find it in the dashboard to work / escalate it. Each row
- *  copies one ID; "Copy all" copies the newline-joined set. */
-function CopyableIds({ label, ids }: { label: string; ids: string[] }) {
-  const [copied, setCopied] = useState<string | null>(null);
-  const copy = async (text: string, key: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(key);
-      setTimeout(() => setCopied((c) => (c === key ? null : c)), 1200);
-    } catch {
-      /* clipboard blocked (e.g. insecure context) — no-op */
-    }
-  };
-  return (
-    <div className="mt-3">
-      <div className="mb-1.5 flex items-center justify-between">
-        <span className="text-[11px] font-semibold uppercase tracking-wide text-[#5BA88C]">
-          {label} ({ids.length})
-        </span>
-        {ids.length > 1 && (
-          <button
-            type="button"
-            onClick={() => copy(ids.join("\n"), "__all__")}
-            className="text-[11px] font-medium text-[#8EEFC7] hover:underline"
-          >
-            {copied === "__all__" ? "Copied ✓" : "Copy all"}
-          </button>
-        )}
-      </div>
-      <ul className="space-y-1">
-        {ids.map((id) => (
-          <li
-            key={id}
-            className="flex items-center justify-between gap-2 rounded-md border border-emerald-400/15 bg-emerald-400/[0.04] px-2.5 py-1.5"
-          >
-            <code className="truncate font-mono text-[11px] text-[#8EEFC7]">{id}</code>
-            <button
-              type="button"
-              onClick={() => copy(id, id)}
-              className="shrink-0 text-[11px] font-medium text-[#5BA88C] transition-colors hover:text-[#8EEFC7]"
-            >
-              {copied === id ? "Copied ✓" : "Copy"}
-            </button>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
 /** The legs genuinely are an ordered sequence, so numbering them is carrying
  *  information rather than decorating. */
 function Timeline({ legs }: { legs: ScenarioLegResult[] }) {
@@ -370,7 +325,18 @@ function Timeline({ legs }: { legs: ScenarioLegResult[] }) {
 
 /* ── main ────────────────────────────────────────────────────────────────── */
 
-export default function ScenarioSimulator() {
+/**
+ * `publicMode` splits this component the same way it splits TransactionSimulator:
+ *
+ *  - public (the customer-facing /simulator page): templates and runs go through
+ *    `/api/public-simulator*`, the server route that holds the service
+ *    credential, and the run PERSISTS into the fixed demo institution so the
+ *    client sees the pattern arrive in their queue.
+ *  - authenticated (the console): templates and runs go through the normal
+ *    cookie-authenticated API, and the run is a DRY RUN. An analyst testing a
+ *    typology must not inject traffic into their own institution's queues.
+ */
+export default function ScenarioSimulator({ publicMode = false }: { publicMode?: boolean }) {
   const [templates, setTemplates] = useState<TemplateInfo[] | null>(null);
   const [loadErr, setLoadErr] = useState<string | null>(null);
   const [selected, setSelected] = useState<string>("");
@@ -380,7 +346,35 @@ export default function ScenarioSimulator() {
   const [runErr, setRunErr] = useState<string | null>(null);
   const verdictRef = useRef<HTMLElement | null>(null);
 
+  // Authenticated console: RTK Query loads the templates through the normal
+  // cookie-authenticated API. Skipped entirely on the public page, which has no
+  // session and must go through the credential-holding proxy below.
+  const tplQuery = useListScenarioTemplatesQuery(undefined, { skip: publicMode });
+  const [runScenarioDryRun] = useSimulateScenarioMutation();
+
+  // Seed the picker once. A background refetch hands back a fresh array, and
+  // re-seeding on it would snap the user's chosen typology (and every parameter
+  // they had tuned) back to the first template mid-configuration.
+  const seeded = useRef(false);
+
   useEffect(() => {
+    if (publicMode || !tplQuery.data) return;
+    const data = inDisplayOrder(tplQuery.data);
+    setTemplates(data);
+    if (data.length && !seeded.current) {
+      seeded.current = true;
+      setSelected(data[0].name);
+      setParams({ ...data[0].params });
+    }
+  }, [publicMode, tplQuery.data]);
+
+  useEffect(() => {
+    if (publicMode || !tplQuery.isError) return;
+    setLoadErr("The scenario templates did not load. The simulator backend may be down.");
+  }, [publicMode, tplQuery.isError]);
+
+  useEffect(() => {
+    if (!publicMode) return;
     let alive = true;
     (async () => {
       try {
@@ -408,7 +402,7 @@ export default function ScenarioSimulator() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [publicMode]);
 
   const current = useMemo(() => templates?.find((t) => t.name === selected) ?? null, [templates, selected]);
 
@@ -431,24 +425,37 @@ export default function ScenarioSimulator() {
         if (typeof v === "string" && (PLACEHOLDERS.has(v) || v === "")) continue;
         clean[k] = v;
       }
-      const res = await fetch("/api/public-simulator/scenarios/persist", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ template: selected, params: clean }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        const detail = (data as { detail?: unknown })?.detail;
-        throw new Error(
-          typeof detail === "string"
-            ? detail
-            : (detail as { message?: string })?.message || `The scenario did not run (${res.status}).`,
-        );
+      if (publicMode) {
+        // Customer-facing surface: the run PERSISTS into the fixed demo
+        // institution, so the pattern lands in the client's queue for real.
+        const res = await fetch("/api/public-simulator/scenarios/persist", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ template: selected, params: clean }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          const detail = (data as { detail?: unknown })?.detail;
+          throw new Error(
+            typeof detail === "string"
+              ? detail
+              : (detail as { message?: string })?.message || `The scenario did not run (${res.status}).`,
+          );
+        }
+        setResult(data as ScenarioResult);
+      } else {
+        // Console: dry run. Testing a typology must not inject traffic into the
+        // analyst's own institution.
+        const data = await runScenarioDryRun({ template: selected, params: clean }).unwrap();
+        setResult(data);
       }
-      setResult(data as ScenarioResult);
       revealVerdict(verdictRef.current);
     } catch (e) {
-      setRunErr(e instanceof Error ? e.message : "The scenario did not run.");
+      // Public mode throws a plain Error carrying the backend's message; the RTK
+      // mutation throws a FetchBaseQueryError, which errorMessage() unpacks.
+      setRunErr(
+        e instanceof Error ? e.message : errorMessage(e, "The scenario did not run."),
+      );
       setResult(null);
     } finally {
       setRunning(false);

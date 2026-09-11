@@ -11,10 +11,21 @@ import TransactionSimulator from "@/components/simulator/TransactionSimulator";
  *
  * It's also isolated at the network level, not just the UI level: this page
  * never authenticates the browser itself (no cookies, no Redux auth state).
- * Every "Run simulation" call goes to /api/public-simulator, a server route
- * that holds its own service credential and forwards the request, so even a
+ * Every "Run simulation" call goes to /api/public-simulator*, server routes
+ * that hold their own service credential and forward the request, so even a
  * technical visitor poking at the network tab has no session to reuse against
  * anything else in the app.
+ *
+ * Who this page represents matters to how it behaves. The visitor stands in for
+ * the BANK'S CUSTOMER / payment channel: they originate activity, that activity
+ * is monitored, and whatever trips monitoring is written into a fixed demo
+ * institution so the bank's own people can see it arrive in the Validar console.
+ * What the visitor cannot do is the bank's compliance job — investigating and
+ * filing an STR with the FIC. There is no replica of that here at all: the page
+ * hands back the real alert/case ids it created and stops, and the work happens
+ * in the console, by people who hold `file_str`. `publicMode` is what enforces
+ * the rest of the split (synthetic senders only, runs go through the
+ * credential-holding proxy, and they persist rather than roll back).
  */
 export default function PublicSimulatorPage() {
   // Force dark on this isolated public surface: it has no theme toggle and a
@@ -43,7 +54,7 @@ export default function PublicSimulatorPage() {
             </div>
             <span className="hidden items-center gap-2 text-[11px] text-[#767CAB] sm:inline-flex">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-              Live engine, nothing is saved
+              Live engine · flagged activity reaches the demo bank&apos;s console
             </span>
           </div>
         </header>

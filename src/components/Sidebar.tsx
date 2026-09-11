@@ -42,6 +42,7 @@ import {
   IdentificationIcon,
   CircleStackIcon,
   PresentationChartLineIcon,
+  BeakerIcon,
 } from "@heroicons/react/24/outline";
 import { effectivePersona, PERSONA_META, type Persona } from "@/lib/personas";
 
@@ -73,6 +74,7 @@ const NAV = {
   watchlists: { name: "Watchlists", href: "/dashboard/watchlists", icon: ShieldExclamationIcon },
   sanctions: { name: "Sanctions Check", href: "/dashboard/sanctions", icon: NoSymbolIcon },
   rules: { name: "Rules", href: "/dashboard/rules", icon: AdjustmentsHorizontalIcon },
+  simulator: { name: "Simulator", href: "/dashboard/simulator", icon: BeakerIcon },
   shadow: { name: "Shadow Stats", href: "/dashboard/shadow", icon: ChartPieIcon },
   models: { name: "ML Models", href: "/dashboard/models", icon: CpuChipIcon },
   drift: { name: "Drift Monitoring", href: "/dashboard/drift", icon: ExclamationTriangleIcon },
@@ -113,12 +115,13 @@ const PERSONA_SECTIONS: Record<Persona, NavSectionDef[]> = {
     { label: "Compliance", items: [NAV.str, NAV.ctr, NAV.approvals, NAV.reports, NAV.executive, NAV.behavioral, NAV.geo, NAV.watchlists, NAV.sanctions] },
     // Tenants can view + tune detection rules for their own institution (backend
     // scopes the edit). ML Ops (shadow/models/drift) stays Agregar-only.
-    { label: "Detection", items: [NAV.rules] },
+    { label: "Detection", items: [NAV.rules, NAV.simulator] },
     { label: "Admin", items: [NAV.ingestion, NAV.team, NAV.apiKeys, NAV.users, NAV.institutionPolicy, NAV.privacy, NAV.audit, NAV.health, NAV.settings] },
   ],
   compliance: [
     { label: "Monitor", items: [NAV.overview, NAV.alerts, NAV.cases, NAV.kyc] },
     { label: "Compliance", items: [NAV.str, NAV.ctr, NAV.approvals, NAV.reports, NAV.behavioral, NAV.watchlists, NAV.sanctions] },
+    { label: "Detection", items: [NAV.simulator] },
     { label: "Account", items: [NAV.audit, NAV.settings] },
   ],
   supervisor: [
@@ -126,6 +129,7 @@ const PERSONA_SECTIONS: Record<Persona, NavSectionDef[]> = {
     // Supervisors review filed STR/CTR reports (read/file STR via FILE_STR; CTR read-only via VIEW_CASES).
     { label: "Compliance", items: [NAV.str, NAV.ctr] },
     { label: "Analytics", items: [NAV.reports, NAV.executive, NAV.behavioral, NAV.geo] },
+    { label: "Detection", items: [NAV.simulator] },
     { label: "Account", items: [NAV.settings] },
   ],
   ml: [
@@ -143,6 +147,7 @@ const PERSONA_SECTIONS: Record<Persona, NavSectionDef[]> = {
   ],
   analyst: [
     { label: "My Work", items: [NAV.overview, NAV.alerts, NAV.cases, NAV.transactions, NAV.customers, NAV.kyc] },
+    { label: "Detection", items: [NAV.simulator] },
     { label: "Account", items: [NAV.settings] },
   ],
   default: [
@@ -178,6 +183,7 @@ const PERMISSION_NAV_MAP: Record<string, string[]> = {
   "/dashboard/watchlists":    ["manage_sanctions_lists"],
   "/dashboard/sanctions":     ["manage_sanctions_lists"],
   "/dashboard/rules":         ["view_rules"],
+  "/dashboard/simulator":     ["simulate_transaction"],
   "/dashboard/shadow":        ["view_shadow_stats"],
   "/dashboard/models":        ["view_models"],
   "/dashboard/drift":         ["view_drift"],
