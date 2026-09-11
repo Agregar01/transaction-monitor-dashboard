@@ -651,7 +651,11 @@ export default function ScenarioSimulator({ publicMode = false }: { publicMode?:
                 </div>
               )}
 
-              <Notice tone="ok">No case opened, no report filed, no data saved.</Notice>
+              <Notice tone="ok">
+                {result.persisted
+                  ? "Written to the demo bank's console. The alerts and cases above are real and are waiting in their queue."
+                  : "No case opened, no report filed, no data saved."}
+              </Notice>
             </div>
           )}
         </div>

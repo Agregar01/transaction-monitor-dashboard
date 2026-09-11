@@ -701,7 +701,11 @@ export default function TransactionSimulator({ canUse, publicMode = false }: Tra
                     {result.explanation}
                   </p>
 
-                  <Notice tone="ok">No case opened, no notification sent, no data saved.</Notice>
+                  <Notice tone="ok">
+                    {result.persisted
+                      ? "Written to the demo bank's console. Any alert or case above is real and is waiting in their queue."
+                      : "No case opened, no notification sent, no data saved."}
+                  </Notice>
                 </div>
               )}
             </div>
