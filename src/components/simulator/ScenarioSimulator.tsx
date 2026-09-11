@@ -353,11 +353,17 @@ export default function ScenarioSimulator({ publicMode = false }: { publicMode?:
   const tplQuery = useListScenarioTemplatesQuery(undefined, { skip: publicMode });
   const [runScenarioDryRun] = useSimulateScenarioMutation();
 
+  // Seed the picker once. A background refetch hands back a fresh array, and
+  // re-seeding on it would snap the user's chosen typology (and every parameter
+  // they had tuned) back to the first template mid-configuration.
+  const seeded = useRef(false);
+
   useEffect(() => {
     if (publicMode || !tplQuery.data) return;
     const data = inDisplayOrder(tplQuery.data);
     setTemplates(data);
-    if (data.length) {
+    if (data.length && !seeded.current) {
+      seeded.current = true;
       setSelected(data[0].name);
       setParams({ ...data[0].params });
     }
