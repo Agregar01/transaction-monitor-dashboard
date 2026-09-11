@@ -122,6 +122,11 @@ export interface ScenarioResult {
   leg_results: ScenarioLegResult[];
   aggregate: ScenarioAggregate;
   expectation: ExpectationOutcome | null;
+  /** Set by the persist path: the run was written to a real institution. */
+  persisted?: boolean;
+  institution_id?: string | null;
+  alert_ids?: string[];
+  case_ids?: string[];
 }
 
 export interface ScenarioRequest {

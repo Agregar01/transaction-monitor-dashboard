@@ -24,6 +24,7 @@ const DEMO_PASSWORD = process.env.SIMULATOR_ADMIN_PASSWORD?.trim();
 const ALLOWED_PATHS = new Set([
   "/simulations/transactions",
   "/simulations/scenarios",
+  "/simulations/scenarios/persist",
   "/simulations/templates",
 ]);
 
