@@ -80,6 +80,26 @@ function randomDeviceId() {
   return `SIM-DEV-${Math.random().toString(36).slice(2, 10)}`;
 }
 
+/** Backend marker (app/services/simulation/service.py BUDGET_EXHAUSTED) meaning
+ *  the demo institution has spent its daily allowance of simulator writes. */
+const BUDGET_EXHAUSTED = "daily_budget_exhausted";
+
+function isBudgetExhausted(data: unknown): boolean {
+  const detail = (data as { detail?: unknown } | undefined)?.detail;
+  const errors = (detail as { errors?: unknown } | undefined)?.errors;
+  return Array.isArray(errors) && errors.includes(BUDGET_EXHAUSTED);
+}
+
+async function postPublic(url: string, request: SimulationRequest) {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(request),
+  });
+  const data = await res.json().catch(() => ({}));
+  return { ok: res.ok, status: res.status, data };
+}
+
 function PermissionDenied() {
   return (
     <div className="flex flex-col items-center justify-center gap-3 py-24 text-center">
@@ -248,18 +268,29 @@ export default function TransactionSimulator({ canUse, publicMode = false }: Tra
   }
 
   /** Public-mode call: hits the dedicated, credential-holding server route
-   * directly (no cookies, no Redux auth) instead of the RTK Query mutation. */
+   * directly (no cookies, no Redux auth) instead of the RTK Query mutation.
+   *
+   * It targets the PERSISTING endpoint. The public page stands in for the bank's
+   * customer channel, so a payment that trips monitoring has to actually land in
+   * the demo bank's alert queue — otherwise the compliance half of the demo has
+   * nothing to open. The sequence tab has worked this way for a while; a single
+   * payment used to dry-run and vanish.
+   *
+   * When the demo institution has spent its daily write budget the backend says
+   * so with a machine-readable code. Score the payment anyway via the dry-run
+   * endpoint rather than leaving the page dead for the rest of the day — the
+   * verdict is still real, it just doesn't reach the console, and the walkthrough
+   * says as much because the result carries no persisted ids. */
   async function runPublic(request: SimulationRequest) {
     setPublicRunning(true);
     try {
-      const res = await fetch("/api/public-simulator", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(request),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw { status: res.status, data };
-      return data;
+      const write = await postPublic("/api/public-simulator/transactions/persist", request);
+      if (write.ok) return write.data;
+      if (!isBudgetExhausted(write.data)) throw { status: write.status, data: write.data };
+
+      const dry = await postPublic("/api/public-simulator", request);
+      if (!dry.ok) throw { status: dry.status, data: dry.data };
+      return dry.data;
     } finally {
       setPublicRunning(false);
     }
@@ -305,7 +336,7 @@ export default function TransactionSimulator({ canUse, publicMode = false }: Tra
       />
 
       {view === "scenario" ? (
-        <ScenarioSimulator />
+        <ScenarioSimulator publicMode={publicMode} />
       ) : analystMode && result ? (
         <AnalystWorkflow
           alert={{
@@ -335,7 +366,13 @@ export default function TransactionSimulator({ canUse, publicMode = false }: Tra
             ],
             caseType: "AML",
             fromAlerts: 1,
+            persistedAlertIds: result.alert_ids ?? [],
+            persistedCaseIds: result.case_ids ?? [],
           }}
+          // The public surface is the customer side: it stops at escalation.
+          // Investigating and filing the STR is the client's job, done for real
+          // in the console.
+          allowFiling={!publicMode}
           onExit={() => setAnalystMode(false)}
         />
       ) : (
@@ -355,7 +392,13 @@ export default function TransactionSimulator({ canUse, publicMode = false }: Tra
               }
               aside={result ? result.simulated_transaction_id : undefined}
               asideMono
-              asideSub={result ? "Rolled back, nothing persisted" : undefined}
+              asideSub={
+                result
+                  ? result.persisted
+                    ? "Sent to the demo bank's console"
+                    : "Rolled back, nothing persisted"
+                  : undefined
+              }
             />
             <DecisionScale score={result ? result.combined_risk_score : null} band={band} />
             {result && result.would_trigger.case_opened && (
@@ -364,7 +407,9 @@ export default function TransactionSimulator({ canUse, publicMode = false }: Tra
                 onClick={() => setAnalystMode(true)}
                 className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-[#E06030] px-4 py-3 text-[13px] font-semibold text-white transition-colors hover:bg-[#c9542a]"
               >
-                This raised an alert — work it as an L1 analyst →
+                {publicMode
+                  ? "This raised an alert — see what the bank does with it →"
+                  : "This raised an alert — work it as an L1 analyst →"}
               </button>
             )}
           </section>

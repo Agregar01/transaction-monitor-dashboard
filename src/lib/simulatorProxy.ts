@@ -23,6 +23,7 @@ const DEMO_PASSWORD = process.env.SIMULATOR_ADMIN_PASSWORD?.trim();
 // being pointed anywhere else even if a caller crafts a different path.
 const ALLOWED_PATHS = new Set([
   "/simulations/transactions",
+  "/simulations/transactions/persist",
   "/simulations/scenarios",
   "/simulations/scenarios/persist",
   "/simulations/templates",

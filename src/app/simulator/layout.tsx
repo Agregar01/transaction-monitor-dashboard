@@ -11,7 +11,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Validar Simulator",
   description:
-    "Score a transaction against the live Validar decision engine. Nothing is saved.",
+    "Score a transaction against the live Validar decision engine, and watch anything it flags arrive in the compliance console.",
 };
 
 export default function SimulatorLayout({ children }: { children: React.ReactNode }) {

@@ -23,6 +23,11 @@ import {
   wellCls,
 } from "@/components/simulator/ui";
 import AnalystWorkflow, { type AlertInput } from "@/components/simulator/AnalystWorkflow";
+import {
+  useListScenarioTemplatesQuery,
+  useSimulateScenarioMutation,
+} from "@/redux/slices/api/simulationApi";
+import { errorMessage } from "@/lib/errors";
 
 /**
  * Plain-English names for the backend's typology templates.
@@ -320,7 +325,18 @@ function Timeline({ legs }: { legs: ScenarioLegResult[] }) {
 
 /* ── main ────────────────────────────────────────────────────────────────── */
 
-export default function ScenarioSimulator() {
+/**
+ * `publicMode` splits this component the same way it splits TransactionSimulator:
+ *
+ *  - public (the customer-facing /simulator page): templates and runs go through
+ *    `/api/public-simulator*`, the server route that holds the service
+ *    credential, and the run PERSISTS into the fixed demo institution so the
+ *    client sees the pattern arrive in their queue.
+ *  - authenticated (the console): templates and runs go through the normal
+ *    cookie-authenticated API, and the run is a DRY RUN. An analyst testing a
+ *    typology must not inject traffic into their own institution's queues.
+ */
+export default function ScenarioSimulator({ publicMode = false }: { publicMode?: boolean }) {
   const [templates, setTemplates] = useState<TemplateInfo[] | null>(null);
   const [loadErr, setLoadErr] = useState<string | null>(null);
   const [selected, setSelected] = useState<string>("");
@@ -331,7 +347,29 @@ export default function ScenarioSimulator() {
   const [analystMode, setAnalystMode] = useState(false);
   const verdictRef = useRef<HTMLElement | null>(null);
 
+  // Authenticated console: RTK Query loads the templates through the normal
+  // cookie-authenticated API. Skipped entirely on the public page, which has no
+  // session and must go through the credential-holding proxy below.
+  const tplQuery = useListScenarioTemplatesQuery(undefined, { skip: publicMode });
+  const [runScenarioDryRun] = useSimulateScenarioMutation();
+
   useEffect(() => {
+    if (publicMode || !tplQuery.data) return;
+    const data = inDisplayOrder(tplQuery.data);
+    setTemplates(data);
+    if (data.length) {
+      setSelected(data[0].name);
+      setParams({ ...data[0].params });
+    }
+  }, [publicMode, tplQuery.data]);
+
+  useEffect(() => {
+    if (publicMode || !tplQuery.isError) return;
+    setLoadErr("The scenario templates did not load. The simulator backend may be down.");
+  }, [publicMode, tplQuery.isError]);
+
+  useEffect(() => {
+    if (!publicMode) return;
     let alive = true;
     (async () => {
       try {
@@ -359,7 +397,7 @@ export default function ScenarioSimulator() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [publicMode]);
 
   const current = useMemo(() => templates?.find((t) => t.name === selected) ?? null, [templates, selected]);
 
@@ -382,24 +420,37 @@ export default function ScenarioSimulator() {
         if (typeof v === "string" && (PLACEHOLDERS.has(v) || v === "")) continue;
         clean[k] = v;
       }
-      const res = await fetch("/api/public-simulator/scenarios/persist", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ template: selected, params: clean }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        const detail = (data as { detail?: unknown })?.detail;
-        throw new Error(
-          typeof detail === "string"
-            ? detail
-            : (detail as { message?: string })?.message || `The scenario did not run (${res.status}).`,
-        );
+      if (publicMode) {
+        // Customer-facing surface: the run PERSISTS into the fixed demo
+        // institution, so the pattern lands in the client's queue for real.
+        const res = await fetch("/api/public-simulator/scenarios/persist", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ template: selected, params: clean }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          const detail = (data as { detail?: unknown })?.detail;
+          throw new Error(
+            typeof detail === "string"
+              ? detail
+              : (detail as { message?: string })?.message || `The scenario did not run (${res.status}).`,
+          );
+        }
+        setResult(data as ScenarioResult);
+      } else {
+        // Console: dry run. Testing a typology must not inject traffic into the
+        // analyst's own institution.
+        const data = await runScenarioDryRun({ template: selected, params: clean }).unwrap();
+        setResult(data);
       }
-      setResult(data as ScenarioResult);
       revealVerdict(verdictRef.current);
     } catch (e) {
-      setRunErr(e instanceof Error ? e.message : "The scenario did not run.");
+      // Public mode throws a plain Error carrying the backend's message; the RTK
+      // mutation throws a FetchBaseQueryError, which errorMessage() unpacks.
+      setRunErr(
+        e instanceof Error ? e.message : errorMessage(e, "The scenario did not run."),
+      );
       setResult(null);
     } finally {
       setRunning(false);
@@ -446,11 +497,19 @@ export default function ScenarioSimulator() {
         ],
         caseType: cases.length ? cases[0][0] : "AML",
         fromAlerts: result.aggregate.alerts_opened,
+        persistedAlertIds: result.alert_ids ?? [],
+        persistedCaseIds: result.case_ids ?? [],
       }
     : null;
 
   if (analystMode && scenarioAlert) {
-    return <AnalystWorkflow alert={scenarioAlert} onExit={() => setAnalystMode(false)} />;
+    return (
+      <AnalystWorkflow
+        alert={scenarioAlert}
+        allowFiling={!publicMode}
+        onExit={() => setAnalystMode(false)}
+      />
+    );
   }
 
   return (
@@ -493,7 +552,8 @@ export default function ScenarioSimulator() {
             onClick={() => setAnalystMode(true)}
             className="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-[#E06030] px-4 py-3 text-[13px] font-semibold text-white transition-colors hover:bg-[#c9542a]"
           >
-            This raised {result.aggregate.alerts_opened} alert{result.aggregate.alerts_opened > 1 ? "s" : ""} — work it as an L1 analyst →
+            This raised {result.aggregate.alerts_opened} alert{result.aggregate.alerts_opened > 1 ? "s" : ""} —{" "}
+            {publicMode ? "see what the bank does with it" : "work it as an L1 analyst"} →
           </button>
         )}
       </section>

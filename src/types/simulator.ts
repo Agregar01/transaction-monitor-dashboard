@@ -66,6 +66,13 @@ export interface SimulationResult {
   would_trigger: WouldTrigger;
   explanation: string;
   simulated_transaction_id: string;
+  /** Set by the persist path (POST /simulations/transactions/persist): the
+   *  payment was written to a real institution and these ids are trackable in
+   *  the dashboard. Absent/false on the dry-run endpoint. */
+  persisted?: boolean;
+  institution_id?: string | null;
+  alert_ids?: string[];
+  case_ids?: string[];
 }
 
 /** Frontend-only: tags whether a result came from the live endpoint or the offline fallback. */

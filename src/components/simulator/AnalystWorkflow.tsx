@@ -14,8 +14,8 @@ import {
 
 /**
  * The guided L1-analyst walkthrough that follows a simulated payment (single) or
- * scenario (sequence) which raised an alert. It replays the real workflow as
- * replica screens — nothing is persisted:
+ * scenario (sequence) which raised an alert. It replays the workflow as replica
+ * screens — the replica itself persists nothing:
  *
  *   Alert (review)  →  Escalate  →  Case  →  File STR  →  Filed (+ goAML)
  *                   ↘  Close (false positive)  →  Closed
@@ -23,6 +23,16 @@ import {
  * Both entry points feed the same normalized `AlertInput`, so single payments
  * and multi-leg sequences drive an identical journey with numbers that match
  * whatever the simulator showed.
+ *
+ * `allowFiling` is what separates the two audiences. On the public simulator the
+ * visitor is standing in for the BANK'S CUSTOMER / channel: their activity is
+ * what gets monitored, and the journey has to stop at escalation, because
+ * investigating and filing an STR is the compliance team's job, done for real in
+ * the Validar console. Showing a customer-side visitor a replica STR both
+ * misrepresents who does what and undersells the real filing flow, which has
+ * maker-checker approval and a server-generated goAML the replica can't show.
+ * So: `allowFiling={false}` ends at `escalated`; the case/STR/filed screens stay
+ * in the component for the authenticated console, where they belong.
  */
 
 export interface AlertInput {
@@ -46,9 +56,17 @@ export interface AlertInput {
   caseType?: string;
   /** How many alerts the case was auto-created from (sequences). */
   fromAlerts?: number;
+  /**
+   * Real ids the run actually wrote into the demo institution, when the
+   * simulator persisted rather than dry-ran. These are what make the handover
+   * concrete: the visitor sees the id here, the compliance team opens the same
+   * id in the console. Empty when the run was a dry-run.
+   */
+  persistedAlertIds?: string[];
+  persistedCaseIds?: string[];
 }
 
-type Step = "alert" | "case" | "str" | "filed" | "closed";
+type Step = "alert" | "case" | "str" | "filed" | "closed" | "escalated";
 
 const CURRENCY = "GHS";
 
@@ -121,13 +139,15 @@ function buildGoaml(a: {
 
 /* ── small building blocks ─────────────────────────────────────────────────── */
 
-function Crumbs({ step }: { step: Step }) {
-  const order = [
-    { label: "Alert" },
-    { label: "Case" },
-    { label: step === "closed" ? "Closed" : "STR" },
-  ];
-  const idx = { alert: 0, case: 1, str: 2, filed: 2, closed: 2 }[step];
+function Crumbs({ step, allowFiling }: { step: Step; allowFiling: boolean }) {
+  // Without filing rights the journey is two steps, and the second one is the
+  // handover — never an STR the viewer isn't entitled to file.
+  const order = allowFiling
+    ? [{ label: "Alert" }, { label: "Case" }, { label: step === "closed" ? "Closed" : "STR" }]
+    : [{ label: "Alert" }, { label: step === "closed" ? "Closed" : "Compliance" }];
+  const idx = allowFiling
+    ? { alert: 0, case: 1, str: 2, filed: 2, closed: 2, escalated: 2 }[step]
+    : { alert: 0, case: 1, str: 1, filed: 1, closed: 1, escalated: 1 }[step];
   return (
     <div className="flex items-center gap-2 text-[12px]">
       {order.map((o, i) => (
@@ -173,7 +193,18 @@ function Btn({
 
 /* ── main ──────────────────────────────────────────────────────────────────── */
 
-export default function AnalystWorkflow({ alert, onExit }: { alert: AlertInput; onExit: () => void }) {
+export default function AnalystWorkflow({
+  alert,
+  onExit,
+  allowFiling = true,
+}: {
+  alert: AlertInput;
+  onExit: () => void;
+  /** See the module comment: false on the customer-facing public simulator, which
+   *  stops at escalation. Defaults to true so the authenticated console keeps the
+   *  full journey. */
+  allowFiling?: boolean;
+}) {
   const [step, setStep] = useState<Step>("alert");
 
   const ctx = useMemo(() => {
@@ -191,6 +222,7 @@ export default function AnalystWorkflow({ alert, onExit }: { alert: AlertInput; 
   const band = bandOf(alert.score, null);
   const amount = alert.primaryAmount ?? 0;
   const caseType = alert.caseType ?? "AML";
+  const hasPersisted = !!(alert.persistedAlertIds?.length || alert.persistedCaseIds?.length);
 
   const [narrative, setNarrative] = useState(
     `${alert.subject} — ${alert.summaryLine}. ` +
@@ -255,7 +287,7 @@ export default function AnalystWorkflow({ alert, onExit }: { alert: AlertInput; 
   return (
     <div className={`${panelCls} p-6 sm:p-7`}>
       <div className="mb-5 flex items-center justify-between">
-        <Crumbs step={step} />
+        <Crumbs step={step} allowFiling={allowFiling} />
         <button type="button" onClick={onExit} className="text-[12px] text-[#767CAB] hover:text-[#C9CCE8]">
           ← Back to simulator
         </button>
@@ -277,8 +309,9 @@ export default function AnalystWorkflow({ alert, onExit }: { alert: AlertInput; 
           </header>
 
           <p className="text-[13px] leading-relaxed text-[#9FA3C4]">
-            This activity tripped monitoring and is waiting in your queue. Review it, then decide: escalate
-            it to a case for investigation, or close it as a false positive.
+            {allowFiling
+              ? "This activity tripped monitoring and is waiting in your queue. Review it, then decide: escalate it to a case for investigation, or close it as a false positive."
+              : "This activity tripped monitoring. Review what the engine saw, then hand it to the compliance team as a case, or close it as a false positive. Investigating and reporting it is their call, not yours."}
           </p>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -310,14 +343,16 @@ export default function AnalystWorkflow({ alert, onExit }: { alert: AlertInput; 
           </div>
 
           <div className="flex flex-wrap items-center gap-3 border-t border-white/[0.06] pt-4">
-            <Btn onClick={() => setStep("case")}>Escalate to case →</Btn>
+            <Btn onClick={() => setStep(allowFiling ? "case" : "escalated")}>
+              {allowFiling ? "Escalate to case →" : "Send to compliance →"}
+            </Btn>
             <Btn variant="danger" onClick={() => setStep("closed")}>Close — false positive</Btn>
           </div>
         </div>
       )}
 
       {/* ── CASE ──────────────────────────────────────────────────────────── */}
-      {step === "case" && (
+      {allowFiling && step === "case" && (
         <div className="space-y-5">
           <header className="flex flex-wrap items-center gap-3">
             <span className={`text-[15px] font-semibold ${monoCls} text-[#F2F3FA]`}>{ctx.caseId}</span>
@@ -358,7 +393,7 @@ export default function AnalystWorkflow({ alert, onExit }: { alert: AlertInput; 
       )}
 
       {/* ── FILE STR ──────────────────────────────────────────────────────── */}
-      {step === "str" && (
+      {allowFiling && step === "str" && (
         <div className="space-y-5">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-[#5B6091]">Suspicious Transaction Report</p>
           <div className={`${wellCls} p-4`}>
@@ -381,7 +416,7 @@ export default function AnalystWorkflow({ alert, onExit }: { alert: AlertInput; 
       )}
 
       {/* ── FILED ─────────────────────────────────────────────────────────── */}
-      {step === "filed" && (
+      {allowFiling && step === "filed" && (
         <div className="space-y-5">
           <div className="flex items-center gap-3">
             <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[rgba(52,211,153,0.16)] text-[18px] text-[#34D399]">✓</span>
@@ -409,6 +444,69 @@ export default function AnalystWorkflow({ alert, onExit }: { alert: AlertInput; 
         </div>
       )}
 
+      {/* ── ESCALATED (customer-side terminal state) ──────────────────────── */}
+      {step === "escalated" && (
+        <div className="space-y-5">
+          <div className="flex items-center gap-3">
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[rgba(52,211,153,0.16)] text-[18px] text-[#34D399]">✓</span>
+            <div>
+              <p className="text-[15px] font-semibold text-[#F2F3FA]">Sent to compliance</p>
+              <p className="text-[12px] text-[#767CAB]">
+                {alert.fromAlerts && alert.fromAlerts > 1
+                  ? `${alert.fromAlerts} alerts on this pattern were handed over as one case.`
+                  : `${ctx.alertId} was handed over for investigation.`}
+              </p>
+            </div>
+          </div>
+
+          {hasPersisted ? (
+            <>
+              <Notice tone="ok">
+                This is live in the demo bank&apos;s Validar console right now, not a mock-up. The
+                compliance team picks it up from there.
+              </Notice>
+              <div className={`${wellCls} p-4`}>
+                {alert.persistedAlertIds?.length ? (
+                  <Row
+                    k={alert.persistedAlertIds.length > 1 ? "Alerts raised" : "Alert raised"}
+                    v={alert.persistedAlertIds.join(", ")}
+                    mono
+                  />
+                ) : null}
+                {alert.persistedCaseIds?.length ? (
+                  <Row
+                    k={alert.persistedCaseIds.length > 1 ? "Cases opened" : "Case opened"}
+                    v={alert.persistedCaseIds.join(", ")}
+                    mono
+                  />
+                ) : null}
+              </div>
+            </>
+          ) : (
+            <Notice tone="ok">
+              Nothing was written — this run was scored and rolled back.
+            </Notice>
+          )}
+
+          <div className={`${wellCls} p-4`}>
+            <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-[#5B6091]">
+              What happens next
+            </p>
+            <p className="text-[13px] leading-relaxed text-[#9FA3C4]">
+              An analyst investigates the case, and if the suspicion holds, a compliance officer
+              files a Suspicious Transaction Report with the Financial Intelligence Centre. That
+              step needs a second approver and produces a goAML v4 submission. It happens in the
+              Validar console, not here.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 border-t border-white/[0.06] pt-4">
+            <Btn variant="ghost" onClick={() => setStep("alert")}>← Back to the alert</Btn>
+            <Btn onClick={onExit}>Done — run another</Btn>
+          </div>
+        </div>
+      )}
+
       {/* ── CLOSED ────────────────────────────────────────────────────────── */}
       {step === "closed" && (
         <div className="space-y-5">
@@ -419,7 +517,11 @@ export default function AnalystWorkflow({ alert, onExit }: { alert: AlertInput; 
               <p className="text-[12px] text-[#767CAB]">{ctx.alertId} — resolved as a false positive (LEGITIMATE). No case opened.</p>
             </div>
           </div>
-          <Notice tone="ok">Nothing was persisted — this is a dry-run.</Notice>
+          <Notice tone="ok">
+            {hasPersisted
+              ? "Closing here is part of the walkthrough. The alert itself is real and stays open in the demo bank's console until an analyst resolves it there."
+              : "Nothing was persisted — this is a dry-run."}
+          </Notice>
           <div className="flex flex-wrap items-center gap-3 border-t border-white/[0.06] pt-4">
             <Btn variant="ghost" onClick={() => setStep("alert")}>← Reopen alert</Btn>
             <Btn onClick={onExit}>Done — run another</Btn>
