@@ -8,7 +8,7 @@ import {
 import { useSimulateTransactionMutation } from "@/redux/slices/api/simulationApi";
 import { estimateSimulation, type EstimateProfileInput } from "@/lib/simulatorEstimate";
 import ScenarioSimulator from "@/components/simulator/ScenarioSimulator";
-import AnalystWorkflow, { type TxnSummary } from "@/components/simulator/AnalystWorkflow";
+import AnalystWorkflow from "@/components/simulator/AnalystWorkflow";
 import { errorMessage } from "@/lib/errors";
 import ActionBadge from "@/components/ActionBadge";
 import { RULE_CATALOG } from "@/config/ruleCatalog";
@@ -308,19 +308,34 @@ export default function TransactionSimulator({ canUse, publicMode = false }: Tra
         <ScenarioSimulator />
       ) : analystMode && result ? (
         <AnalystWorkflow
-          result={result}
-          txn={
-            {
-              amount,
-              transaction_type: transactionType,
-              channel,
-              receiver_country: country,
-              sender:
-                effectiveMode === "synthetic"
-                  ? `Made-up sender · ${synthRiskLevel} risk`
-                  : loadedCustomerId ?? "Customer",
-            } as TxnSummary
-          }
+          alert={{
+            score: result.combined_risk_score,
+            rules: result.triggered_rules.map((r) => r.name),
+            breakdown:
+              result.breakdown.customer_risk + result.breakdown.transaction_risk + result.breakdown.behavioral_risk > 0
+                ? {
+                    customer: result.breakdown.customer_risk,
+                    transaction: result.breakdown.transaction_risk,
+                    behavioral: result.breakdown.behavioral_risk,
+                  }
+                : undefined,
+            subject:
+              effectiveMode === "synthetic" ? `Made-up sender · ${synthRiskLevel} risk` : loadedCustomerId ?? "Customer",
+            txnNumber: result.simulated_transaction_id.replace(/^SIM-/, "TXN-").slice(0, 20),
+            primaryAmount: amount,
+            summaryLine: `${transactionType} · ${channel} · ${country}`,
+            detailRows: [
+              { k: "Amount", v: `GHS ${amount.toLocaleString()}`, mono: true },
+              { k: "Type / channel", v: `${transactionType} · ${channel}` },
+              { k: "Destination", v: country },
+              {
+                k: "Sender",
+                v: effectiveMode === "synthetic" ? `Made-up · ${synthRiskLevel} risk` : loadedCustomerId ?? "Customer",
+              },
+            ],
+            caseType: "AML",
+            fromAlerts: 1,
+          }}
           onExit={() => setAnalystMode(false)}
         />
       ) : (

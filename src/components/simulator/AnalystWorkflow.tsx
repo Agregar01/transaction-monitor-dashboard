@@ -11,46 +11,56 @@ import {
   wellCls,
   Notice,
 } from "@/components/simulator/ui";
-import type { SimulationResult } from "@/types/simulator";
 
 /**
- * The guided L1-analyst walkthrough that follows a simulated transaction which
- * raised an alert. It replays the real workflow as replica screens — nothing is
- * persisted — so a viewer can click the whole journey:
+ * The guided L1-analyst walkthrough that follows a simulated payment (single) or
+ * scenario (sequence) which raised an alert. It replays the real workflow as
+ * replica screens — nothing is persisted:
  *
  *   Alert (review)  →  Escalate  →  Case  →  File STR  →  Filed (+ goAML)
  *                   ↘  Close (false positive)  →  Closed
  *
- * Everything is seeded from the simulation result + the transaction the caller
- * ran, so the numbers on every screen match what the simulator showed.
+ * Both entry points feed the same normalized `AlertInput`, so single payments
+ * and multi-leg sequences drive an identical journey with numbers that match
+ * whatever the simulator showed.
  */
 
-export interface TxnSummary {
-  amount: number;
-  transaction_type: string;
-  channel: string;
-  receiver_country: string;
-  sender: string;
+export interface AlertInput {
+  /** Combined risk score (0–300) — drives priority + band. */
+  score: number;
+  /** Names of the rules that fired (drives "why it fired" + the STR typology). */
+  rules: string[];
+  /** The three risk layers, when known (single payment). Omitted for sequences. */
+  breakdown?: { customer: number; transaction: number; behavioral: number };
+  /** Sender / subject label shown on every screen and in the goAML. */
+  subject: string;
+  /** A representative transaction id for the goAML. */
+  txnNumber: string;
+  /** A single amount (GHS) for the goAML; sequences pass an estimated total. */
+  primaryAmount?: number;
+  /** One-liner describing the payment/pattern, e.g. "Transfer · Momo · GH". */
+  summaryLine: string;
+  /** Rows rendered on the alert/case "transaction" card. */
+  detailRows: { k: string; v: string; mono?: boolean }[];
+  /** Case type badge — AML / FRAUD / SANCTIONS. */
+  caseType?: string;
+  /** How many alerts the case was auto-created from (sequences). */
+  fromAlerts?: number;
 }
 
 type Step = "alert" | "case" | "str" | "filed" | "closed";
 
 const CURRENCY = "GHS";
 
-function priorityOf(score: number): { label: string; tone: keyof typeof PTONE } {
-  if (score >= 200) return { label: "IMMEDIATE", tone: "block" };
-  if (score >= 150) return { label: "BATCH", tone: "hold" };
-  return { label: "REVIEW", tone: "flag" };
+function priorityOf(score: number): { label: string; color: string; ring: string } {
+  if (score >= 200) return { label: "IMMEDIATE", color: riskBandColors.BLOCK, ring: "rgba(220,60,60,0.16)" };
+  if (score >= 150) return { label: "BATCH", color: riskBandColors.HOLD, ring: "rgba(230,160,60,0.16)" };
+  return { label: "REVIEW", color: riskBandColors.FLAG, ring: "rgba(230,160,60,0.16)" };
 }
-const PTONE = {
-  block: riskBandColors.BLOCK,
-  hold: riskBandColors.HOLD,
-  flag: riskBandColors.FLAG,
-} as const;
 
 /** Pick a goAML suspicious-activity typology from the rules that fired. */
-function typologyOf(result: SimulationResult): { type: string; code: string } {
-  const names = result.triggered_rules.map((r) => r.name.toLowerCase()).join(" ");
+function typologyOf(rules: string[]): { type: string; code: string } {
+  const names = rules.join(" ").toLowerCase();
   if (/structur|burst|near-ctr|flash/.test(names)) return { type: "STRUCTURING", code: "S" };
   if (/travel|cross|layer|aggregate|jurisdiction/.test(names)) return { type: "LAYERING", code: "L" };
   if (/device|velocity|fan-?out|counterparty/.test(names)) return { type: "SMURFING", code: "M" };
@@ -65,7 +75,7 @@ function fmtAmount(n: number) {
   return n.toLocaleString("en-GH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function buildGoaml(args: {
+function buildGoaml(a: {
   reference: string;
   txnNumber: string;
   amount: number;
@@ -83,27 +93,27 @@ function buildGoaml(args: {
   <creation_datetime>${now}</creation_datetime>
   <currency_code_local>${CURRENCY}</currency_code_local>
   <reporting_person_title>Compliance Officer</reporting_person_title>
-  <report_reference>${args.reference}</report_reference>
+  <report_reference>${a.reference}</report_reference>
   <regulator_code>FIC</regulator_code>
   <regulator_name>Financial Intelligence Centre (Ghana)</regulator_name>
   <report>
     <str>
       <transaction>
-        <transactionnumber>${args.txnNumber}</transactionnumber>
+        <transactionnumber>${a.txnNumber}</transactionnumber>
         <transaction_location>GHA</transaction_location>
-        <teller>${args.amount.toFixed(2)}</teller>
-        <amount_local>${args.amount.toFixed(2)}</amount_local>
+        <teller>${a.amount.toFixed(2)}</teller>
+        <amount_local>${a.amount.toFixed(2)}</amount_local>
         <funds_code>T</funds_code>
-        <suspicious_activity_type>${args.typology.type}</suspicious_activity_type>
-        <suspicious_activity_code>${args.typology.code}</suspicious_activity_code>
+        <suspicious_activity_type>${a.typology.type}</suspicious_activity_type>
+        <suspicious_activity_code>${a.typology.code}</suspicious_activity_code>
         <involved_party>
           <role>O</role>
           <person>
-            <first_name>${args.sender}</first_name>
+            <first_name>${a.sender}</first_name>
           </person>
         </involved_party>
       </transaction>
-      <reason>${args.narrative.replace(/[<>&]/g, "")}</reason>
+      <reason>${a.narrative.replace(/[<>&]/g, "")}</reason>
     </str>
   </report>
 </Report>`;
@@ -112,21 +122,17 @@ function buildGoaml(args: {
 /* ── small building blocks ─────────────────────────────────────────────────── */
 
 function Crumbs({ step }: { step: Step }) {
-  const order: { key: Step; label: string }[] = [
-    { key: "alert", label: "Alert" },
-    { key: "case", label: "Case" },
-    { key: step === "closed" ? "closed" : "str", label: step === "closed" ? "Closed" : "STR" },
+  const order = [
+    { label: "Alert" },
+    { label: "Case" },
+    { label: step === "closed" ? "Closed" : "STR" },
   ];
   const idx = { alert: 0, case: 1, str: 2, filed: 2, closed: 2 }[step];
   return (
-    <div className="mb-5 flex items-center gap-2 text-[12px]">
+    <div className="flex items-center gap-2 text-[12px]">
       {order.map((o, i) => (
-        <span key={o.key} className="flex items-center gap-2">
-          <span
-            className={i <= idx ? "font-semibold text-[#F2F3FA]" : "text-[#5B6091]"}
-          >
-            {o.label}
-          </span>
+        <span key={i} className="flex items-center gap-2">
+          <span className={i <= idx ? "font-semibold text-[#F2F3FA]" : "text-[#5B6091]"}>{o.label}</span>
           {i < order.length - 1 && <span className="text-[#3A3F6B]">→</span>}
         </span>
       ))}
@@ -159,11 +165,7 @@ function Btn({
         ? "border border-white/15 text-[#C9CCE8] hover:bg-white/[0.04]"
         : "text-[#9FA3C4] hover:text-[#E7E9F6]";
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-lg px-4 py-2.5 text-[13px] font-semibold transition-colors ${cls}`}
-    >
+    <button type="button" onClick={onClick} className={`rounded-lg px-4 py-2.5 text-[13px] font-semibold transition-colors ${cls}`}>
       {children}
     </button>
   );
@@ -171,15 +173,7 @@ function Btn({
 
 /* ── main ──────────────────────────────────────────────────────────────────── */
 
-export default function AnalystWorkflow({
-  result,
-  txn,
-  onExit,
-}: {
-  result: SimulationResult;
-  txn: TxnSummary;
-  onExit: () => void;
-}) {
+export default function AnalystWorkflow({ alert, onExit }: { alert: AlertInput; onExit: () => void }) {
   const [step, setStep] = useState<Step>("alert");
 
   const ctx = useMemo(() => {
@@ -187,18 +181,21 @@ export default function AnalystWorkflow({
     return {
       alertId: `ALT-${rand(10)}`,
       caseId: `CASE-${rand(8)}`,
-      txnNumber: result.simulated_transaction_id.replace(/^SIM-/, "TXN-").slice(0, 20),
       strRef: `GHA-STR-${ym}-${rand(6)}`,
-      priority: priorityOf(result.combined_risk_score),
-      typology: typologyOf(result),
+      priority: priorityOf(alert.score),
+      typology: typologyOf(alert.rules),
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [result.simulated_transaction_id]);
+  }, [alert.txnNumber]);
 
-  const band = bandOf(result.combined_risk_score, result.risk_band);
+  const band = bandOf(alert.score, null);
+  const amount = alert.primaryAmount ?? 0;
+  const caseType = alert.caseType ?? "AML";
+
   const [narrative, setNarrative] = useState(
-    `Customer sent ${CURRENCY} ${fmtAmount(txn.amount)} via ${txn.channel} to ${txn.receiver_country}. ` +
-      `Pattern matched ${result.triggered_rules.length} monitoring rule(s) and scored ${result.combined_risk_score}/300 (${BAND_LABEL[band]}). ` +
+    `${alert.subject} — ${alert.summaryLine}. ` +
+      (amount ? `Amount ${CURRENCY} ${fmtAmount(amount)}. ` : "") +
+      `Matched ${alert.rules.length} monitoring rule(s) and scored ${alert.score}/300 (${BAND_LABEL[band]}). ` +
       `Consistent with ${ctx.typology.type.toLowerCase().replace(/_/g, " ")}; escalated for STR filing.`,
   );
 
@@ -206,13 +203,13 @@ export default function AnalystWorkflow({
     () =>
       buildGoaml({
         reference: ctx.strRef,
-        txnNumber: ctx.txnNumber,
-        amount: txn.amount,
-        sender: txn.sender,
+        txnNumber: alert.txnNumber,
+        amount,
+        sender: alert.subject,
         typology: ctx.typology,
         narrative,
       }),
-    [ctx, txn, narrative],
+    [ctx, alert, amount, narrative],
   );
 
   function downloadGoaml() {
@@ -225,13 +222,11 @@ export default function AnalystWorkflow({
     URL.revokeObjectURL(url);
   }
 
-  const TxnCard = (
+  const DetailCard = (
     <div className={`${wellCls} p-4`}>
-      <Row k="Amount" v={`${CURRENCY} ${fmtAmount(txn.amount)}`} mono />
-      <Row k="Type / channel" v={`${txn.transaction_type} · ${txn.channel}`} />
-      <Row k="Destination" v={txn.receiver_country} />
-      <Row k="Sender" v={txn.sender} />
-      <Row k="Transaction" v={ctx.txnNumber} mono />
+      {alert.detailRows.map((r, i) => (
+        <Row key={i} k={r.k} v={r.v} mono={r.mono} />
+      ))}
     </div>
   );
 
@@ -239,13 +234,21 @@ export default function AnalystWorkflow({
     <div className={`${wellCls} p-4`}>
       <div className="mb-2 flex items-center gap-2">
         <span className={`text-[22px] font-semibold ${monoCls}`} style={{ color: riskBandColors[band] }}>
-          {result.combined_risk_score}
+          {alert.score}
         </span>
         <span className="text-[12px] text-[#767CAB]">/ 300 · {BAND_LABEL[band]}</span>
       </div>
-      <Row k="Customer risk" v={result.breakdown.customer_risk} mono />
-      <Row k="Transaction risk" v={result.breakdown.transaction_risk} mono />
-      <Row k="Behaviour risk" v={result.breakdown.behavioral_risk} mono />
+      {alert.breakdown ? (
+        <>
+          <Row k="Customer risk" v={alert.breakdown.customer} mono />
+          <Row k="Transaction risk" v={alert.breakdown.transaction} mono />
+          <Row k="Behaviour risk" v={alert.breakdown.behavioral} mono />
+        </>
+      ) : (
+        <p className="text-[12px] leading-relaxed text-[#767CAB]">
+          Highest-scoring leg in the sequence. Per-leg layer breakdown isn&apos;t shown for a pattern.
+        </p>
+      )}
     </div>
   );
 
@@ -253,11 +256,7 @@ export default function AnalystWorkflow({
     <div className={`${panelCls} p-6 sm:p-7`}>
       <div className="mb-5 flex items-center justify-between">
         <Crumbs step={step} />
-        <button
-          type="button"
-          onClick={onExit}
-          className="text-[12px] text-[#767CAB] hover:text-[#C9CCE8]"
-        >
+        <button type="button" onClick={onExit} className="text-[12px] text-[#767CAB] hover:text-[#C9CCE8]">
           ← Back to simulator
         </button>
       </div>
@@ -269,7 +268,7 @@ export default function AnalystWorkflow({
             <span className={`text-[15px] font-semibold ${monoCls} text-[#F2F3FA]`}>{ctx.alertId}</span>
             <span
               className="rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide"
-              style={{ background: `${ctx.priority.tone === "block" ? "rgba(220,60,60,0.16)" : "rgba(230,160,60,0.16)"}`, color: PTONE[ctx.priority.tone] }}
+              style={{ background: ctx.priority.ring, color: ctx.priority.color }}
             >
               {ctx.priority.label}
             </span>
@@ -278,14 +277,14 @@ export default function AnalystWorkflow({
           </header>
 
           <p className="text-[13px] leading-relaxed text-[#9FA3C4]">
-            This payment tripped monitoring and is waiting in your queue. Review it, then decide:
-            escalate it to a case for investigation, or close it as a false positive.
+            This activity tripped monitoring and is waiting in your queue. Review it, then decide: escalate
+            it to a case for investigation, or close it as a false positive.
           </p>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[#5B6091]">Transaction</p>
-              {TxnCard}
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[#5B6091]">Activity</p>
+              {DetailCard}
             </div>
             <div>
               <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[#5B6091]">Risk</p>
@@ -295,15 +294,15 @@ export default function AnalystWorkflow({
 
           <div>
             <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[#5B6091]">
-              Why it fired ({result.triggered_rules.length})
+              Why it fired ({alert.rules.length})
             </p>
             <div className="flex flex-wrap gap-2">
-              {result.triggered_rules.length === 0 ? (
+              {alert.rules.length === 0 ? (
                 <span className="text-[12px] text-[#767CAB]">No rules — review manually.</span>
               ) : (
-                result.triggered_rules.map((r, i) => (
+                alert.rules.map((r, i) => (
                   <span key={i} className={`${wellCls} px-2.5 py-1 text-[12px] text-[#C9CCE8]`}>
-                    {r.name}
+                    {r}
                   </span>
                 ))
               )}
@@ -322,17 +321,21 @@ export default function AnalystWorkflow({
         <div className="space-y-5">
           <header className="flex flex-wrap items-center gap-3">
             <span className={`text-[15px] font-semibold ${monoCls} text-[#F2F3FA]`}>{ctx.caseId}</span>
-            <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] font-semibold text-[#9FA3C4]">AML</span>
+            <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] font-semibold text-[#9FA3C4]">{caseType}</span>
             <span className="rounded-full px-2.5 py-1 text-[11px] font-bold text-[#F5C0A5]" style={{ background: "rgba(224,96,48,0.14)" }}>HIGH</span>
             <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] font-semibold text-[#9FA3C4]">OPEN</span>
           </header>
 
-          <Notice tone="ok">Escalated from {ctx.alertId} — a case was opened and assigned for investigation.</Notice>
+          <Notice tone="ok">
+            {alert.fromAlerts && alert.fromAlerts > 1
+              ? `Auto-escalated from ${alert.fromAlerts} alerts on this pattern — a case was opened for investigation.`
+              : `Escalated from ${ctx.alertId} — a case was opened and assigned for investigation.`}
+          </Notice>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[#5B6091]">Linked transaction</p>
-              {TxnCard}
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[#5B6091]">Linked activity</p>
+              {DetailCard}
             </div>
             <div>
               <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[#5B6091]">Assessment</p>
@@ -344,12 +347,7 @@ export default function AnalystWorkflow({
             <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[#5B6091]">
               STR narrative <span className="font-normal normal-case text-[#5B6091]">— editable</span>
             </p>
-            <textarea
-              value={narrative}
-              onChange={(e) => setNarrative(e.target.value)}
-              rows={4}
-              className={`${inputCls} leading-relaxed`}
-            />
+            <textarea value={narrative} onChange={(e) => setNarrative(e.target.value)} rows={4} className={`${inputCls} leading-relaxed`} />
           </div>
 
           <div className="flex flex-wrap items-center gap-3 border-t border-white/[0.06] pt-4">
@@ -364,9 +362,9 @@ export default function AnalystWorkflow({
         <div className="space-y-5">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-[#5B6091]">Suspicious Transaction Report</p>
           <div className={`${wellCls} p-4`}>
-            <Row k="Subject" v={txn.sender} />
+            <Row k="Subject" v={alert.subject} />
             <Row k="Suspicious activity" v={ctx.typology.type.replace(/_/g, " ")} />
-            <Row k="Amount" v={`${CURRENCY} ${fmtAmount(txn.amount)}`} mono />
+            {amount ? <Row k="Amount" v={`${CURRENCY} ${fmtAmount(amount)}`} mono /> : <Row k="Pattern" v={alert.summaryLine} />}
             <Row k="Regulator" v="Financial Intelligence Centre (Ghana)" />
             <Row k="From case" v={ctx.caseId} mono />
           </div>
@@ -374,9 +372,7 @@ export default function AnalystWorkflow({
             <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-[#5B6091]">Narrative</p>
             <p className="text-[13px] leading-relaxed text-[#C9CCE8]">{narrative}</p>
           </div>
-          <p className="text-[12px] text-[#767CAB]">
-            Filing generates a goAML v4 XML, validates it against the FIC schema, and submits.
-          </p>
+          <p className="text-[12px] text-[#767CAB]">Filing generates a goAML v4 XML, validates it against the FIC schema, and submits.</p>
           <div className="flex flex-wrap items-center gap-3 border-t border-white/[0.06] pt-4">
             <Btn onClick={() => setStep("filed")}>Submit STR to FIC →</Btn>
             <Btn variant="ghost" onClick={() => setStep("case")}>← Back to case</Btn>
@@ -408,7 +404,7 @@ export default function AnalystWorkflow({
           </div>
 
           <div className="flex flex-wrap items-center gap-3 border-t border-white/[0.06] pt-4">
-            <Btn onClick={onExit}>Done — run another payment</Btn>
+            <Btn onClick={onExit}>Done — run another</Btn>
           </div>
         </div>
       )}
@@ -426,7 +422,7 @@ export default function AnalystWorkflow({
           <Notice tone="ok">Nothing was persisted — this is a dry-run.</Notice>
           <div className="flex flex-wrap items-center gap-3 border-t border-white/[0.06] pt-4">
             <Btn variant="ghost" onClick={() => setStep("alert")}>← Reopen alert</Btn>
-            <Btn onClick={onExit}>Done — run another payment</Btn>
+            <Btn onClick={onExit}>Done — run another</Btn>
           </div>
         </div>
       )}
