@@ -13,7 +13,13 @@ import QueryState from "@/components/QueryState";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { showToast } from "@/components/Toast";
 import { errorMessage } from "@/lib/errors";
-import { KeyIcon, ClipboardDocumentIcon, CheckIcon } from "@heroicons/react/24/outline";
+import {
+  KeyIcon,
+  ClipboardDocumentIcon,
+  CheckIcon,
+  BookOpenIcon,
+} from "@heroicons/react/24/outline";
+import { API_DOCS_URL } from "@/config/constants";
 
 export default function ApiKeysPage() {
   useEffect(() => {
@@ -41,6 +47,18 @@ export default function ApiKeysPage() {
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             Keys authenticate as your institution for service-to-service access. Secrets are shown once.
           </p>
+          {/* The product never linked to its own documentation, and this page is
+              exactly where a developer needs it: they have just been handed a
+              credential and have to work out what to do with it. */}
+          <a
+            href={API_DOCS_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 mt-2 text-sm font-semibold text-primary hover:underline"
+          >
+            <BookOpenIcon className="h-4 w-4" aria-hidden="true" />
+            API documentation and quickstart
+          </a>
         </div>
         <button
           onClick={() => setShowCreate(true)}

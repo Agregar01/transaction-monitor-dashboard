@@ -8,7 +8,7 @@ import ActionBadge from "@/components/ActionBadge";
 import DonutCard from "@/components/DonutCard";
 import Pagination from "@/components/Pagination";
 import type { RiskLevel } from "@/types/api";
-import { CUSTOMER_RISK_LEVELS } from "@/config/constants";
+import { CUSTOMER_RISK_LEVELS, API_DOCS_URL } from "@/config/constants";
 
 const RISK_LEVELS: RiskLevel[] = [...CUSTOMER_RISK_LEVELS];
 
@@ -25,6 +25,9 @@ export default function CustomersListPage() {
   const [riskLevel, setRiskLevel] = useState<RiskLevel | "">("");
   const [country, setCountry] = useState("");
   const [pepOnly, setPepOnly] = useState(false);
+  // An empty result means two very different things: no data in the tenant
+  // at all, or no rows matching what the user asked for.
+  const hasFilters = Boolean(riskLevel || country || pepOnly);
 
   const { data, isLoading, error } = useListCustomersQuery({
     page,
@@ -153,8 +156,33 @@ export default function CustomersListPage() {
           Failed to load customers.
         </div>
       ) : !data || data.items.length === 0 ? (
-        <div className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-12 text-center text-sm text-gray-500 dark:text-gray-400">
-          No customers match the filters.
+        <div className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-12 text-center">
+          {hasFilters ? (
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              No customers match the filters.
+            </p>
+          ) : (
+            /* A brand-new tenant has no customers at all, and blaming the
+               filters made the product look broken on a client's first visit.
+               Customers are created by ingestion, so the fix is to say that. */
+            <>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                No customers yet
+              </p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                Customers are created automatically when you send transactions.
+                Send your first one, then refresh this page.
+              </p>
+              <a
+                href={API_DOCS_URL + "/quickstart"}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 mt-4 text-sm font-semibold text-primary hover:underline"
+              >
+                Read the ingestion quickstart
+              </a>
+            </>
+          )}
         </div>
       ) : (
         <div className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 overflow-hidden">

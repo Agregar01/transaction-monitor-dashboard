@@ -37,6 +37,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         fullName: me.full_name,
         institutionId: me.institution_id,
         institutionName: me.institution_name,
+        sandbox: me.sandbox,
       }),
     );
   }, [me, dispatch]);

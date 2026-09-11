@@ -32,6 +32,8 @@ export interface AuthState {
    *  (Agregar admins), who belong to no institution and see all tenants. */
   institutionId: string | null;
   institutionName: string | null;
+  /** Sandbox tenant — surfaced as a header badge. */
+  sandbox: boolean;
 }
 
 const initialState: AuthState = {
@@ -48,6 +50,7 @@ const initialState: AuthState = {
   activePersona: null,
   institutionId: null,
   institutionName: null,
+  sandbox: false,
 };
 
 interface RefreshProfilePayload {
@@ -56,6 +59,7 @@ interface RefreshProfilePayload {
   fullName: string | null;
   institutionId: string | null;
   institutionName: string | null;
+  sandbox?: boolean;
 }
 
 interface SetCredentialsPayload {
@@ -70,6 +74,7 @@ interface SetCredentialsPayload {
   features?: TenantFeatures | null;
   institutionId?: string | null;
   institutionName?: string | null;
+  sandbox?: boolean;
 }
 
 const authSlice = createSlice({
@@ -89,6 +94,7 @@ const authSlice = createSlice({
       state.features = action.payload.features ?? null;
       state.institutionId = action.payload.institutionId ?? null;
       state.institutionName = action.payload.institutionName ?? null;
+      state.sandbox = action.payload.sandbox ?? false;
       // Reset persona on a fresh login so it re-resolves from the new roles.
       state.activePersona = null;
     },
@@ -106,6 +112,7 @@ const authSlice = createSlice({
       state.fullName = action.payload.fullName;
       state.institutionId = action.payload.institutionId;
       state.institutionName = action.payload.institutionName;
+      if (action.payload.sandbox !== undefined) state.sandbox = action.payload.sandbox;
     },
     logout(state) {
       state.userId = null;

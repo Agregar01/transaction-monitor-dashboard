@@ -110,3 +110,15 @@ export const TMS_ROLES = [
   "READONLY",
 ] as const;
 export type TMSRole = (typeof TMS_ROLES)[number];
+
+/**
+ * Client-facing API documentation (Mintlify).
+ *
+ * Deliberately NOT monitor.agregartech.com/docs: that is the raw FastAPI
+ * explorer and exposes every internal operation (ml_ops, drift, tenant,
+ * simulations, approvals), which is not something to hand a client.
+ *
+ * Override per environment with NEXT_PUBLIC_API_DOCS_URL.
+ */
+export const API_DOCS_URL =
+  process.env.NEXT_PUBLIC_API_DOCS_URL || "https://agregartechnologies.mintlify.app";

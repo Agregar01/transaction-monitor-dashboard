@@ -19,6 +19,7 @@ import {
   ChevronDownIcon,
   CheckIcon,
   BuildingOffice2Icon,
+  BeakerIcon,
 } from "@heroicons/react/24/outline";
 
 function ApiStatusDot() {
@@ -59,6 +60,24 @@ function ApiStatusDot() {
         {labels[status]}
       </span>
     </div>
+  );
+}
+
+function SandboxBadge() {
+  const sandbox = useAppSelector((s) => s.auth.sandbox);
+  if (!sandbox) return null;
+  // Deliberately the loudest thing in the header. In sandbox the engine behaves
+  // identically, so there is no other way to tell that filings are not real,
+  // webhooks do not fire, and resolved alerts do not train the model. An
+  // integrator who cannot see this cannot know whether their traffic counts.
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold uppercase tracking-wide bg-amber-100 text-amber-900 dark:bg-amber-500/20 dark:text-amber-200"
+      title="Sandbox tenant: real engine, but nothing reaches live reporting, a regulator, or the fraud model."
+    >
+      <BeakerIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
+      <span>Sandbox</span>
+    </span>
   );
 }
 
@@ -223,6 +242,7 @@ function ProfileDropdown() {
 export default function TopBar() {
   return (
     <header className="h-14 bg-white dark:bg-navy-800 border-b border-gray-200 dark:border-navy-600 flex items-center justify-end gap-3 px-4 lg:px-6">
+      <SandboxBadge />
       <InstitutionBadge />
       <JurisdictionBadge />
       <ApiStatusDot />

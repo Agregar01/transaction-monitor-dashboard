@@ -53,6 +53,11 @@ export interface MeResponse {
   permissions: string[];
   institution_id: string | null;
   institution_name: string | null;
+  /** True when this institution is a sandbox tenant: its traffic runs the real
+   * engine but is excluded from live reporting, regulator views and ML training.
+   * Drives the header badge — without it the console cannot tell a client
+   * whether what they are doing counts. */
+  sandbox: boolean;
 }
 
 // ─── Tenant ─────────────────────────────────────────────────────────────────
