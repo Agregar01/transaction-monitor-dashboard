@@ -73,14 +73,45 @@ async function getServiceToken(forceRefresh = false): Promise<TokenResult> {
   }
 }
 
+/**
+ * Trusted client IP for rate limiting. The naive `x-forwarded-for`.split(",")[0]
+ * reads the LEFTMOST value, which the client fully controls — rotating it gives
+ * every request a fresh bucket and defeats the limit. Prefer Netlify's own
+ * connection-IP header (set by the trusted edge, not forwardable by the client);
+ * fall back to the RIGHTMOST XFF entry (appended by the trusted proxy), never the
+ * leftmost. Returns "unknown" only when no source is present (all such requests
+ * then share one bucket, which fails safe toward throttling).
+ */
+export function clientIp(req: Request): string {
+  const nf = req.headers.get("x-nf-client-connection-ip");
+  if (nf && nf.trim()) return nf.trim();
+  const xff = req.headers.get("x-forwarded-for");
+  if (xff) {
+    const parts = xff.split(",").map((p) => p.trim()).filter(Boolean);
+    if (parts.length) return parts[parts.length - 1]; // rightmost = trusted hop
+  }
+  return "unknown";
+}
+
 // Best-effort per-IP throttle (in-memory, per instance — a courtesy limit
-// against a runaway script, not the security boundary).
+// against a runaway script, not the security boundary; the backend enforces the
+// real per-key/institution limits and the daily persist budget).
 const RATE_LIMIT = 20;
 const RATE_WINDOW_MS = 60_000;
+const MAX_TRACKED_IPS = 10_000; // bound the map so a spoofed-IP flood can't grow it unbounded
 const hits = new Map<string, { count: number; windowStart: number }>();
 
 export function rateLimited(ip: string): boolean {
   const now = Date.now();
+  // Opportunistically evict expired windows so the map stays bounded.
+  if (hits.size > MAX_TRACKED_IPS) {
+    for (const k of Array.from(hits.keys())) {
+      const v = hits.get(k);
+      if (v && now - v.windowStart > RATE_WINDOW_MS) hits.delete(k);
+    }
+    // Still over the cap after eviction → fail safe by throttling.
+    if (hits.size > MAX_TRACKED_IPS) return true;
+  }
   const entry = hits.get(ip);
   if (!entry || now - entry.windowStart > RATE_WINDOW_MS) {
     hits.set(ip, { count: 1, windowStart: now });

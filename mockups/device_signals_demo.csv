@@ -1,0 +1,7 @@
+customer_id,timestamp,amount,transaction_type,channel,flow_type,receiver_id,receiver_country,device_id,geo_location,is_rooted,iccid,imei,mno,ip_country,customer_name,customer_type,customer_occupation,customer_kyc_score,declared_monthly_income
+DEVS-101,2026-06-25T09:00:00Z,1200.00,deposit,momo,,,GH,DEV-SHARE-1,,false,ICC-S101,IMEI-S1,MTN,GH,Ama Mensah,Individual,trader,70,4000
+DEVS-102,2026-06-25T10:15:00Z,800.00,deposit,momo,,,GH,DEV-SHARE-1,,false,ICC-S102,IMEI-S1,MTN,GH,Kofi Owusu,Individual,trader,68,3500
+DEVS-103,2026-06-25T11:30:00Z,1500.00,deposit,momo,,,GH,DEV-SHARE-1,,false,ICC-S103,IMEI-S1,MTN,GH,Yaa Asante,Individual,trader,72,3800
+DEVS-104,2026-06-25T12:45:00Z,950.00,deposit,momo,,,GH,DEV-SHARE-1,,false,ICC-S104,IMEI-S1,MTN,GH,Kojo Boateng,Individual,trader,66,3200
+SWAP-201,2026-06-26T08:00:00Z,2000.00,transfer,momo,,,GH,DEV-SWAP-1,,false,ICC-OLD-201,IMEI-W1,MTN,GH,Esi Darko,Individual,merchant,80,9000
+SWAP-201,2026-06-27T08:00:00Z,2500.00,transfer,momo,,,GH,DEV-SWAP-1,,false,ICC-NEW-201,IMEI-W1,VODAFONE,GH,Esi Darko,Individual,merchant,80,9000
