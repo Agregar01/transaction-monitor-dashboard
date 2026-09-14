@@ -8,6 +8,7 @@ import type {
   InsiderThreatReport,
   GeoHeatmapData,
   BehavioralRiskSummary,
+  DeviceAssociations,
 } from "@/types/api";
 
 export const analyticsApi = baseApi.injectEndpoints({
@@ -51,6 +52,14 @@ export const analyticsApi = baseApi.injectEndpoints({
       query: (params) => ({ url: "/analytics/behavioral-risk", params }),
       providesTags: ["Analytics"],
     }),
+    // Drill-down for one shared device: every associated customer identity plus
+    // the SIM/handset IDs (ICCID/IMEI/MNO) seen on it. Fetched on row expand.
+    getDeviceAssociations: b.query<DeviceAssociations, { device_id: string }>({
+      query: ({ device_id }) => ({
+        url: `/analytics/devices/${encodeURIComponent(device_id)}/associations`,
+      }),
+      providesTags: ["Analytics"],
+    }),
   }),
 });
 
@@ -63,4 +72,5 @@ export const {
   useGetInsiderThreatReportQuery,
   useGetGeoHeatmapQuery,
   useGetBehavioralRiskQuery,
+  useGetDeviceAssociationsQuery,
 } = analyticsApi;

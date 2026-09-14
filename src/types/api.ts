@@ -1059,3 +1059,20 @@ export interface BehavioralRiskSummary {
   total_device_sharing: number;
   total_sim_swaps: number;
 }
+
+export interface DeviceAssociatedCustomer {
+  customer_id: string;
+  transactions: number;
+  first_seen: string | null;
+  last_seen: string | null;
+}
+
+/** Drill-down for one device: GET /analytics/devices/{id}/associations. */
+export interface DeviceAssociations {
+  device_id: string;
+  distinct_customers: number;
+  customers: DeviceAssociatedCustomer[];
+  iccids: string[];
+  imeis: string[];
+  mnos: string[];
+}
