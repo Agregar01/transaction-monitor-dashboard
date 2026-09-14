@@ -77,9 +77,17 @@ export function isAllowedPath(path: string): boolean {
   return ALLOWED_PREFIXES.some((prefix) => candidate.startsWith(prefix));
 }
 
-/** Auth-flow paths skip the double-submit CSRF check. */
+/** Auth-flow paths skip the double-submit CSRF check.
+ *
+ * Anchored to a path-segment boundary (exact match, suffix, or the entry
+ * followed by "/") rather than substring-anywhere, so an unrelated path that
+ * merely embeds an exempt string (e.g. ".../auth/login-something") cannot
+ * silently skip CSRF. The "/" form keeps `/institutions/signup` covering
+ * `/institutions/signup/resend-verification`. */
 export function isCsrfExempt(path: string): boolean {
-  return CSRF_EXEMPT_SUBSTRINGS.some((s) => path.includes(s));
+  return CSRF_EXEMPT_SUBSTRINGS.some(
+    (s) => path === s || path.endsWith(s) || path.includes(s + "/"),
+  );
 }
 
 /** True when the request method requires a CSRF token (and the path isn't exempt). */
