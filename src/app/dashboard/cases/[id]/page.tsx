@@ -28,11 +28,12 @@ import { SkeletonCard } from "@/components/Skeleton";
 import ActionBadge from "@/components/ActionBadge";
 import UserPicker from "@/components/UserPicker";
 import CaseTimeline from "@/components/CaseTimeline";
+import CaseGraph from "@/components/CaseGraph";
 import { showToast } from "@/components/Toast";
 import { errorMessage } from "@/lib/errors";
 import type { CaseStatus } from "@/types/api";
 
-type Tab = "overview" | "devices" | "chain";
+type Tab = "overview" | "devices" | "chain" | "network";
 
 /** Valid workflow transitions. ASSIGNED and IN_REVIEW were added in Tier 2. */
 const NEXT_STATES: Record<CaseStatus, CaseStatus[]> = {
@@ -308,7 +309,7 @@ export default function CaseDetailPage() {
 
       {/* Tab bar */}
       <div className="flex gap-1 bg-gray-100 dark:bg-navy-700 rounded-lg p-1 w-fit" role="tablist">
-        {(["overview", "devices", "chain"] as Tab[]).map((t) => (
+        {(["overview", "devices", "chain", "network"] as Tab[]).map((t) => (
           <button
             key={t}
             role="tab"
@@ -325,6 +326,9 @@ export default function CaseDetailPage() {
         ))}
       </div>
 
+      {activeTab === "network" && <CaseGraph caseId={caseId} />}
+
+      {activeTab !== "network" && (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main column */}
         <div className="lg:col-span-2 space-y-6">
@@ -842,6 +846,7 @@ export default function CaseDetailPage() {
           </section>
         </aside>
       </div>
+      )}
     </div>
   );
 }

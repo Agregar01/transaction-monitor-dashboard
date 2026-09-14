@@ -125,8 +125,9 @@ function DeviceRow({ d }: { d: DeviceSharingSignal }) {
               <p className="text-sm text-gray-400 py-1">Couldn&apos;t load associations for this device.</p>
             ) : (
               <div className="space-y-4 py-1">
-                {(data.iccids.length > 0 || data.imeis.length > 0 || data.mnos.length > 0) && (
+                {(data.iccids.length > 0 || data.msisdns.length > 0 || data.imeis.length > 0 || data.mnos.length > 0) && (
                   <div className="space-y-1.5">
+                    <IdChips label="Phone (MSISDN)" values={data.msisdns} />
                     <IdChips label="SIM (ICCID)" values={data.iccids} />
                     <IdChips label="Handset (IMEI)" values={data.imeis} />
                     <IdChips label="Carrier (MNO)" values={data.mnos} />
@@ -142,6 +143,7 @@ function DeviceRow({ d }: { d: DeviceSharingSignal }) {
                     <table className="w-full max-w-2xl">
                       <thead>
                         <tr>
+                          <th className="text-left text-[11px] uppercase tracking-wider text-gray-400 pb-1 pr-4">Customer</th>
                           <th className="text-left text-[11px] uppercase tracking-wider text-gray-400 pb-1 pr-4">Customer ID</th>
                           <th className="text-left text-[11px] uppercase tracking-wider text-gray-400 pb-1 pr-4">Txns</th>
                           <th className="text-left text-[11px] uppercase tracking-wider text-gray-400 pb-1 pr-4">First seen</th>
@@ -151,7 +153,8 @@ function DeviceRow({ d }: { d: DeviceSharingSignal }) {
                       <tbody>
                         {data.customers.map((c) => (
                           <tr key={c.customer_id}>
-                            <td className="py-1 pr-4 font-mono text-[13px] text-gray-900 dark:text-white">{c.customer_id}</td>
+                            <td className="py-1 pr-4 text-[13px] text-gray-900 dark:text-white">{c.name || <span className="text-gray-400">—</span>}</td>
+                            <td className="py-1 pr-4 font-mono text-[13px] text-gray-500 dark:text-gray-400">{c.customer_id}</td>
                             <td className="py-1 pr-4 text-[13px] text-gray-700 dark:text-gray-300">{c.transactions}</td>
                             <td className="py-1 pr-4 text-[13px] text-gray-500 dark:text-gray-400">{fmtDate(c.first_seen)}</td>
                             <td className="py-1 text-[13px] text-gray-500 dark:text-gray-400">{fmtDate(c.last_seen)}</td>

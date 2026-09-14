@@ -1060,8 +1060,49 @@ export interface BehavioralRiskSummary {
   total_sim_swaps: number;
 }
 
+// ─── Case entity-network graph (GET /cases/{id}/graph) ───────────────────────
+
+export type CaseGraphNodeType = "case" | "alert" | "customer" | "device" | "sim" | "handset";
+
+export interface CaseGraphNode {
+  id: string;
+  type: CaseGraphNodeType;
+  label: string;
+  // Present on some node types:
+  in_case?: boolean;          // customer: a subject of this case (vs. connected via a shared device)
+  name?: string | null;       // customer: display name (masked unless caller may see raw PII)
+  phone?: string | null;      // customer: phone (masked)
+  risk_level?: string | null; // customer
+  is_pep?: boolean;           // customer
+  msisdn?: string | null;     // sim: the phone number on the SIM (masked)
+  distinct_customers?: number; // device
+  priority?: string;          // alert
+  status?: string;            // alert / case
+  risk_score?: number;        // alert
+  case_type?: string;         // case
+}
+
+export interface CaseGraphEdge {
+  source: string;
+  target: string;
+  type: "has_alert" | "subject" | "used_device" | "sim" | "handset" | string;
+}
+
+export interface CaseGraph {
+  case_id: string;
+  nodes: CaseGraphNode[];
+  edges: CaseGraphEdge[];
+  stats: {
+    customers: number;
+    connected_customers: number;
+    devices: number;
+    alerts: number;
+  };
+}
+
 export interface DeviceAssociatedCustomer {
   customer_id: string;
+  name: string | null; // display name, masked unless caller may see raw PII
   transactions: number;
   first_seen: string | null;
   last_seen: string | null;
@@ -1073,6 +1114,7 @@ export interface DeviceAssociations {
   distinct_customers: number;
   customers: DeviceAssociatedCustomer[];
   iccids: string[];
+  msisdns: string[];
   imeis: string[];
   mnos: string[];
 }

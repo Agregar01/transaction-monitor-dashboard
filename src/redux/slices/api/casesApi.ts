@@ -10,6 +10,7 @@ import type {
   CaseNote,
   CaseDeviceHistory,
   CaseTransactionChain,
+  CaseGraph,
   MutationResponse,
 } from "@/types/api";
 
@@ -133,6 +134,9 @@ export const casesApi = baseApi.injectEndpoints({
       query: ({ case_id, depth = 2 }) =>
         `/cases/${case_id}/transaction-chain?depth=${depth}`,
     }),
+    getCaseGraph: b.query<CaseGraph, string>({
+      query: (case_id) => `/cases/${case_id}/graph`,
+    }),
   }),
 });
 
@@ -152,4 +156,5 @@ export const {
   useDeleteCaseNoteMutation,
   useGetCaseDeviceHistoryQuery,
   useGetCaseTransactionChainQuery,
+  useGetCaseGraphQuery,
 } = casesApi;
