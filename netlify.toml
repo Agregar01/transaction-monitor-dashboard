@@ -1,6 +1,6 @@
 # Netlify build config for the Next.js (App Router) dashboard.
 #
-# This site uses SSR, middleware, and the BFF proxy under /api/proxy/* — it is
+# This site uses SSR, middleware, and the BFF proxy under /api/proxy/*, so it is
 # NOT a static export. The official @netlify/plugin-nextjs adapter runs the full
 # Next runtime (server routes, middleware, dynamic routes) on Netlify Functions.
 #
@@ -8,9 +8,19 @@
 # relying on Netlify's framework auto-detection, which is what let newly-added
 # routes 404 on a stale build.
 #
-# Required environment variable (set in Site config → Environment variables):
-#   BACKEND_URL = https://monitor.agregartech.com   (the FastAPI origin the
-#   proxy forwards to; without it every /api/proxy call returns 503)
+# Required environment variable: BACKEND_URL, the FastAPI origin the proxy
+# forwards to (without it every /api/proxy call returns 503). The proxy reads
+# it at RUNTIME inside Netlify Functions, and env set in this file only reaches
+# the build, so BACKEND_URL must be set in the Netlify UI (Site config →
+# Environment variables), scoped per deploy context:
+#   Production                       -> https://monitor.agregartech.com
+#   Branch deploy `staging`          -> https://monitor-staging.agregartech.com
+#   Deploy Previews                  -> https://monitor-staging.agregartech.com
+# Previews must never point at production: a PR build would read and act on
+# live AML cases.
+#
+# NEXT_PUBLIC_APP_ENV is inlined at build time, so the contexts below work for
+# it. It drives the non-production banner (src/components/EnvironmentBanner.tsx).
 
 [build]
   command = "npm run build"
@@ -18,3 +28,12 @@
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+
+[context.production.environment]
+  NEXT_PUBLIC_APP_ENV = "production"
+
+[context.staging.environment]
+  NEXT_PUBLIC_APP_ENV = "staging"
+
+[context.deploy-preview.environment]
+  NEXT_PUBLIC_APP_ENV = "preview"
