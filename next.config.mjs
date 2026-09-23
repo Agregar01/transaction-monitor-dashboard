@@ -8,8 +8,23 @@ const KYC_ORIGINS = [
 // Permissions-Policy allowlist syntax: self + quoted origins.
 const KYC_ALLOWLIST = ["self", ...KYC_ORIGINS.map((o) => `"${o}"`)].join(" ");
 
+// Host of the backend this build talks to, inlined so the environment banner
+// can warn when a non-production build points at the production backend.
+// BACKEND_URL (a Netlify UI variable) is available at build time too; if it is
+// changed in the UI, redeploy so this value follows.
+const BACKEND_HOST = (() => {
+  try {
+    return new URL(process.env.BACKEND_URL || "").hostname;
+  } catch {
+    return "";
+  }
+})();
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  env: {
+    NEXT_PUBLIC_BACKEND_HOST: BACKEND_HOST,
+  },
   // Trim barrel imports: @heroicons/react is imported by ~16 files via the
   // /24/outline barrel. optimizePackageImports rewrites these to per-icon
   // paths so only the icons actually used land in the bundle.

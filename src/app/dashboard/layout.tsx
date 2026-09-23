@@ -97,7 +97,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <div className="min-h-screen bg-gray-50 dark:bg-navy-900">
         <Sidebar />
         <div className="lg:ml-64 flex flex-col min-h-screen">
-          <div className="sticky top-0 z-10 hidden lg:block">
+          <div className="sticky top-[var(--env-banner-h,0px)] z-10 hidden lg:block">
             <TopBar />
           </div>
           <main id="main-content" className="flex-1 p-4 pt-16 lg:pt-6 lg:p-8">
