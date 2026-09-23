@@ -16,11 +16,13 @@
 #   Production                       -> https://monitor.agregartech.com
 #   Branch deploy `staging`          -> https://monitor-staging.agregartech.com
 #   Deploy Previews                  -> https://monitor-staging.agregartech.com
+#   Branch deploys (all)             -> https://monitor-staging.agregartech.com
 # Previews must never point at production: a PR build would read and act on
 # live AML cases.
 #
 # NEXT_PUBLIC_APP_ENV is inlined at build time, so the contexts below work for
-# it. It drives the non-production banner (src/components/EnvironmentBanner.tsx).
+# it. It drives the non-production banner (src/components/EnvironmentBanner.tsx),
+# which turns red if a non-production build is pointed at the production backend.
 
 [build]
   command = "npm run build"
@@ -37,3 +39,10 @@
 
 [context.deploy-preview.environment]
   NEXT_PUBLIC_APP_ENV = "preview"
+
+# Any other branch deploy (the `staging` block above wins for that branch).
+[context.branch-deploy.environment]
+  NEXT_PUBLIC_APP_ENV = "branch"
+
+[context.dev.environment]
+  NEXT_PUBLIC_APP_ENV = "development"

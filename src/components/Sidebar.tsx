@@ -353,13 +353,13 @@ export default function Sidebar() {
       <button
         onClick={() => setMobileOpen(true)}
         aria-label="Open navigation menu"
-        className="fixed top-4 left-4 z-20 lg:hidden p-2 rounded-lg bg-navy text-white shadow-lg"
+        className="fixed top-[calc(1rem+var(--env-banner-h,0px))] left-4 z-20 lg:hidden p-2 rounded-lg bg-navy text-white shadow-lg"
       >
         <Bars3Icon className="h-6 w-6" aria-hidden="true" />
       </button>
 
       {mobileOpen && (
-        <div className="fixed inset-0 z-40 lg:hidden">
+        <div className="fixed inset-x-0 bottom-0 top-[var(--env-banner-h,0px)] z-40 lg:hidden">
           <div className="absolute inset-0 bg-black/50" onClick={() => setMobileOpen(false)} />
           <aside className="relative z-50 w-64 h-full bg-navy flex flex-col">
             <button
@@ -374,7 +374,7 @@ export default function Sidebar() {
         </div>
       )}
 
-      <aside className="hidden lg:flex fixed inset-y-0 left-0 z-10 w-64 bg-navy flex-col">
+      <aside className="hidden lg:flex fixed top-[var(--env-banner-h,0px)] bottom-0 left-0 z-10 w-64 bg-navy flex-col">
         <SidebarContent />
       </aside>
     </>
