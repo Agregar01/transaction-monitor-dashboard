@@ -10,6 +10,7 @@ const NAV = [
   { name: "Rules", href: "/dashboard/rules", icon: HomeIcon },
   { name: "Users & Roles", href: "/dashboard/users", icon: HomeIcon },
   { name: "Settings", href: "/dashboard/settings", icon: HomeIcon },
+  { name: "Travel Rule", href: "/dashboard/travel-rule", icon: HomeIcon },
 ];
 
 // Flat permission sets as /auth/me would resolve them for each role.
@@ -43,6 +44,13 @@ describe("filterNavByPermissions", () => {
       expect(visible).toContain("/dashboard");
       expect(visible).toContain("/dashboard/settings");
     }
+  });
+
+  it("shows Travel Rule only with view_travel_rule", () => {
+    expect(filterNavByPermissions(NAV, ANALYST).map((i) => i.href)).not.toContain("/dashboard/travel-rule");
+    expect(filterNavByPermissions(NAV, [...ANALYST, "view_travel_rule"]).map((i) => i.href)).toContain(
+      "/dashboard/travel-rule",
+    );
   });
 
   it("with no permissions, only the empty-policy links survive", () => {

@@ -52,6 +52,8 @@ export const ALLOWED_PREFIXES = [
   "/api/v1/kyc/",
   "/api/v1/notifications/",
   "/api/v1/simulations/",
+  // Virtual asset Travel Rule (records, counterparty register, wallets, profiles, MI).
+  "/api/v1/travel-rule/",
 ] as const;
 
 export const CSRF_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);

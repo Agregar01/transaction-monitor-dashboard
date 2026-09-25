@@ -43,6 +43,7 @@ import {
   CircleStackIcon,
   PresentationChartLineIcon,
   BeakerIcon,
+  ArrowsRightLeftIcon,
 } from "@heroicons/react/24/outline";
 import { effectivePersona, PERSONA_META, type Persona } from "@/lib/personas";
 
@@ -93,6 +94,7 @@ const NAV = {
   regulator: { name: "Regulator Dashboard", href: "/dashboard/regulator", icon: ScaleIcon },
   filings: { name: "Filed Reports", href: "/dashboard/regulator/filings", icon: DocumentCheckIcon },
   dataLake: { name: "Data Lake", href: "/dashboard/data-lake", icon: CircleStackIcon },
+  travelRule: { name: "Travel Rule", href: "/dashboard/travel-rule", icon: ArrowsRightLeftIcon },
 } satisfies Record<string, NavItem>;
 
 type NavSectionDef = { label: string; items: NavItem[] };
@@ -112,7 +114,7 @@ const PERSONA_SECTIONS: Record<Persona, NavSectionDef[]> = {
   ],
   client_admin: [
     { label: "Monitor", items: [NAV.overview, NAV.alerts, NAV.cases, NAV.transactions, NAV.customers, NAV.kyc] },
-    { label: "Compliance", items: [NAV.str, NAV.ctr, NAV.approvals, NAV.reports, NAV.executive, NAV.behavioral, NAV.geo, NAV.watchlists, NAV.sanctions] },
+    { label: "Compliance", items: [NAV.str, NAV.ctr, NAV.travelRule, NAV.approvals, NAV.reports, NAV.executive, NAV.behavioral, NAV.geo, NAV.watchlists, NAV.sanctions] },
     // Tenants can view + tune detection rules for their own institution (backend
     // scopes the edit). ML Ops (shadow/models/drift) stays Agregar-only.
     { label: "Detection", items: [NAV.rules, NAV.simulator] },
@@ -120,14 +122,14 @@ const PERSONA_SECTIONS: Record<Persona, NavSectionDef[]> = {
   ],
   compliance: [
     { label: "Monitor", items: [NAV.overview, NAV.alerts, NAV.cases, NAV.kyc] },
-    { label: "Compliance", items: [NAV.str, NAV.ctr, NAV.approvals, NAV.reports, NAV.behavioral, NAV.watchlists, NAV.sanctions] },
+    { label: "Compliance", items: [NAV.str, NAV.ctr, NAV.travelRule, NAV.approvals, NAV.reports, NAV.behavioral, NAV.watchlists, NAV.sanctions] },
     { label: "Detection", items: [NAV.simulator] },
     { label: "Account", items: [NAV.audit, NAV.settings] },
   ],
   supervisor: [
     { label: "Team", items: [NAV.overview, NAV.alerts, NAV.cases, NAV.transactions, NAV.customers, NAV.kyc] },
     // Supervisors review filed STR/CTR reports (read/file STR via FILE_STR; CTR read-only via VIEW_CASES).
-    { label: "Compliance", items: [NAV.str, NAV.ctr] },
+    { label: "Compliance", items: [NAV.str, NAV.ctr, NAV.travelRule] },
     { label: "Analytics", items: [NAV.reports, NAV.executive, NAV.behavioral, NAV.geo] },
     { label: "Detection", items: [NAV.simulator] },
     { label: "Account", items: [NAV.settings] },
@@ -142,11 +144,11 @@ const PERSONA_SECTIONS: Record<Persona, NavSectionDef[]> = {
   ],
   auditor: [
     { label: "Review", items: [NAV.overview, NAV.audit, NAV.reports, NAV.executive] },
-    { label: "Casework (read-only)", items: [NAV.alerts, NAV.cases] },
+    { label: "Casework (read-only)", items: [NAV.alerts, NAV.cases, NAV.travelRule] },
     { label: "Account", items: [NAV.settings] },
   ],
   analyst: [
-    { label: "My Work", items: [NAV.overview, NAV.alerts, NAV.cases, NAV.transactions, NAV.customers, NAV.kyc] },
+    { label: "My Work", items: [NAV.overview, NAV.alerts, NAV.cases, NAV.transactions, NAV.customers, NAV.kyc, NAV.travelRule] },
     { label: "Detection", items: [NAV.simulator] },
     { label: "Account", items: [NAV.settings] },
   ],
@@ -202,6 +204,7 @@ const PERMISSION_NAV_MAP: Record<string, string[]> = {
   "/dashboard/regulator":          ["view_regulator_filings"],
   "/dashboard/regulator/filings":  ["view_regulator_filings"],
   "/dashboard/data-lake":          ["view_audit_trail"],
+  "/dashboard/travel-rule":        ["view_travel_rule"],
 };
 
 export function filterNavByPermissions(items: NavItem[], permissions: string[]): NavItem[] {

@@ -187,6 +187,8 @@ export interface Transaction {
   flagged: boolean;
   alert_id?: string | null;
   created_at?: string;
+  /** Travel Rule summary (detail view only): VA record verdict or fiat R.16 check. */
+  travel_rule?: TransactionTravelRuleSummary | null;
 }
 
 export interface TransactionTimelineEvent {
@@ -1118,3 +1120,252 @@ export interface DeviceAssociations {
   imeis: string[];
   mnos: string[];
 }
+
+// ─── Virtual asset Travel Rule (GET/POST /travel-rule/*) ───
+
+export type TravelRuleDirection = "OUTBOUND" | "INBOUND";
+export type TravelRuleDisposition = "PROCEED" | "HOLD" | "BLOCK" | "SUSPEND" | "RETURN" | "PENDING_INFO";
+export type TravelRuleMode = "SHADOW" | "ENFORCE";
+export type TravelRuleResolution =
+  | "EXECUTE"
+  | "SUSPEND"
+  | "REJECT_RETURN"
+  | "REQUEST_INFO"
+  | "CANCEL"
+  | "OVERRIDE_RELEASE"
+  | "CLEAR_SCREENING_FALSE_POSITIVE";
+
+/** List row: never contains PII (no wallets, no payload). */
+export interface TravelRuleRecordListItem {
+  id: string;
+  transaction_id: string;
+  direction: TravelRuleDirection;
+  asset_symbol: string;
+  network: string;
+  amount: number | string | null;
+  status: string;
+  disposition: TravelRuleDisposition;
+  threshold_band: "ABOVE" | "BELOW";
+  enforcement_mode: TravelRuleMode;
+  exception_open: boolean;
+  missing_count: number;
+  reason_codes: string[];
+  screening_status: string;
+  counterparty_type: string;
+  counterparty_vasp_id: string | null;
+  counterparty_name: string | null;
+  profile_jurisdiction: string;
+  resolution: string | null;
+  info_deadline_at: string | null;
+  created_at: string;
+}
+
+export interface TravelRuleRecordList {
+  items: TravelRuleRecordListItem[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface TravelRuleEvent {
+  id: string;
+  event_type: string;
+  from_status: string | null;
+  to_status: string | null;
+  source: string;
+  actor_user_id: string | null;
+  protocol_state_raw: string | null;
+  details: Record<string, unknown> | null;
+  occurred_at: string | null;
+  recorded_at: string;
+}
+
+export interface TravelRuleRecordDetail extends TravelRuleRecordListItem {
+  amount_native: number | string | null;
+  fx_rate: number | string | null;
+  fx_source: string | null;
+  originator_wallet: string | null;
+  beneficiary_wallet: string | null;
+  wallet_memo: string | null;
+  tx_hash: string | null;
+  tx_output_index: number | null;
+  counterparty_identification_method: string;
+  counterparty_dd_status: string | null;
+  counterparty_risk_rating: string | null;
+  protocol: string | null;
+  protocol_reference: string | null;
+  ivms101_payload: Record<string, unknown> | null;
+  ivms101_version: string | null;
+  profile_version: number;
+  profile_legal_status: string;
+  missing_fields: string[];
+  ivms_errors: string[];
+  name_alignment_score: number | null;
+  screening_details: Record<string, unknown> | null;
+  analytics_risk_score: number | null;
+  tr_sent_at: string | null;
+  tr_received_at: string | null;
+  onchain_broadcast_at: string | null;
+  onchain_confirmed_at: string | null;
+  post_facto: boolean;
+  resolution_reason: string | null;
+  resolved_by: string | null;
+  resolved_at: string | null;
+  retention_until: string | null;
+  legal_hold: boolean;
+  purged_at: string | null;
+  customer_id: string | null;
+  allowed_resolutions: TravelRuleResolution[];
+  events: TravelRuleEvent[];
+}
+
+export interface TravelRuleListParams {
+  status?: string;
+  disposition?: string;
+  exception_open?: boolean;
+  direction?: string;
+  counterparty_vasp_id?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface TravelRuleResolveResult {
+  applied: boolean;
+  approval_id: string | null;
+  disposition: string;
+  status: string;
+}
+
+export interface CounterpartyVaspReview {
+  id: string;
+  vasp_id: string;
+  review_type: string;
+  proposed_outcome: string;
+  risk_rating: string;
+  checklist: Record<string, unknown>;
+  evidence_notes: string | null;
+  next_review_at: string | null;
+  status: string;
+  reviewed_by: string | null;
+  approval_request_id: string | null;
+  created_at: string;
+  applied_at: string | null;
+}
+
+export interface CounterpartyVasp {
+  id: string;
+  legal_name: string;
+  lei: string | null;
+  registration_number: string | null;
+  registration_authority: string | null;
+  country: string | null;
+  licence_status: string;
+  licence_source: string | null;
+  licence_checked_at: string | null;
+  travel_rule_protocols: string[];
+  sanctions_status: string;
+  risk_rating: string | null;
+  dd_status: string;
+  dd_approved_at: string | null;
+  dd_next_review_at: string | null;
+  confidentiality_assessed: boolean;
+  notes: string | null;
+  auto_created: boolean;
+  created_at: string;
+  updated_at: string;
+  failure_count?: number | null;
+  reviews?: CounterpartyVaspReview[] | null;
+}
+
+export interface CounterpartyVaspInput {
+  legal_name?: string;
+  lei?: string | null;
+  registration_number?: string | null;
+  registration_authority?: string | null;
+  country?: string | null;
+  licence_status?: string;
+  licence_source?: string | null;
+  travel_rule_protocols?: string[];
+  confidentiality_assessed?: boolean;
+  notes?: string | null;
+  sanctions_status?: string;
+}
+
+export interface CounterpartyReviewInput {
+  review_type: "INITIAL" | "PERIODIC" | "TRIGGERED";
+  proposed_outcome: "APPROVED" | "RESTRICTED" | "REJECTED";
+  risk_rating: "LOW" | "MEDIUM" | "HIGH" | "PROHIBITED";
+  checklist: Record<string, boolean>;
+  evidence_notes?: string | null;
+  next_review_at?: string | null;
+}
+
+export interface TravelRuleProfile {
+  jurisdiction_code: string;
+  version: number;
+  legal_status: string;
+  source_reference: string;
+  currency: string;
+  threshold_amount: number | string | null;
+  data_set_version: string;
+  unhosted_policy: string;
+  ownership_proof_threshold: number | string | null;
+  unregistered_counterparty_policy: string;
+  inbound_missing_info_policy: string;
+  inbound_grace_minutes: number;
+  request_info_deadline_hours: number;
+  stale_proceed_hours: number;
+  repeat_offender_threshold: number;
+  repeat_offender_window_days: number;
+  retention_years: number;
+  is_builtin: boolean;
+}
+
+export interface TravelRuleMI {
+  period: { from: string; to: string };
+  transfers: {
+    count: number;
+    value: number;
+    compliant_count: number;
+    compliant_value: number;
+    compliant_pct_count: number | null;
+    compliant_pct_value: number | null;
+  };
+  timeliness: { with_both_timestamps: number; on_time: number; on_time_pct: number | null };
+  missing_fields: Record<string, number>;
+  exceptions: {
+    opened_in_period: number;
+    open_total: number;
+    open_by_age: { under_1d: number; "1d_to_7d": number; over_7d: number };
+    resolutions: Record<string, number>;
+  };
+  exposure: {
+    unhosted_count: number;
+    unhosted_value: number;
+    non_approved_counterparty_count: number;
+    non_approved_counterparty_value: number;
+  };
+  counterparties: {
+    repeat_offenders: { id: string; legal_name: string; failures: number }[];
+    reviews_overdue: number;
+  };
+  by_jurisdiction: Record<string, number>;
+}
+
+/** Summary on GET /transactions/{id} (`travel_rule`). */
+export type TransactionTravelRuleSummary =
+  | {
+      kind: "VIRTUAL_ASSET";
+      record_id: string | null;
+      status?: string;
+      disposition: string | null;
+      mode?: TravelRuleMode;
+      threshold_band?: string;
+      missing_fields?: string[];
+      reason_codes: string[];
+      exception_open?: boolean;
+      asset_symbol?: string;
+      network?: string;
+      direction?: TravelRuleDirection;
+    }
+  | { kind: "FIAT_R16"; required: boolean; compliant: boolean; missing_fields: string[] };

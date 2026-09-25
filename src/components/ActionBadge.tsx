@@ -42,6 +42,37 @@ const variantClasses: Record<string, string> = {
   HIGH: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-200",
   MEDIUM: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200",
   LOW: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200",
+
+  // Virtual asset Travel Rule dispositions
+  PROCEED: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200",
+  HOLD: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200",
+  SUSPEND: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200",
+  PENDING_INFO: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200",
+  BLOCK: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-200",
+  RETURN: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-200",
+
+  // Travel Rule lifecycle statuses (neutral unless terminal-good)
+  AWAITING_COUNTERPARTY: "bg-slate-100 text-slate-700 dark:bg-slate-700/40 dark:text-slate-200",
+  AWAITING_DATA: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200",
+  SENT: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200",
+  ACKNOWLEDGED: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200",
+  ACCEPTED: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200",
+  DECLINED: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-200",
+  REPAIR_REQUESTED: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200",
+  CANCELLED: "bg-slate-100 text-slate-500 dark:bg-slate-700/30 dark:text-slate-400",
+  COMPLETED: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200",
+  INCOMPLETE: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200",
+  // Counterparty due diligence
+  NOT_STARTED: "bg-slate-100 text-slate-700 dark:bg-slate-700/40 dark:text-slate-200",
+  IN_REVIEW: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200",
+  RESTRICTED: "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-200",
+  PROHIBITED: "bg-red-200 text-red-800 dark:bg-red-900/60 dark:text-red-100",
+  CLEAR: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200",
+  HIT: "bg-red-200 text-red-800 dark:bg-red-900/60 dark:text-red-100",
+  NOT_RUN: "bg-slate-100 text-slate-500 dark:bg-slate-700/30 dark:text-slate-400",
+  ENFORCE: "bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-200",
+  CONFIRMED: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200",
+  UNCONFIRMED: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200",
 };
 
 export default function ActionBadge({ action }: { action: string }) {
