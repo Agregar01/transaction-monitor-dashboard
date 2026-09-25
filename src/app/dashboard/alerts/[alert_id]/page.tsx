@@ -17,6 +17,8 @@ import { useAppSelector } from "@/redux/store";
 import { SkeletonCard } from "@/components/Skeleton";
 import RiskBadge from "@/components/RiskBadge";
 import ActionBadge from "@/components/ActionBadge";
+import TravelRulePanel from "@/components/TravelRulePanel";
+import { isTravelRuleRule } from "@/lib/travelRule";
 import UserPicker from "@/components/UserPicker";
 import { showToast } from "@/components/Toast";
 import type { AlertResolution, TriggeredRuleDetail } from "@/types/api";
@@ -296,6 +298,11 @@ export default function AlertDetailPage() {
               </dd>
             </dl>
           </section>
+
+          {(transaction.channel === "VirtualAsset" ||
+            alert.triggered_rules.some((r) => isTravelRuleRule(r.rule_id))) && (
+            <TravelRulePanel transactionId={transaction.transaction_id} />
+          )}
 
           {Object.keys(alert.baseline_comparisons ?? {}).length > 0 && (
             <section className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-6">

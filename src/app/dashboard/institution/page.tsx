@@ -9,6 +9,7 @@ import {
   type CaseAccessMode,
 } from "@/redux/slices/api/institutionsApi";
 import QueryState from "@/components/QueryState";
+import VaTravelRuleCard from "@/components/VaTravelRuleCard";
 import { showToast } from "@/components/Toast";
 import { errorMessage } from "@/lib/errors";
 import { CheckCircleIcon } from "@heroicons/react/24/solid";
@@ -233,6 +234,8 @@ export default function InstitutionPolicyPage() {
             </div>
           )}
         </section>
+
+        {data && <VaTravelRuleCard institution={data} canManage={canManage} />}
       </QueryState>
     </div>
   );

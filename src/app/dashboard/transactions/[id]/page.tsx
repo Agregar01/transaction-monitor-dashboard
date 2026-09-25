@@ -9,6 +9,7 @@ import {
 } from "@/redux/slices/api/transactionsApi";
 import { SkeletonCard } from "@/components/Skeleton";
 import RiskBadge from "@/components/RiskBadge";
+import TravelRulePanel from "@/components/TravelRulePanel";
 
 export default function TransactionDetailPage() {
   const params = useParams<{ id: string }>();
@@ -80,6 +81,8 @@ export default function TransactionDetailPage() {
           <dd className="md:col-span-2">{tx.flagged ? "Yes" : "No"}</dd>
         </dl>
       </section>
+
+      <TravelRulePanel summary={tx.travel_rule ?? null} />
 
       <section className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-6">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">
