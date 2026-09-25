@@ -899,5 +899,101 @@ export const RULE_CATALOG: Record<string, RuleCatalogEntry> = {
     "riskContribution": 55,
     "trigger": "( country code == \"KE\" and channel == \"Momo\" and receiver country != country code and receiver country and amount > 500 )",
     "reason": "Kenyan mobile money cross-border transfer of amount to receiver country \u2014 M-Pesa/MoMo cross-border corridors require FRC screening; frequently exploited for hawala-style settlement"
+  },
+  "R-VA01": {
+    "name": "VA Travel Rule data missing (outbound)",
+    "category": "Compliance",
+    "severity": "Critical",
+    "riskContribution": 80,
+    "trigger": "direction == OUTBOUND and travel rule compliant is False (ENFORCE mode)",
+    "reason": "Outbound virtual asset transfer is missing required Travel Rule fields; the originating VASP must not execute it (FATF INR.16 para 23)"
+  },
+  "R-VA02": {
+    "name": "VA Travel Rule data missing (inbound)",
+    "category": "Compliance",
+    "severity": "High",
+    "riskContribution": 60,
+    "trigger": "direction == INBOUND and travel rule compliant is False (ENFORCE mode)",
+    "reason": "Inbound virtual asset transfer arrived without required Travel Rule fields; apply the risk-based execute / suspend / return policy and follow up"
+  },
+  "R-VA03": {
+    "name": "Counterparty VASP not due-diligenced",
+    "category": "Compliance",
+    "severity": "High",
+    "riskContribution": 50,
+    "trigger": "counterparty type == VASP and due diligence status != APPROVED",
+    "reason": "FATF requires due diligence on the counterparty VASP before transacting"
+  },
+  "R-VA04": {
+    "name": "High-risk or prohibited counterparty VASP",
+    "category": "Compliance",
+    "severity": "Critical",
+    "riskContribution": 85,
+    "trigger": "counterparty risk rating in (HIGH, PROHIBITED)",
+    "reason": "The counterparty VASP is rated high risk or prohibited in the counterparty register"
+  },
+  "R-VA05": {
+    "name": "Post-facto Travel Rule transmission",
+    "category": "Compliance",
+    "severity": "High",
+    "riskContribution": 60,
+    "trigger": "Travel Rule data sent after the on-chain broadcast",
+    "reason": "FATF requires Travel Rule data before or simultaneously with the transfer; post-facto submission is a breach"
+  },
+  "R-VA06": {
+    "name": "Unhosted wallet without verified ownership",
+    "category": "Compliance",
+    "severity": "High",
+    "riskContribution": 55,
+    "trigger": "counterparty type == UNHOSTED and ownership not verified and band == ABOVE",
+    "reason": "Above-threshold transfer with an unhosted wallet whose ownership by the customer has not been verified"
+  },
+  "R-VA07": {
+    "name": "Sanctioned wallet or counterparty",
+    "category": "Compliance",
+    "severity": "Critical",
+    "riskContribution": 100,
+    "trigger": "intake screening == HIT (wallet on SANCTIONED_VA_ADDRESSES or counterparty name sanctions match)",
+    "reason": "Counterparty name or a wallet address matched a sanctions list at intake"
+  },
+  "R-VA08": {
+    "name": "Repeat-offender counterparty VASP",
+    "category": "Compliance",
+    "severity": "High",
+    "riskContribution": 50,
+    "trigger": "counterparty Travel Rule failures in window >= profile repeat-offender threshold",
+    "reason": "The counterparty VASP repeatedly fails to send complete or timely Travel Rule data; warn, restrict or terminate the relationship"
+  },
+  "R-VA09": {
+    "name": "High blockchain analytics risk",
+    "category": "Compliance",
+    "severity": "High",
+    "riskContribution": 60,
+    "trigger": "analytics risk score >= 75",
+    "reason": "Client-supplied blockchain analytics score indicates high-risk exposure"
+  },
+  "R-VA10": {
+    "name": "Customer name misalignment in Travel Rule data",
+    "category": "Compliance",
+    "severity": "Medium",
+    "riskContribution": 40,
+    "trigger": "KYC name match score < 70",
+    "reason": "The customer-side name in the Travel Rule payload does not match the KYC name (possible misdirected or third-party transfer)"
+  },
+  "R-VA11": {
+    "name": "Below-threshold VA structuring to one wallet",
+    "category": "Compliance",
+    "severity": "High",
+    "riskContribution": 65,
+    "trigger": "band == BELOW and 24h outbound sum to the same beneficiary wallet >= Travel Rule threshold",
+    "reason": "Below-threshold transfers to one wallet add up to the Travel Rule threshold within 24 hours (structuring)"
+  },
+  "R-VA12": {
+    "name": "Broadcast against Travel Rule disposition",
+    "category": "Compliance",
+    "severity": "Critical",
+    "riskContribution": 100,
+    "trigger": "broadcast, tx hash or completion reported while the ENFORCE disposition says stop",
+    "reason": "The transfer was broadcast while its Travel Rule disposition said not to proceed"
   }
 };
