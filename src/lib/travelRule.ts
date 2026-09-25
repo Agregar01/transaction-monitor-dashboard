@@ -90,6 +90,15 @@ export function humaniseReason(code: string): string {
   return REASONS[code] ?? sentenceCase(code);
 }
 
+/** Informational codes that rarely explain a stop on their own. */
+const INFORMATIONAL_REASONS = new Set(["CP_UNREGISTERED", "IVMS_INVALID"]);
+
+/** The reason worth showing first in a list row. */
+export function primaryReason(reasons: string[]): string | null {
+  if (!reasons.length) return null;
+  return reasons.find((r) => !INFORMATIONAL_REASONS.has(r)) ?? reasons[0];
+}
+
 export type AgeBucket = "under_1d" | "1d_to_7d" | "over_7d";
 
 export function ageBucket(createdAt: string, now: Date = new Date()): AgeBucket {

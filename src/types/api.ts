@@ -159,7 +159,7 @@ export interface Jurisdiction {
 // — and the dropdown source-of-truth in config/constants.ts (TRANSACTION_TYPES,
 // CHANNELS). `| string` keeps them permissive against future additions.
 export type TransactionType = "Deposit" | "Transfer" | "Withdrawal" | string;
-export type Channel = "ATM" | "Bank" | "Card" | "Momo" | "Agent" | string;
+export type Channel = "ATM" | "Bank" | "Card" | "Momo" | "Agent" | "VirtualAsset" | string;
 export type FlowType = "P2P" | "P2M" | "B2P" | "CASH_IN" | "CASH_OUT" | string;
 
 /**

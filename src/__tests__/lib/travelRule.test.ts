@@ -10,6 +10,7 @@ import {
   isFourEyesResolution,
   formatPct,
   isTravelRuleRule,
+  primaryReason,
 } from "@/lib/travelRule";
 
 describe("statusLabel", () => {
@@ -156,5 +157,16 @@ describe("flattenIvmsParty", () => {
   it("returns null for missing parties or payloads", () => {
     expect(flattenIvmsParty(null, "originator")).toBeNull();
     expect(flattenIvmsParty({}, "beneficiary")).toBeNull();
+  });
+});
+
+describe("primaryReason", () => {
+  it("prefers blocking reasons over informational ones", () => {
+    expect(primaryReason(["CP_UNREGISTERED", "MISSING_REQUIRED_FIELDS"])).toBe("MISSING_REQUIRED_FIELDS");
+    expect(primaryReason(["IVMS_INVALID", "CP_DD_NOT_APPROVED"])).toBe("CP_DD_NOT_APPROVED");
+  });
+  it("falls back to the first reason, or null", () => {
+    expect(primaryReason(["CP_UNREGISTERED"])).toBe("CP_UNREGISTERED");
+    expect(primaryReason([])).toBeNull();
   });
 });
