@@ -7,7 +7,7 @@ import QueryState from "@/components/QueryState";
 import TravelRuleTabs from "@/components/TravelRuleTabs";
 import { useVisiblePolling } from "@/hooks/useVisiblePolling";
 import { useGetTravelRuleMIQuery, useListTravelRuleRecordsQuery } from "@/redux/slices/api/travelRuleApi";
-import { ageLabel, formatPct, humaniseReason, primaryReason, statusLabel } from "@/lib/travelRule";
+import { ageLabel, formatPct, humaniseReason, primaryReason, statusLabel, clampOffset } from "@/lib/travelRule";
 import { API_V1 } from "@/config/api";
 import { downloadFile } from "@/lib/download";
 import { showToast } from "@/components/Toast";
@@ -63,6 +63,14 @@ export default function TravelRulePage() {
   const m = mi.data;
   const items = records.data?.items ?? [];
   const total = records.data?.total ?? 0;
+
+  // Closing exceptions shrinks the result set; never leave the user on an empty page past the end.
+  useEffect(() => {
+    if (records.data) {
+      const next = clampOffset(offset, total, PAGE);
+      if (next !== offset) setOffset(next);
+    }
+  }, [records.data, offset, total]);
 
   const exportCsv = async () => {
     try {

@@ -4,16 +4,18 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import ActionBadge from "@/components/ActionBadge";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import { SkeletonCard } from "@/components/Skeleton";
 import { showToast } from "@/components/Toast";
 import { errorMessage } from "@/lib/errors";
+import { identityChangeResetsDd } from "@/lib/travelRule";
 import { useAppSelector } from "@/redux/store";
 import {
   useCreateCounterpartyReviewMutation,
   useGetCounterpartyQuery,
   useUpdateCounterpartyMutation,
 } from "@/redux/slices/api/travelRuleApi";
-import type { CounterpartyReviewInput, CounterpartyVasp } from "@/types/api";
+import type { CounterpartyReviewInput, CounterpartyVasp, CounterpartyVaspInput } from "@/types/api";
 
 const CARD = "bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-6";
 const H2 = "text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3";
@@ -30,33 +32,90 @@ const CHECKLIST: { key: string; label: string }[] = [
 ];
 
 function EditForm({ vasp }: { vasp: CounterpartyVasp }) {
-  const [form, setForm] = useState({
+  const initial = {
+    legal_name: vasp.legal_name,
+    lei: vasp.lei ?? "",
+    registration_number: vasp.registration_number ?? "",
+    registration_authority: vasp.registration_authority ?? "",
+    country: vasp.country ?? "",
     licence_status: vasp.licence_status,
     licence_source: vasp.licence_source ?? "",
     travel_rule_protocols: vasp.travel_rule_protocols.join(", "),
     notes: vasp.notes ?? "",
     confidentiality_assessed: vasp.confidentiality_assessed,
-  });
+  };
+  const [form, setForm] = useState(initial);
+  const [confirmReset, setConfirmReset] = useState(false);
   const [update, { isLoading }] = useUpdateCounterpartyMutation();
-  const save = async () => {
+
+  // Only fields the analyst actually changed are sent (the backend resets due
+  // diligence when an identity field of a reviewed counterparty changes).
+  const changes = (): Record<string, unknown> => {
+    const out: Record<string, unknown> = {};
+    const text = (k: keyof typeof initial) => {
+      const v = String(form[k]).trim();
+      if (v !== String(initial[k]).trim()) out[k] = v || null;
+    };
+    (["legal_name", "lei", "registration_number", "registration_authority", "licence_source", "notes"] as const).forEach(text);
+    if (form.country.trim().toUpperCase() !== initial.country.trim().toUpperCase()) {
+      out.country = form.country.trim().toUpperCase() || null;
+    }
+    if (form.licence_status !== initial.licence_status) out.licence_status = form.licence_status;
+    if (form.confidentiality_assessed !== initial.confidentiality_assessed) {
+      out.confidentiality_assessed = form.confidentiality_assessed;
+    }
+    const protocols = form.travel_rule_protocols.split(",").map((p) => p.trim()).filter(Boolean);
+    if (protocols.join(",") !== vasp.travel_rule_protocols.join(",")) out.travel_rule_protocols = protocols;
+    return out;
+  };
+
+  const doSave = async () => {
+    setConfirmReset(false);
+    const body = changes();
+    if (Object.keys(body).length === 0) {
+      showToast({ type: "info", title: "No changes", message: "Nothing to save." });
+      return;
+    }
     try {
-      await update({
-        id: vasp.id,
-        licence_status: form.licence_status,
-        licence_source: form.licence_source.trim() || null,
-        travel_rule_protocols: form.travel_rule_protocols.split(",").map((s) => s.trim()).filter(Boolean),
-        notes: form.notes.trim() || null,
-        confidentiality_assessed: form.confidentiality_assessed,
-      }).unwrap();
-      showToast({ type: "success", title: "Saved", message: "Counterparty details updated." });
+      const saved = await update({ id: vasp.id, ...(body as CounterpartyVaspInput) }).unwrap();
+      showToast({
+        type: "success",
+        title: "Saved",
+        message:
+          saved.dd_status !== vasp.dd_status
+            ? `Counterparty updated. Due diligence is now ${saved.dd_status.replace(/_/g, " ").toLowerCase()}.`
+            : "Counterparty details updated.",
+      });
     } catch (e) {
       showToast({ type: "error", title: "Save failed", message: errorMessage(e) });
     }
   };
+
+  const save = () => {
+    if (identityChangeResetsDd(vasp.dd_status, changes())) setConfirmReset(true);
+    else void doSave();
+  };
+
+  const field = (key: keyof typeof initial, label: string, extra?: string) => (
+    <label className="text-xs text-gray-500 dark:text-gray-400">
+      {label}
+      <input
+        className={`${INPUT}${extra ?? ""}`}
+        value={String(form[key])}
+        onChange={(e) => setForm({ ...form, [key]: e.target.value })}
+      />
+    </label>
+  );
+
   return (
     <section className={CARD}>
       <h2 className={H2}>Details</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {field("legal_name", "Legal name")}
+        {field("lei", "LEI (20 characters)", " font-mono uppercase")}
+        {field("registration_number", "Registration number")}
+        {field("registration_authority", "Registration authority (GLEIF RA code)")}
+        {field("country", "Country (ISO 3166 alpha-2)", " uppercase")}
         <label className="text-xs text-gray-500 dark:text-gray-400">
           Licence status
           <select className={INPUT} value={form.licence_status} onChange={(e) => setForm({ ...form, licence_status: e.target.value })}>
@@ -65,14 +124,8 @@ function EditForm({ vasp }: { vasp: CounterpartyVasp }) {
             ))}
           </select>
         </label>
-        <label className="text-xs text-gray-500 dark:text-gray-400">
-          Licence source (register URL or document)
-          <input className={INPUT} value={form.licence_source} onChange={(e) => setForm({ ...form, licence_source: e.target.value })} />
-        </label>
-        <label className="text-xs text-gray-500 dark:text-gray-400">
-          Travel Rule protocols (comma separated)
-          <input className={INPUT} value={form.travel_rule_protocols} onChange={(e) => setForm({ ...form, travel_rule_protocols: e.target.value })} />
-        </label>
+        {field("licence_source", "Licence source (register URL or document)")}
+        {field("travel_rule_protocols", "Travel Rule protocols (comma separated)")}
         <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 mt-5">
           <input type="checkbox" checked={form.confidentiality_assessed} onChange={(e) => setForm({ ...form, confidentiality_assessed: e.target.checked })} />
           Confidentiality assessed
@@ -84,10 +137,20 @@ function EditForm({ vasp }: { vasp: CounterpartyVasp }) {
       </div>
       <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
         Due diligence status and risk rating change only through a review approved by a second user.
+        Changing the legal name, LEI, registration number, registration authority or country of a
+        reviewed counterparty resets its due diligence to not started.
       </p>
       <button onClick={save} disabled={isLoading} className="mt-3 px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-600 disabled:opacity-50">
         {isLoading ? "Saving..." : "Save details"}
       </button>
+      <ConfirmDialog
+        open={confirmReset}
+        title="Reset due diligence?"
+        message="You are changing an identity field of a counterparty that has been reviewed. Its due diligence will be reset to not started, and outbound transfers to it will be held until a new review is approved."
+        confirmLabel="Save and reset"
+        onConfirm={() => void doSave()}
+        onCancel={() => setConfirmReset(false)}
+      />
     </section>
   );
 }

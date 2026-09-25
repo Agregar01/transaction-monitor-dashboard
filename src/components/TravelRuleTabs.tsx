@@ -26,14 +26,13 @@ export default function TravelRuleTabs({ subtitle }: { subtitle?: string }) {
             "FATF Travel Rule (R.15 / R.16) evidence for virtual asset transfers: verdicts, exceptions and counterparties."}
         </p>
       </div>
-      <nav className="flex gap-1 border-b border-gray-200 dark:border-navy-600" role="tablist">
+      <nav className="flex gap-1 border-b border-gray-200 dark:border-navy-600 overflow-x-auto" aria-label="Travel Rule sections">
         {TABS.map((t) => (
           <Link
             key={t.href}
             href={t.href}
-            role="tab"
-            aria-selected={active(t.href)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
+            aria-current={active(t.href) ? "page" : undefined}
+            className={`px-4 py-2 text-sm font-medium whitespace-nowrap border-b-2 -mb-px ${
               active(t.href)
                 ? "border-primary text-primary"
                 : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"

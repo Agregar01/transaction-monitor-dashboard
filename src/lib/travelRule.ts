@@ -263,3 +263,52 @@ export function flattenIvmsParty(payload: unknown, side: IvmsSide): FlatParty | 
   const partyAccounts = asList(get(block, "accountNumber")).map(text).filter(Boolean) as string[];
   return { ...party, accounts: partyAccounts.length ? partyAccounts : party.accounts };
 }
+
+// ── Review-fix helpers ──────────────────────────────────────────────────────
+
+const IDENTITY_FIELDS = ["legal_name", "lei", "registration_number", "registration_authority", "country"];
+
+/** True when saving these changes will reset a reviewed counterparty's due diligence (backend rule). */
+export function identityChangeResetsDd(ddStatus: string, changes: Record<string, unknown>): boolean {
+  if (!["APPROVED", "RESTRICTED", "IN_REVIEW"].includes(ddStatus)) return false;
+  return Object.keys(changes).some((k) => IDENTITY_FIELDS.includes(k));
+}
+
+/** Banner text for an UNCONFIRMED profile, stating the threshold the verdict really used. */
+export function unconfirmedProfileNotice(p: {
+  profile_jurisdiction: string;
+  threshold_amount: string | number | null;
+  currency: string | null;
+}): string {
+  const amount = p.threshold_amount === null || p.threshold_amount === undefined ? null : Number(p.threshold_amount);
+  const basis =
+    amount === null || Number.isNaN(amount) || amount <= 0
+      ? "so the full data set is required on every transfer"
+      : `so this verdict uses a placeholder threshold of ${p.currency ?? ""} ${amount.toLocaleString("en-US")}`.replace("  ", " ");
+  return `The ${p.profile_jurisdiction} Travel Rule profile is UNCONFIRMED: the regulator has not published a threshold or data set yet, ${basis}.`;
+}
+
+/** Why an outbound record cannot be released, and how it is cured (null if nothing to cure). */
+export function cureHint(r: { direction: string; reason_codes: string[] }): string | null {
+  if (r.reason_codes.includes("MISSING_REQUIRED_FIELDS")) {
+    return "Missing Travel Rule data cannot be released. Cure it by having the client supply the missing data (a new IVMS101 payload on the record's events endpoint); the record is re-evaluated automatically.";
+  }
+  if (r.reason_codes.includes("SCREENING_NOT_RUN")) {
+    return "Screening could not run because the sanctions lists were not loaded. Once the lists are loaded, the client re-posts the payload and the record is re-screened.";
+  }
+  if (r.reason_codes.includes("PROTOCOL_REJECTED")) {
+    return "The counterparty rejected this transfer. It stays blocked; start a new transfer if needed.";
+  }
+  return null;
+}
+
+/** Keep a list offset inside the result set after rows disappear (e.g. exceptions closed). */
+export function clampOffset(offset: number, total: number, limit: number): number {
+  if (total <= 0) return 0;
+  if (offset < total) return offset;
+  return Math.max(0, Math.floor((total - 1) / limit) * limit);
+}
+
+export function dataTimestampLabel(direction: string): string {
+  return direction === "INBOUND" ? "Data received" : "Data sent";
+}

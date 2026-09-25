@@ -101,11 +101,13 @@ type NavSectionDef = { label: string; items: NavItem[] };
 
 // Each persona's nav, in render order. Backend RLS still scopes the data;
 // this just shapes what each persona is offered.
-const PERSONA_SECTIONS: Record<Persona, NavSectionDef[]> = {
+export const PERSONA_SECTIONS: Record<Persona, NavSectionDef[]> = {
   platform: [
     { label: "Platform", items: [NAV.overview, NAV.institutions] },
     // Rules + ML ops are Agregar-owned (platform assets), not exposed to tenants.
     { label: "Rules & ML", items: [NAV.adminConfig, NAV.rules, NAV.models, NAV.drift, NAV.shadow] },
+    // Travel Rule: cross-tenant exception queue and the platform-owned jurisdiction profiles.
+    { label: "Compliance", items: [NAV.travelRule] },
     { label: "System", items: [NAV.jurisdictions, NAV.dataLake, NAV.audit, NAV.health, NAV.settings] },
   ],
   regulator: [

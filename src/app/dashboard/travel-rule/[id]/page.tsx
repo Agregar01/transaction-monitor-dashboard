@@ -11,6 +11,9 @@ import { downloadFile } from "@/lib/download";
 import { errorMessage } from "@/lib/errors";
 import {
   allowedResolutionLabel,
+  cureHint,
+  dataTimestampLabel,
+  unconfirmedProfileNotice,
   flattenIvmsParty,
   humaniseMissingField,
   humaniseReason,
@@ -20,7 +23,11 @@ import {
   type IvmsSide,
 } from "@/lib/travelRule";
 import { useAppSelector } from "@/redux/store";
-import { useGetTravelRuleRecordQuery, useResolveTravelRuleRecordMutation } from "@/redux/slices/api/travelRuleApi";
+import {
+  useGetTravelRuleRecordQuery,
+  useListTravelRuleProfilesQuery,
+  useResolveTravelRuleRecordMutation,
+} from "@/redux/slices/api/travelRuleApi";
 import type { TravelRuleRecordDetail, TravelRuleResolution } from "@/types/api";
 
 const CARD = "bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-6";
@@ -97,8 +104,14 @@ function ResolutionForm({ record }: { record: TravelRuleRecordDetail }) {
   const [resolve, { isLoading }] = useResolveTravelRuleRecordMutation();
   const options = record.allowed_resolutions;
 
+  const hint = record.direction === "OUTBOUND" ? cureHint(record) : null;
+
   if (options.length === 0) {
-    return <p className="text-sm text-gray-500 dark:text-gray-400">No actions are available for this record in its current state.</p>;
+    return (
+      <p className="text-sm text-gray-500 dark:text-gray-400">
+        {hint ?? "No actions are available for this record in its current state."}
+      </p>
+    );
   }
 
   const submit = async () => {
@@ -119,6 +132,7 @@ function ResolutionForm({ record }: { record: TravelRuleRecordDetail }) {
 
   return (
     <div className="space-y-3">
+      {hint && <p className="text-xs text-gray-600 dark:text-gray-300">{hint}</p>}
       <div className="flex flex-wrap gap-2">
         {options.map((o) => (
           <button
@@ -144,6 +158,7 @@ function ResolutionForm({ record }: { record: TravelRuleRecordDetail }) {
         value={reason}
         onChange={(e) => setReason(e.target.value)}
         rows={3}
+        maxLength={2000}
         placeholder="Reason for the record (at least 10 characters). This is kept as audit evidence."
         className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-800 text-gray-900 dark:text-white"
       />
@@ -163,6 +178,8 @@ export default function TravelRuleRecordPage() {
   const permissions = useAppSelector((s) => s.auth.permissions);
   const canManage = permissions.includes("manage_travel_rule");
   const { data: r, isLoading, isError, error } = useGetTravelRuleRecordQuery(id);
+  const { data: profiles } = useListTravelRuleProfilesQuery();
+  const profile = profiles?.find((p) => p.jurisdiction_code === r?.profile_jurisdiction);
 
   useEffect(() => {
     document.title = "Travel Rule record | Transaction Monitor";
@@ -211,8 +228,11 @@ export default function TravelRuleRecordPage() {
 
       {r.profile_legal_status !== "CONFIRMED" && (
         <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 rounded-xl p-4 text-sm">
-          The {r.profile_jurisdiction} Travel Rule profile is UNCONFIRMED: the regulator has not published a
-          threshold or data set yet, so this verdict applies the FATF USD 1,000 equivalent as a placeholder.
+          {unconfirmedProfileNotice({
+            profile_jurisdiction: r.profile_jurisdiction,
+            threshold_amount: profile?.threshold_amount ?? null,
+            currency: profile?.currency ?? null,
+          })}
         </div>
       )}
       {r.enforcement_mode === "SHADOW" && (
@@ -356,7 +376,7 @@ export default function TravelRuleRecordPage() {
               )}
               <dt className={DT}>Tx hash</dt>
               <dd className={`col-span-2 font-mono text-xs ${DD}`}>{r.tx_hash ?? "not bound yet"}</dd>
-              <dt className={DT}>Data sent</dt>
+              <dt className={DT}>{dataTimestampLabel(r.direction)}</dt>
               <dd className={`col-span-2 ${DD}`}>{fmt(r.tr_sent_at ?? r.tr_received_at)}</dd>
               <dt className={DT}>Broadcast</dt>
               <dd className={`col-span-2 ${DD}`}>{fmt(r.onchain_broadcast_at)}</dd>

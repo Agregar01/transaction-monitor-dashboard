@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import CaseTravelRulePanels from "@/components/CaseTravelRulePanels";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -334,6 +335,8 @@ export default function CaseDetailPage() {
         <div className="lg:col-span-2 space-y-6">
           {/* ── Overview tab ─────────────────────────────────────────────── */}
           {activeTab === "overview" && (<>
+
+          <CaseTravelRulePanels alertIds={(alerts ?? []).map((a) => a.alert_id)} />
 
           {/* Linked alerts */}
           <section className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-6">
