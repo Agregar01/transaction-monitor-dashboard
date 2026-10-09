@@ -73,6 +73,10 @@ const variantClasses: Record<string, string> = {
   ENFORCE: "bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-200",
   CONFIRMED: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200",
   UNCONFIRMED: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200",
+  // Customer wallet ownership
+  VERIFIED: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200",
+  DECLARED: "bg-slate-100 text-slate-700 dark:bg-slate-700/40 dark:text-slate-200",
+  REVOKED: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-200",
 };
 
 export default function ActionBadge({ action }: { action: string }) {

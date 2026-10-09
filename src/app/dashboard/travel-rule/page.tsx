@@ -7,7 +7,19 @@ import QueryState from "@/components/QueryState";
 import TravelRuleTabs from "@/components/TravelRuleTabs";
 import { useVisiblePolling } from "@/hooks/useVisiblePolling";
 import { useGetTravelRuleMIQuery, useListTravelRuleRecordsQuery } from "@/redux/slices/api/travelRuleApi";
-import { ageLabel, formatPct, humaniseReason, primaryReason, statusLabel, clampOffset } from "@/lib/travelRule";
+import {
+  ageLabel,
+  allowedResolutionLabel,
+  defaultMiPeriod,
+  formatPct,
+  humaniseMissingField,
+  humaniseReason,
+  miPeriodParams,
+  primaryReason,
+  statusLabel,
+  clampOffset,
+  topReasons,
+} from "@/lib/travelRule";
 import { API_V1 } from "@/config/api";
 import { downloadFile } from "@/lib/download";
 import { showToast } from "@/components/Toast";
@@ -35,6 +47,40 @@ function money(n: number | null | undefined): string {
   return n == null ? "n/a" : Number(n).toLocaleString(undefined, { maximumFractionDigits: 0 });
 }
 
+/** Compact "label: count" list used by the MI breakdown cards. */
+function CountList({
+  title,
+  rows,
+  empty,
+  render,
+}: {
+  title: string;
+  rows: [string, number][];
+  empty: string;
+  render?: (key: string) => React.ReactNode;
+}) {
+  return (
+    <div className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-5">
+      <p className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">{title}</p>
+      {rows.length === 0 ? (
+        <p className="mt-2 text-sm text-gray-400">{empty}</p>
+      ) : (
+        <ul className="mt-2 space-y-1 text-sm">
+          {rows.map(([k, n]) => (
+            <li key={k} className="flex items-start justify-between gap-3">
+              <span className="text-gray-700 dark:text-gray-300">{render ? render(k) : k}</span>
+              <span className="font-mono text-gray-900 dark:text-white">{n}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+const DATE_INPUT =
+  "px-2 py-1 text-xs border border-gray-200 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-800 text-gray-900 dark:text-white";
+
 export default function TravelRulePage() {
   useEffect(() => {
     document.title = "Travel Rule | Transaction Monitor";
@@ -47,7 +93,10 @@ export default function TravelRulePage() {
   const [offset, setOffset] = useState(0);
   const polling = useVisiblePolling(30000);
 
-  const mi = useGetTravelRuleMIQuery(undefined, { pollingInterval: polling });
+  const [period, setPeriod] = useState(() => defaultMiPeriod());
+  const periodParams = miPeriodParams(period.from, period.to);
+  const periodInvalid = !!period.from && !!period.to && period.from > period.to;
+  const mi = useGetTravelRuleMIQuery(periodParams, { pollingInterval: polling, skip: periodInvalid });
   const records = useListTravelRuleRecordsQuery(
     {
       status: status || undefined,
@@ -74,7 +123,11 @@ export default function TravelRulePage() {
 
   const exportCsv = async () => {
     try {
-      await downloadFile(`${API_V1}/travel-rule/mi/export.csv`, "travel-rule-mi.csv");
+      const qs = new URLSearchParams(periodParams as Record<string, string>).toString();
+      await downloadFile(
+        `${API_V1}/travel-rule/mi/export.csv${qs ? `?${qs}` : ""}`,
+        `travel-rule-mi-${period.from || "start"}-to-${period.to || "now"}.csv`,
+      );
     } catch (e) {
       showToast({ type: "error", title: "Export failed", message: errorMessage(e) });
     }
@@ -85,20 +138,54 @@ export default function TravelRulePage() {
       <TravelRuleTabs />
 
       <section className="space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-            Last 30 days
+            Management information
           </h2>
-          <button
-            onClick={exportCsv}
-            className="px-3 py-1.5 text-xs font-medium border border-gray-200 dark:border-navy-500 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-navy-600"
-          >
-            Export MI (CSV)
-          </button>
+          <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+            <label className="inline-flex items-center gap-1">
+              From
+              <input
+                type="date"
+                aria-label="MI period start"
+                className={DATE_INPUT}
+                value={period.from}
+                max={period.to || undefined}
+                onChange={(e) => setPeriod({ ...period, from: e.target.value })}
+              />
+            </label>
+            <label className="inline-flex items-center gap-1">
+              To
+              <input
+                type="date"
+                aria-label="MI period end"
+                className={DATE_INPUT}
+                value={period.to}
+                min={period.from || undefined}
+                onChange={(e) => setPeriod({ ...period, to: e.target.value })}
+              />
+            </label>
+            <button
+              onClick={() => setPeriod(defaultMiPeriod())}
+              className="px-2 py-1 text-xs text-primary hover:underline"
+            >
+              Last 30 days
+            </button>
+            <button
+              onClick={exportCsv}
+              disabled={periodInvalid}
+              className="px-3 py-1.5 text-xs font-medium border border-gray-200 dark:border-navy-500 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-navy-600 disabled:opacity-50"
+            >
+              Export MI (CSV)
+            </button>
+          </div>
         </div>
+        {periodInvalid && (
+          <p className="text-xs text-red-600 dark:text-red-300">The start date must be on or before the end date.</p>
+        )}
         <QueryState isLoading={mi.isLoading} isError={mi.isError} error={mi.error} rows={2} cols={3}>
           {m && (
-            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
               <Tile
                 label="Compliant"
                 value={formatPct(m.transfers.compliant_pct_count)}
@@ -118,9 +205,15 @@ export default function TravelRulePage() {
                 tone={m.exceptions.open_by_age.over_7d > 0 ? "bad" : m.exceptions.open_total > 0 ? "warn" : undefined}
               />
               <Tile
+                label="Compliant by value"
+                value={formatPct(m.transfers.compliant_pct_value)}
+                hint={`${money(m.transfers.compliant_value)} of ${money(m.transfers.value)}`}
+                tone={m.transfers.compliant_pct_value != null && m.transfers.compliant_pct_value < 95 ? "warn" : undefined}
+              />
+              <Tile
                 label="Unhosted exposure"
                 value={money(m.exposure.unhosted_value)}
-                hint={`${m.exposure.unhosted_count} transfers`}
+                hint={`${m.exposure.unhosted_count} transfers, ${m.exposure.unhosted_third_party_count ?? 0} third-party`}
               />
               <Tile
                 label="Unassessed counterparties"
@@ -134,6 +227,50 @@ export default function TravelRulePage() {
                 hint="Not started, in review, expired or past next review"
                 tone={m.counterparties.reviews_overdue > 0 ? "warn" : undefined}
               />
+            </div>
+          )}
+          {m && (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+              <CountList
+                title="Most frequent reasons (top 10)"
+                rows={topReasons(m.reason_frequency, 10)}
+                empty="No reason codes in this period."
+                render={(code) => (
+                  <span title={code}>{humaniseReason(code)}</span>
+                )}
+              />
+              <CountList
+                title="Missing fields"
+                rows={topReasons(m.missing_fields, 10)}
+                empty="No missing fields in this period."
+                render={(f) => humaniseMissingField(f)}
+              />
+              <CountList
+                title="Resolutions"
+                rows={topReasons(m.exceptions.resolutions, 20)}
+                empty="No exceptions resolved in this period."
+                render={(r) => allowedResolutionLabel(r)}
+              />
+              <div className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-5">
+                <p className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">Repeat offenders</p>
+                {m.counterparties.repeat_offenders.length === 0 ? (
+                  <p className="mt-2 text-sm text-gray-400">No counterparty over the repeat failure threshold.</p>
+                ) : (
+                  <ul className="mt-2 space-y-1 text-sm">
+                    {m.counterparties.repeat_offenders.map((o) => (
+                      <li key={o.id} className="flex items-start justify-between gap-3">
+                        <Link href={`/dashboard/travel-rule/counterparties/${o.id}`} className="text-primary hover:underline">
+                          {o.legal_name}
+                        </Link>
+                        <span className="font-mono text-red-600 dark:text-red-300">{o.failures}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
+                  {m.exceptions.opened_in_period} exceptions opened in this period.
+                </p>
+              </div>
             </div>
           )}
         </QueryState>

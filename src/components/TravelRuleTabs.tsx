@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const TABS = [
   { href: "/dashboard/travel-rule", label: "Exceptions & MI" },
   { href: "/dashboard/travel-rule/counterparties", label: "Counterparty VASPs" },
+  { href: "/dashboard/travel-rule/wallets", label: "Customer wallets" },
   { href: "/dashboard/travel-rule/profiles", label: "Jurisdiction profiles" },
 ];
 

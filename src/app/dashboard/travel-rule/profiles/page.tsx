@@ -16,6 +16,7 @@ const INPUT =
 const EDITABLE: { key: keyof TravelRuleProfile; label: string; kind: "number" | "text" | "select"; options?: string[] }[] = [
   { key: "legal_status", label: "Legal status", kind: "select", options: ["CONFIRMED", "UNCONFIRMED"] },
   { key: "source_reference", label: "Source reference", kind: "text" },
+  { key: "currency", label: "Currency (ISO 4217)", kind: "text" },
   { key: "threshold_amount", label: "Full data set threshold", kind: "number" },
   { key: "data_set_version", label: "Data set", kind: "select", options: ["FATF_2021", "ZA_DIRECTIVE_9"] },
   { key: "unhosted_policy", label: "Unhosted wallets", kind: "select", options: ["ALLOW", "REQUIRE_OWNERSHIP_PROOF", "BLOCK"] },
@@ -24,25 +25,40 @@ const EDITABLE: { key: keyof TravelRuleProfile; label: string; kind: "number" | 
   { key: "inbound_missing_info_policy", label: "Inbound missing data", kind: "select", options: ["SUSPEND", "REQUEST_INFO", "RETURN", "EXECUTE_AND_FLAG"] },
   { key: "inbound_grace_minutes", label: "Inbound grace (minutes)", kind: "number" },
   { key: "request_info_deadline_hours", label: "Request info deadline (hours)", kind: "number" },
+  { key: "stale_proceed_hours", label: "Stale approved outbound after (hours)", kind: "number" },
+  { key: "repeat_offender_threshold", label: "Repeat offender failures", kind: "number" },
+  { key: "repeat_offender_window_days", label: "Repeat offender window (days)", kind: "number" },
   { key: "retention_years", label: "Retention (years)", kind: "number" },
 ];
 
-const INT_FIELDS = new Set(["inbound_grace_minutes", "request_info_deadline_hours", "retention_years"]);
+const INT_FIELDS = new Set([
+  "inbound_grace_minutes",
+  "request_info_deadline_hours",
+  "stale_proceed_hours",
+  "repeat_offender_threshold",
+  "repeat_offender_window_days",
+  "retention_years",
+]);
 
 function VersionForm({ profile }: { profile: TravelRuleProfile }) {
   const [changes, setChanges] = useState<Record<string, string>>({});
+  // Explicit control: a null threshold means the full data set on every transfer.
+  const [clearThreshold, setClearThreshold] = useState(false);
   const [request, { isLoading }] = useRequestProfileVersionMutation();
   const submit = async () => {
     const body: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(changes)) {
-      if (v === "") continue;
-      body[k] = INT_FIELDS.has(k) ? parseInt(v, 10) : v;
+      if (v.trim() === "") continue;
+      if (k === "threshold_amount" && clearThreshold) continue;
+      body[k] = INT_FIELDS.has(k) ? parseInt(v, 10) : k === "currency" ? v.trim().toUpperCase() : v;
     }
+    if (clearThreshold) body.threshold_amount = null;
     if (Object.keys(body).length === 0) return;
     try {
       await request({ code: profile.jurisdiction_code, changes: body }).unwrap();
       showToast({ type: "success", title: "New version requested", message: "A second platform user approves it on the Approvals page." });
       setChanges({});
+      setClearThreshold(false);
     } catch (e) {
       showToast({ type: "error", title: "Request failed", message: errorMessage(e) });
     }
@@ -52,25 +68,40 @@ function VersionForm({ profile }: { profile: TravelRuleProfile }) {
       <p className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">Propose a new version (four-eyes)</p>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {EDITABLE.map((f) => (
-          <label key={f.key} className="text-xs text-gray-500 dark:text-gray-400">
-            {f.label}
-            {f.kind === "select" ? (
-              <select className={INPUT} value={changes[f.key] ?? ""} onChange={(e) => setChanges({ ...changes, [f.key]: e.target.value })}>
-                <option value="">unchanged ({String(profile[f.key] ?? "none")})</option>
-                {f.options!.map((o) => (
-                  <option key={o} value={o}>{o.replace(/_/g, " ").toLowerCase()}</option>
-                ))}
-              </select>
-            ) : (
-              <input
-                className={INPUT}
-                type={f.kind === "number" ? "number" : "text"}
-                placeholder={String(profile[f.key] ?? "")}
-                value={changes[f.key] ?? ""}
-                onChange={(e) => setChanges({ ...changes, [f.key]: e.target.value })}
-              />
+          <div key={f.key}>
+            <label className="block text-xs text-gray-500 dark:text-gray-400">
+              {f.label}
+              {f.kind === "select" ? (
+                <select className={INPUT} value={changes[f.key] ?? ""} onChange={(e) => setChanges({ ...changes, [f.key]: e.target.value })}>
+                  <option value="">unchanged ({String(profile[f.key] ?? "none")})</option>
+                  {f.options!.map((o) => (
+                    <option key={o} value={o}>{o.replace(/_/g, " ").toLowerCase()}</option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  className={`${INPUT} disabled:opacity-50`}
+                  type={f.kind === "number" ? "number" : "text"}
+                  placeholder={f.key === "threshold_amount" && profile.threshold_amount == null ? "none (every transfer)" : String(profile[f.key] ?? "")}
+                  value={f.key === "threshold_amount" && clearThreshold ? "" : changes[f.key] ?? ""}
+                  disabled={f.key === "threshold_amount" && clearThreshold}
+                  maxLength={f.key === "currency" ? 3 : undefined}
+                  onChange={(e) => setChanges({ ...changes, [f.key]: e.target.value })}
+                />
+              )}
+            </label>
+            {f.key === "threshold_amount" && (
+              <label className="mt-1 flex items-center gap-2 text-xs text-gray-700 dark:text-gray-300">
+                <input
+                  type="checkbox"
+                  checked={clearThreshold}
+                  disabled={profile.threshold_amount == null}
+                  onChange={(e) => setClearThreshold(e.target.checked)}
+                />
+                No threshold: full data set on every transfer
+              </label>
             )}
-          </label>
+          </div>
         ))}
       </div>
       <button onClick={submit} disabled={isLoading} className="px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-600 disabled:opacity-50">
