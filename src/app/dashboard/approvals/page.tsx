@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   useListApprovalsQuery,
   useApproveActionMutation,
@@ -12,6 +13,7 @@ import ActionBadge from "@/components/ActionBadge";
 import { showToast } from "@/components/Toast";
 import { errorMessage } from "@/lib/errors";
 import { useVisiblePolling } from "@/hooks/useVisiblePolling";
+import { travelRuleApprovalContext } from "@/lib/travelRule";
 import type { ApprovalStatus, PendingApproval } from "@/types/api";
 
 const STATUSES: ApprovalStatus[] = ["PENDING", "APPROVED", "REJECTED", "EXPIRED"];
@@ -128,6 +130,12 @@ export default function ApprovalsPage() {
                 <tr key={a.id} className="hover:bg-gray-50 dark:hover:bg-navy-600 transition-colors">
                   <td className="px-4 py-2">
                     <ActionBadge action={a.action_type.replace(/_/g, " ")} />
+                    {(() => {
+                      const ctx = travelRuleApprovalContext(a.action_type, a.payload);
+                      return ctx ? (
+                        <p className="mt-1 text-xs text-gray-600 dark:text-gray-300 max-w-md">{ctx.summary}</p>
+                      ) : null;
+                    })()}
                   </td>
                   <td className="px-4 py-2 text-xs text-gray-700 dark:text-gray-300 font-mono">
                     {a.requested_by ? `${a.requested_by.slice(0, 8)}…` : "—"}
@@ -185,6 +193,21 @@ export default function ApprovalsPage() {
                 You are the requester. Only a different reviewer can approve or reject this.
               </div>
             )}
+
+            {(() => {
+              const ctx = travelRuleApprovalContext(selected.action_type, selected.payload);
+              if (!ctx) return null;
+              return (
+                <div className="px-3 py-2 rounded-lg bg-gray-50 dark:bg-navy-800 border border-gray-200 dark:border-navy-500 text-sm text-gray-800 dark:text-gray-200">
+                  <p>{ctx.summary}</p>
+                  {ctx.href && ctx.linkLabel && (
+                    <Link href={ctx.href} className="mt-1 inline-block text-xs font-medium text-primary hover:underline">
+                      {ctx.linkLabel}
+                    </Link>
+                  )}
+                </div>
+              );
+            })()}
 
             <div>
               <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">

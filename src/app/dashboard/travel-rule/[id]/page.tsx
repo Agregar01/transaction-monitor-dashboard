@@ -11,6 +11,8 @@ import { downloadFile } from "@/lib/download";
 import { errorMessage } from "@/lib/errors";
 import {
   allowedResolutionLabel,
+  clearToBroadcastLabel,
+  clearToBroadcastTone,
   cureHint,
   dataTimestampLabel,
   unconfirmedProfileNotice,
@@ -18,14 +20,17 @@ import {
   humaniseMissingField,
   humaniseReason,
   isFourEyesResolution,
+  pendingApprovalLabel,
+  resolutionBlockedByPending,
   statusLabel,
+  summariseScreening,
+  TONE_CLASSES,
   type FlatParty,
   type IvmsSide,
 } from "@/lib/travelRule";
 import { useAppSelector } from "@/redux/store";
 import {
   useGetTravelRuleRecordQuery,
-  useListTravelRuleProfilesQuery,
   useResolveTravelRuleRecordMutation,
 } from "@/redux/slices/api/travelRuleApi";
 import type { TravelRuleRecordDetail, TravelRuleResolution } from "@/types/api";
@@ -98,13 +103,76 @@ function PartyCard({ title, party, missingPrefix, missing }: {
   );
 }
 
+function ScreeningDetails({ record }: { record: TravelRuleRecordDetail }) {
+  // Scores, list names and flags only: the backend never sends the screened names.
+  const s = summariseScreening(record.screening_details);
+  if (!s || (s.wallets.length === 0 && !s.name && !s.clearedFalsePositive && !s.counterpartyVaspSanctions)) {
+    return <p className="text-sm text-gray-400">No screening details recorded.</p>;
+  }
+  return (
+    <div className="space-y-3 text-sm">
+      {s.clearedFalsePositive && (
+        <p className="text-xs text-green-700 dark:text-green-300">
+          A screening match on this record was cleared as a false positive (four-eyes).
+        </p>
+      )}
+      {s.counterpartyVaspSanctions && (
+        <p className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+          Counterparty VASP screening: <ActionBadge action={s.counterpartyVaspSanctions} />
+        </p>
+      )}
+      {s.wallets.length > 0 && (
+        <div>
+          <p className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">Wallet screening</p>
+          <ul className="mt-1 space-y-1">
+            {s.wallets.map((w) => (
+              <li key={w.role} className="flex items-center justify-between gap-2">
+                <span className="text-gray-700 dark:text-gray-300">{statusLabel(w.role)} wallet</span>
+                <span className={`px-2 py-0.5 rounded text-xs ${TONE_CLASSES[w.hit ? "bad" : "good"]}`}>
+                  {w.hit ? "On sanctioned wallet list" : "No match"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {s.name && (
+        <div>
+          <p className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">Counterparty name screening</p>
+          <dl className="mt-1 grid grid-cols-3 gap-x-3 gap-y-1">
+            <dt className={DT}>Top score</dt>
+            <dd className={`col-span-2 ${DD}`}>{s.name.topScore == null ? "n/a" : `${s.name.topScore}/100`}</dd>
+            <dt className={DT}>List</dt>
+            <dd className={`col-span-2 ${DD}`}>{s.name.list ?? "none"}</dd>
+            <dt className={DT}>PEP match</dt>
+            <dd className={`col-span-2 ${DD}`}>{s.name.pepMatch ? "Yes" : "No"}</dd>
+            {s.name.namesScreened != null && (
+              <>
+                <dt className={DT}>Names screened</dt>
+                <dd className={`col-span-2 ${DD}`}>{s.name.namesScreened}</dd>
+              </>
+            )}
+            {s.name.recommendation && (
+              <>
+                <dt className={DT}>Result</dt>
+                <dd className="col-span-2"><ActionBadge action={s.name.recommendation} /></dd>
+              </>
+            )}
+          </dl>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ResolutionForm({ record }: { record: TravelRuleRecordDetail }) {
   const [resolution, setResolution] = useState<TravelRuleResolution | "">("");
   const [reason, setReason] = useState("");
   const [resolve, { isLoading }] = useResolveTravelRuleRecordMutation();
   const options = record.allowed_resolutions;
+  const pending = record.pending_approval;
 
-  const hint = record.direction === "OUTBOUND" ? cureHint(record) : null;
+  const hint = cureHint(record);
 
   if (options.length === 0) {
     return (
@@ -126,27 +194,44 @@ function ResolutionForm({ record }: { record: TravelRuleRecordDetail }) {
       setResolution("");
       setReason("");
     } catch (e) {
-      showToast({ type: "error", title: "Action refused", message: errorMessage(e) });
+      // 409: a Travel Rule approval for this record is already pending; show the backend's message.
+      const status = (e as { status?: unknown } | null)?.status;
+      showToast({
+        type: "error",
+        title: status === 409 ? "Approval already pending" : "Action refused",
+        message: errorMessage(e),
+      });
     }
   };
 
   return (
     <div className="space-y-3">
       {hint && <p className="text-xs text-gray-600 dark:text-gray-300">{hint}</p>}
+      {pending && (
+        <p className="text-xs text-amber-700 dark:text-amber-300">
+          {pendingApprovalLabel(pending.action_type)}, requested {fmt(pending.created_at)}. A second user decides it on the{" "}
+          <Link href="/dashboard/approvals" className="underline">Approvals</Link> page. Four-eyes actions stay disabled until then.
+        </p>
+      )}
       <div className="flex flex-wrap gap-2">
-        {options.map((o) => (
-          <button
-            key={o}
-            onClick={() => setResolution(o)}
-            className={`px-3 py-1.5 text-sm rounded-lg border ${
-              resolution === o
-                ? "border-primary bg-primary/5 text-primary"
-                : "border-gray-200 dark:border-navy-500 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-navy-600"
-            }`}
-          >
-            {allowedResolutionLabel(o)}
-          </button>
-        ))}
+        {options.map((o) => {
+          const blocked = resolutionBlockedByPending(o, pending);
+          return (
+            <button
+              key={o}
+              onClick={() => setResolution(o)}
+              disabled={blocked}
+              title={blocked ? "A Travel Rule approval for this record is already pending" : undefined}
+              className={`px-3 py-1.5 text-sm rounded-lg border disabled:opacity-40 disabled:cursor-not-allowed ${
+                resolution === o
+                  ? "border-primary bg-primary/5 text-primary"
+                  : "border-gray-200 dark:border-navy-500 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-navy-600"
+              }`}
+            >
+              {allowedResolutionLabel(o)}
+            </button>
+          );
+        })}
       </div>
       {resolution && isFourEyesResolution(resolution) && (
         <p className="text-xs text-amber-700 dark:text-amber-300">
@@ -164,7 +249,7 @@ function ResolutionForm({ record }: { record: TravelRuleRecordDetail }) {
       />
       <button
         onClick={submit}
-        disabled={!resolution || reason.trim().length < 10 || isLoading}
+        disabled={!resolution || resolutionBlockedByPending(resolution, pending) || reason.trim().length < 10 || isLoading}
         className="px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-600 disabled:opacity-50"
       >
         {isLoading ? "Submitting..." : "Submit"}
@@ -178,8 +263,6 @@ export default function TravelRuleRecordPage() {
   const permissions = useAppSelector((s) => s.auth.permissions);
   const canManage = permissions.includes("manage_travel_rule");
   const { data: r, isLoading, isError, error } = useGetTravelRuleRecordQuery(id);
-  const { data: profiles } = useListTravelRuleProfilesQuery();
-  const profile = profiles?.find((p) => p.jurisdiction_code === r?.profile_jurisdiction);
 
   useEffect(() => {
     document.title = "Travel Rule record | Transaction Monitor";
@@ -217,6 +300,11 @@ export default function TravelRuleRecordPage() {
         <div className="flex items-center gap-2">
           <ActionBadge action={r.disposition} />
           <ActionBadge action={r.enforcement_mode} />
+          {r.pending_approval && (
+            <span className={`px-2 py-0.5 rounded text-xs ${TONE_CLASSES.warn}`}>
+              {pendingApprovalLabel(r.pending_approval.action_type)}
+            </span>
+          )}
           <button
             onClick={exportBundle}
             className="px-3 py-1.5 text-xs font-medium border border-gray-200 dark:border-navy-500 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-navy-600"
@@ -228,10 +316,11 @@ export default function TravelRuleRecordPage() {
 
       {r.profile_legal_status !== "CONFIRMED" && (
         <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 rounded-xl p-4 text-sm">
+          {/* The record's own profile version (the one the verdict used), not the active profile. */}
           {unconfirmedProfileNotice({
             profile_jurisdiction: r.profile_jurisdiction,
-            threshold_amount: profile?.threshold_amount ?? null,
-            currency: profile?.currency ?? null,
+            threshold_amount: r.profile_threshold_amount,
+            currency: r.profile_currency,
           })}
         </div>
       )}
@@ -248,6 +337,15 @@ export default function TravelRuleRecordPage() {
             <dl className="grid grid-cols-2 md:grid-cols-3 gap-y-2 gap-x-6 text-sm">
               <dt className={DT}>Status</dt>
               <dd className={`md:col-span-2 ${DD}`}>{statusLabel(r.status)}</dd>
+              <dt className={DT}>Clear to broadcast</dt>
+              <dd className={`md:col-span-2 ${DD}`}>
+                <span className={`px-2 py-0.5 rounded text-xs ${TONE_CLASSES[clearToBroadcastTone(r.clear_to_broadcast)]}`}>
+                  {clearToBroadcastLabel(r.clear_to_broadcast)}
+                </span>
+                <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
+                  AML decision {r.aml_decision ?? "n/a"}, pipeline decision {r.pipeline_decision ?? "n/a"}
+                </span>
+              </dd>
               <dt className={DT}>Threshold band</dt>
               <dd className={`md:col-span-2 ${DD}`}>
                 {r.threshold_band === "ABOVE" ? "At or above threshold (full data set)" : "Below threshold (reduced data set)"}
@@ -302,6 +400,11 @@ export default function TravelRuleRecordPage() {
                 IVMS101 constraint issues: <span className="font-mono">{r.ivms_errors.join(", ")}</span>
               </p>
             )}
+          </section>
+
+          <section className={CARD}>
+            <h2 className={H2}>Screening</h2>
+            <ScreeningDetails record={r} />
           </section>
 
           <section className={CARD}>

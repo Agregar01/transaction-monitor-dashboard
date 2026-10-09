@@ -621,7 +621,11 @@ export type ApprovalAction =
   | "THRESHOLD_CHANGE"
   | "RULE_PROMOTION"
   | "STR_FILING"
-  | "CTR_EXEMPTION";
+  | "CTR_EXEMPTION"
+  | "TR_OVERRIDE_RELEASE"
+  | "TR_SCREENING_CLEAR"
+  | "TR_PROFILE_VERSION"
+  | "VASP_DD_APPROVAL";
 
 export type ApprovalStatus = "PENDING" | "APPROVED" | "REJECTED" | "EXPIRED";
 
@@ -1180,7 +1184,48 @@ export interface TravelRuleEvent {
   recorded_at: string;
 }
 
-export interface TravelRuleRecordDetail extends TravelRuleRecordListItem {
+/** Pipeline outcome on the verdict (null until the transaction is processed). */
+export interface TravelRuleVerdict {
+  /** Pipeline decision before the Travel Rule floor. */
+  aml_decision: string | null;
+  /** Final pipeline decision. */
+  pipeline_decision: string | null;
+  /** True when the Travel Rule part allows it and aml_decision is not hold or block. */
+  clear_to_broadcast: boolean | null;
+}
+
+/** Four-eyes Travel Rule request already open for a record (409 on a second one). */
+export interface TravelRulePendingApproval {
+  id: string;
+  action_type: ApprovalAction | string;
+  requested_by: string | null;
+  created_at: string;
+}
+
+/** Name screening summary in screening_details (never contains the matched name). */
+export interface TravelRuleNameScreening {
+  top_score?: number | null;
+  list?: string | null;
+  pep_match?: boolean | null;
+  recommendation?: string | null;
+  /** How many names of the counterparty party were screened (every person, every name type). */
+  names_screened?: number | null;
+}
+
+export interface TravelRuleScreeningDetails {
+  wallets?: Record<string, boolean> | null;
+  name?: TravelRuleNameScreening | null;
+  cleared_false_positive?: boolean | null;
+  /** Sanctions status of the counterparty VASP itself at verdict time. */
+  counterparty_vasp_sanctions?: "CLEAR" | "REVIEW" | "HIT" | "NOT_RUN" | null;
+  [key: string]: unknown;
+}
+
+export interface TravelRuleRecordDetail extends TravelRuleRecordListItem, TravelRuleVerdict {
+  /** Threshold of the record's own profile version (string decimal), not the active profile. */
+  profile_threshold_amount: string | null;
+  profile_currency: string | null;
+  pending_approval: TravelRulePendingApproval | null;
   amount_native: number | string | null;
   fx_rate: number | string | null;
   fx_source: string | null;
@@ -1201,7 +1246,7 @@ export interface TravelRuleRecordDetail extends TravelRuleRecordListItem {
   missing_fields: string[];
   ivms_errors: string[];
   name_alignment_score: number | null;
-  screening_details: Record<string, unknown> | null;
+  screening_details: TravelRuleScreeningDetails | null;
   analytics_risk_score: number | null;
   tr_sent_at: string | null;
   tr_received_at: string | null;
@@ -1225,6 +1270,10 @@ export interface TravelRuleListParams {
   exception_open?: boolean;
   direction?: string;
   counterparty_vasp_id?: string;
+  /** ISO datetime, inclusive. */
+  from?: string;
+  /** ISO datetime, exclusive. */
+  to?: string;
   limit?: number;
   offset?: number;
 }
@@ -1264,6 +1313,7 @@ export interface CounterpartyVasp {
   licence_checked_at: string | null;
   travel_rule_protocols: string[];
   sanctions_status: string;
+  sanctions_checked_at: string | null;
   risk_rating: string | null;
   dd_status: string;
   dd_approved_at: string | null;
@@ -1288,7 +1338,8 @@ export interface CounterpartyVaspInput {
   travel_rule_protocols?: string[];
   confidentiality_assessed?: boolean;
   notes?: string | null;
-  sanctions_status?: string;
+  /** PATCH may only escalate: HIT or REVIEW. Clearing is a four-eyes DD review. */
+  sanctions_status?: "HIT" | "REVIEW";
 }
 
 export interface CounterpartyReviewInput {
@@ -1298,6 +1349,44 @@ export interface CounterpartyReviewInput {
   checklist: Record<string, boolean>;
   evidence_notes?: string | null;
   next_review_at?: string | null;
+  /** Clear a sanctions HIT/REVIEW as a false positive (applied by a second user). */
+  clear_sanctions_hit?: boolean;
+}
+
+export type WalletOwnershipStatus = "DECLARED" | "VERIFIED" | "REVOKED";
+export type WalletOwnershipMethod = "SIGNED_MESSAGE" | "MICRO_TRANSFER" | "DECLARATION";
+
+/** Customer wallet (GET /travel-rule/wallets). The address is masked by the backend. */
+export interface CustomerWallet {
+  id: string;
+  customer_id: string;
+  network: string;
+  address_masked: string;
+  ownership_status: WalletOwnershipStatus | string;
+  ownership_method: WalletOwnershipMethod | string;
+  verified_at: string | null;
+  reverify_at: string | null;
+  evidence_notes: string | null;
+  created_at: string;
+}
+
+export interface CustomerWalletInput {
+  customer_id: string;
+  network: string;
+  address: string;
+  ownership_status: WalletOwnershipStatus;
+  ownership_method: WalletOwnershipMethod;
+  verified_at?: string | null;
+  reverify_at?: string | null;
+  evidence_notes?: string | null;
+}
+
+export interface CustomerWalletPatch {
+  ownership_status?: WalletOwnershipStatus;
+  ownership_method?: WalletOwnershipMethod;
+  verified_at?: string | null;
+  reverify_at?: string | null;
+  evidence_notes?: string | null;
 }
 
 export interface TravelRuleProfile {
@@ -1344,12 +1433,16 @@ export interface TravelRuleMI {
     unhosted_value: number;
     non_approved_counterparty_count: number;
     non_approved_counterparty_value: number;
+    /** Unhosted wallets owned by a third party (no ownership proof required). */
+    unhosted_third_party_count: number;
   };
   counterparties: {
     repeat_offenders: { id: string; legal_name: string; failures: number }[];
     reviews_overdue: number;
   };
   by_jurisdiction: Record<string, number>;
+  /** Reason code to number of records in the period. */
+  reason_frequency: Record<string, number>;
 }
 
 /** Summary on GET /transactions/{id} (`travel_rule`). */

@@ -70,12 +70,13 @@ describe("dataTimestampLabel", () => {
 });
 
 describe("identityChangeResetsDd", () => {
+  const initial = { legal_name: "Acme VASP", lei: "5493001KJTIIGC8Y1R12", country: "GH" };
   it("is true when an identity field changes on a reviewed counterparty", () => {
-    expect(identityChangeResetsDd("APPROVED", { lei: "X" })).toBe(true);
-    expect(identityChangeResetsDd("IN_REVIEW", { country: "ZA" })).toBe(true);
+    expect(identityChangeResetsDd("APPROVED", initial, { lei: "X" })).toBe(true);
+    expect(identityChangeResetsDd("IN_REVIEW", initial, { country: "ZA" })).toBe(true);
   });
   it("is false for descriptive edits or unreviewed counterparties", () => {
-    expect(identityChangeResetsDd("APPROVED", { notes: "x" })).toBe(false);
-    expect(identityChangeResetsDd("NOT_STARTED", { lei: "X" })).toBe(false);
+    expect(identityChangeResetsDd("APPROVED", initial, { notes: "x" })).toBe(false);
+    expect(identityChangeResetsDd("NOT_STARTED", initial, { lei: "X" })).toBe(false);
   });
 });
