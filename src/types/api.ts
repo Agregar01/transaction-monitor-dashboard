@@ -770,6 +770,12 @@ export interface ModelRegistryEntry {
   version: number;
   status: ModelStatus | null;
   artifact_path: string | null;
+  // sha256 of the model artifact itself, checked at load time (F4) — present
+  // once the registry row has actually been hash-verified; meta_* mirrors the
+  // same for the model's companion metadata file.
+  sha256: string | null;
+  meta_artifact_path: string | null;
+  meta_sha256: string | null;
   trained_at: string | null;
   sample_count: number | null;
   fraud_sample_count: number | null;
@@ -777,6 +783,26 @@ export interface ModelRegistryEntry {
   metrics: Record<string, unknown> | null;
   feature_names: string[] | null;
   created_at: string | null;
+}
+
+/** GET /transactions/{id}/model-provenance — one ensemble member's
+ *  contribution to a transaction's ML score. sha256 is the hash of the exact
+ *  (model_type, version) pair that scored it, not necessarily the current
+ *  CHAMPION's hash (a promotion may have happened since). */
+export interface ModelProvenanceEntry {
+  model_type: string;
+  version: number | null;
+  threshold: number | null;
+  sha256: string | null;
+}
+
+export interface TransactionModelProvenanceResponse {
+  transaction_id: string;
+  scored_at: string | null;
+  decision: string | null;
+  combined_risk_score: number | null;
+  /** Empty, not a 404, when no TRANSACTION_SCORED audit entry exists yet. */
+  models: ModelProvenanceEntry[];
 }
 
 export interface DriftReport {

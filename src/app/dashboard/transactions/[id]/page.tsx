@@ -6,10 +6,12 @@ import {
   useGetTransactionQuery,
   useGetTransactionTimelineQuery,
   useGetRelatedTransactionsQuery,
+  useGetTransactionModelProvenanceQuery,
 } from "@/redux/slices/api/transactionsApi";
 import { SkeletonCard } from "@/components/Skeleton";
 import RiskBadge from "@/components/RiskBadge";
 import TravelRulePanel from "@/components/TravelRulePanel";
+import { CheckBadgeIcon } from "@heroicons/react/24/outline";
 
 export default function TransactionDetailPage() {
   const params = useParams<{ id: string }>();
@@ -18,6 +20,7 @@ export default function TransactionDetailPage() {
   const { data: tx, isLoading, error } = useGetTransactionQuery(id);
   const { data: timeline } = useGetTransactionTimelineQuery(id, { skip: !id });
   const { data: related } = useGetRelatedTransactionsQuery({ transaction_id: id, limit: 10 }, { skip: !id });
+  const { data: provenance } = useGetTransactionModelProvenanceQuery(id, { skip: !id });
 
   if (isLoading) return <SkeletonCard />;
   if (error || !tx) {
@@ -83,6 +86,50 @@ export default function TransactionDetailPage() {
       </section>
 
       <TravelRulePanel summary={tx.travel_rule ?? null} />
+
+      <section className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-6">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">
+          Model provenance
+        </h2>
+        {!provenance || provenance.models.length === 0 ? (
+          <p className="text-sm text-gray-400">
+            No scoring record for this transaction yet.
+          </p>
+        ) : (
+          <>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+              Scored {provenance.scored_at ? new Date(provenance.scored_at).toLocaleString() : "—"}
+              {provenance.decision && <> · decision <span className="font-semibold text-gray-700 dark:text-gray-200">{provenance.decision}</span></>}
+            </p>
+            <ul className="divide-y divide-gray-100 dark:divide-navy-600">
+              {provenance.models.map((m, i) => (
+                <li key={`${m.model_type}-${i}`} className="py-2 flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs uppercase text-gray-900 dark:text-white">{m.model_type}</span>
+                    {m.version != null && (
+                      <span className="text-xs text-gray-500 dark:text-gray-400">v{m.version}</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+                    {m.threshold != null && <span>threshold {m.threshold}</span>}
+                    {m.sha256 ? (
+                      <span
+                        className="inline-flex items-center gap-1 font-mono text-green-700 dark:text-green-300"
+                        title={m.sha256}
+                      >
+                        <CheckBadgeIcon className="h-3.5 w-3.5 shrink-0" />
+                        {m.sha256.slice(0, 10)}…
+                      </span>
+                    ) : (
+                      <span className="text-gray-400">hash unknown</span>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </section>
 
       <section className="bg-white dark:bg-navy-700 rounded-xl border border-gray-100 dark:border-navy-600 p-6">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">

@@ -6,12 +6,29 @@ import { SkeletonTable } from "@/components/Skeleton";
 import ActionBadge from "@/components/ActionBadge";
 import Pagination from "@/components/Pagination";
 import type { ModelRegistryEntry } from "@/types/api";
+import { CheckBadgeIcon } from "@heroicons/react/24/outline";
 
 function MetricCell({ metrics, key_ }: { metrics: Record<string, unknown> | null; key_: string }) {
   if (!metrics) return <span className="text-gray-400">—</span>;
   const v = metrics[key_];
   if (v == null) return <span className="text-gray-400">—</span>;
   return <span>{Number(v).toFixed(3)}</span>;
+}
+
+// A row's sha256 is only ever populated once that artifact has passed F4's
+// load-time hash check — there's no separate "verified" flag to read, the
+// hash's presence on a registered row *is* the signal.
+function HashCell({ sha256 }: { sha256: string | null }) {
+  if (!sha256) return <span className="text-gray-400">—</span>;
+  return (
+    <span
+      className="inline-flex items-center gap-1 font-mono text-[11px] text-green-700 dark:text-green-300"
+      title={sha256}
+    >
+      <CheckBadgeIcon className="h-3.5 w-3.5 shrink-0" />
+      {sha256.slice(0, 10)}…
+    </span>
+  );
 }
 
 function byType(items: ModelRegistryEntry[]) {
@@ -40,7 +57,7 @@ export default function ModelsPage() {
       </div>
 
       {isLoading ? (
-        <SkeletonTable rows={6} cols={7} />
+        <SkeletonTable rows={6} cols={8} />
       ) : error ? (
         <div className="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 p-4 rounded-xl text-sm">
           Failed to load models.
@@ -74,6 +91,7 @@ export default function ModelsPage() {
                     <th className="px-4 py-2 text-right">Recall</th>
                     <th className="px-4 py-2 text-right">Samples</th>
                     <th className="px-4 py-2 text-left">Trained</th>
+                    <th className="px-4 py-2 text-left">Hash</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-navy-600">
@@ -106,6 +124,9 @@ export default function ModelsPage() {
                       </td>
                       <td className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">
                         {m.trained_at ? new Date(m.trained_at).toLocaleDateString() : "—"}
+                      </td>
+                      <td className="px-4 py-2">
+                        <HashCell sha256={m.sha256} />
                       </td>
                     </tr>
                   ))}

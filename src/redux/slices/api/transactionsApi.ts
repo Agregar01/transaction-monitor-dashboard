@@ -5,6 +5,7 @@ import type {
   TransactionTimelineEvent,
   RelatedTransaction,
   TransactionFeedResponse,
+  TransactionModelProvenanceResponse,
 } from "@/types/api";
 
 export interface ListTransactionsParams {
@@ -52,6 +53,11 @@ export const transactionsApi = baseApi.injectEndpoints({
         params,
       }),
     }),
+    // Empty `models: []` (not a 404) is the normal "not scored yet" response —
+    // callers render that as an empty state, not an error.
+    getTransactionModelProvenance: b.query<TransactionModelProvenanceResponse, string>({
+      query: (id) => `/transactions/${id}/model-provenance`,
+    }),
   }),
 });
 
@@ -60,5 +66,6 @@ export const {
   useGetTransactionQuery,
   useGetTransactionTimelineQuery,
   useGetRelatedTransactionsQuery,
+  useGetTransactionModelProvenanceQuery,
   useLazyGetTransactionFeedQuery,
 } = transactionsApi;
