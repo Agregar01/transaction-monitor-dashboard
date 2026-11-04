@@ -88,6 +88,8 @@ export const baseApi = createApi({
     "Verification",
     "Notification",
     "TravelRule",
+    "BtlSample",
+    "BtlReport",
   ],
   endpoints: () => ({}),
 });
