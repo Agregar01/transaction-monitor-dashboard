@@ -150,7 +150,24 @@ export interface Jurisdiction {
   goaml_version: string;
   is_active: boolean;
   notes?: string | null;
+  /**
+   * Tunable decision-band overrides (PR #208). null = falls back to the static
+   * engine default (flag 90 / step_up 120 / hold 150 / block 200) — there is no
+   * separate "using default" flag, absence of a value IS the signal.
+   */
+  flag_threshold?: number | null;
+  step_up_threshold?: number | null;
+  hold_threshold?: number | null;
+  block_threshold?: number | null;
 }
+
+/** Static engine defaults a null jurisdiction band override falls back to. */
+export const DEFAULT_DECISION_BANDS = {
+  flag_threshold: 90,
+  step_up_threshold: 120,
+  hold_threshold: 150,
+  block_threshold: 200,
+} as const;
 
 // ─── Transactions ───────────────────────────────────────────────────────────
 
