@@ -14,9 +14,62 @@ import { showToast } from "@/components/Toast";
 import { errorMessage } from "@/lib/errors";
 import { useVisiblePolling } from "@/hooks/useVisiblePolling";
 import { travelRuleApprovalContext } from "@/lib/travelRule";
-import type { ApprovalStatus, PendingApproval } from "@/types/api";
+import { isAgregarAdmin } from "@/lib/roles";
+import type { ApprovalStatus, ModelPromotionPayload, PendingApproval } from "@/types/api";
 
 const STATUSES: ApprovalStatus[] = ["PENDING", "APPROVED", "REJECTED", "EXPIRED"];
+
+/** requested_by for MODEL_PROMOTION is always null — it's filed by the champion/
+ * challenger evaluation job, not a person. */
+function requesterLabel(a: Pick<PendingApproval, "action_type" | "requested_by">): string {
+  if (a.requested_by) return `${a.requested_by.slice(0, 8)}…`;
+  return a.action_type === "MODEL_PROMOTION" ? "System (champion/challenger)" : "—";
+}
+
+function parseModelPromotionPayload(p: Record<string, unknown>): ModelPromotionPayload | null {
+  if (typeof p.model_type !== "string" || typeof p.champion_version !== "number") return null;
+  return p as unknown as ModelPromotionPayload;
+}
+
+function ModelPromotionCard({ payload: raw }: { payload: Record<string, unknown> }) {
+  const payload = parseModelPromotionPayload(raw);
+  if (!payload) return null;
+  const improved = payload.f1_improvement > 0;
+  return (
+    <div className="rounded-lg border border-gray-200 dark:border-navy-500 overflow-hidden">
+      <div className="px-3 py-2 bg-gray-50 dark:bg-navy-800 text-xs font-mono uppercase text-gray-700 dark:text-gray-200">
+        {payload.model_type}
+      </div>
+      <div className="grid grid-cols-2 divide-x divide-gray-200 dark:divide-navy-500 text-sm">
+        <div className="p-3">
+          <p className="text-[11px] uppercase tracking-wider text-gray-500 dark:text-gray-400">
+            Champion v{payload.champion_version}
+          </p>
+          <p className="mt-1 font-mono text-gray-900 dark:text-white">
+            F1 {payload.champion_f1.toFixed(3)}
+          </p>
+        </div>
+        <div className="p-3">
+          <p className="text-[11px] uppercase tracking-wider text-gray-500 dark:text-gray-400">
+            Challenger v{payload.challenger_version}
+          </p>
+          <p className="mt-1 font-mono text-gray-900 dark:text-white">
+            F1 {payload.challenger_f1.toFixed(3)}
+          </p>
+        </div>
+      </div>
+      <div className="px-3 py-2 border-t border-gray-200 dark:border-navy-500 flex items-center justify-between text-xs">
+        <span className={improved ? "text-green-700 dark:text-green-300" : "text-red-700 dark:text-red-300"}>
+          {improved ? "+" : ""}
+          {payload.f1_improvement.toFixed(3)} F1 vs champion
+        </span>
+        <span className="text-gray-500 dark:text-gray-400">
+          {payload.challenger_predictions.toLocaleString()} predictions evaluated
+        </span>
+      </div>
+    </div>
+  );
+}
 
 function Countdown({ to }: { to: string }) {
   const remaining = Math.max(0, new Date(to).getTime() - Date.now());
@@ -33,6 +86,8 @@ function Countdown({ to }: { to: string }) {
 
 export default function ApprovalsPage() {
   const currentEmail = useAppSelector((s) => s.auth.email);
+  const roles = useAppSelector((s) => s.auth.roles);
+  const isPlatform = isAgregarAdmin(roles);
   const [status, setStatus] = useState<ApprovalStatus>("PENDING");
   const [selected, setSelected] = useState<PendingApproval | null>(null);
   const [reviewNotes, setReviewNotes] = useState("");
@@ -138,7 +193,7 @@ export default function ApprovalsPage() {
                     })()}
                   </td>
                   <td className="px-4 py-2 text-xs text-gray-700 dark:text-gray-300 font-mono">
-                    {a.requested_by ? `${a.requested_by.slice(0, 8)}…` : "—"}
+                    {requesterLabel(a)}
                   </td>
                   <td className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">
                     {new Date(a.created_at).toLocaleString()}
@@ -176,13 +231,8 @@ export default function ApprovalsPage() {
                   {selected.action_type.replace(/_/g, " ")}
                 </h2>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Requested by{" "}
-                  <span className="font-mono">
-                    {selected.requested_by
-                      ? `${selected.requested_by.slice(0, 8)}…`
-                      : "—"}
-                  </span>{" "}
-                  · {new Date(selected.created_at).toLocaleString()}
+                  Requested by <span className="font-mono">{requesterLabel(selected)}</span> ·{" "}
+                  {new Date(selected.created_at).toLocaleString()}
                 </p>
               </div>
               <ActionBadge action={selected.status} />
@@ -192,6 +242,10 @@ export default function ApprovalsPage() {
               <div className="px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300 text-xs">
                 You are the requester. Only a different reviewer can approve or reject this.
               </div>
+            )}
+
+            {selected.action_type === "MODEL_PROMOTION" && (
+              <ModelPromotionCard payload={selected.payload} />
             )}
 
             {(() => {
@@ -247,15 +301,26 @@ export default function ApprovalsPage() {
                   >
                     {rejecting ? "Rejecting…" : "Reject"}
                   </button>
-                  <button
-                    onClick={onApprove}
-                    disabled={approving || !!isSelf}
-                    className="px-4 py-2 text-sm font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
-                  >
-                    {approving ? "Approving…" : "Approve"}
-                  </button>
+                  {/* Backend restricts MODEL_PROMOTION approval to platform users (403 for
+                      institution users) — hide the button rather than let it fail. */}
+                  {(selected.action_type !== "MODEL_PROMOTION" || isPlatform) && (
+                    <button
+                      onClick={onApprove}
+                      disabled={approving || !!isSelf}
+                      className="px-4 py-2 text-sm font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+                    >
+                      {approving ? "Approving…" : "Approve"}
+                    </button>
+                  )}
                 </>
               )}
+              {selected.status === "PENDING" &&
+                selected.action_type === "MODEL_PROMOTION" &&
+                !isPlatform && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 self-center">
+                    Only a platform admin can approve a model promotion.
+                  </p>
+                )}
             </div>
           </div>
         </div>

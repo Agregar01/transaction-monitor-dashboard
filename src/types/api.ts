@@ -642,9 +642,22 @@ export type ApprovalAction =
   | "TR_OVERRIDE_RELEASE"
   | "TR_SCREENING_CLEAR"
   | "TR_PROFILE_VERSION"
-  | "VASP_DD_APPROVAL";
+  | "VASP_DD_APPROVAL"
+  | "MODEL_PROMOTION";
 
 export type ApprovalStatus = "PENDING" | "APPROVED" | "REJECTED" | "EXPIRED";
+
+/** Payload shape for a MODEL_PROMOTION approval (PR #207) — system-filed,
+ * `requested_by` is always null for this action type. */
+export interface ModelPromotionPayload {
+  model_type: string;
+  champion_version: number;
+  challenger_version: number;
+  champion_f1: number;
+  challenger_f1: number;
+  f1_improvement: number;
+  challenger_predictions: number;
+}
 
 export interface PendingApproval {
   id: string;
