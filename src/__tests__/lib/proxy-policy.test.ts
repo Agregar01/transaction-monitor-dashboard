@@ -19,6 +19,7 @@ describe("isAllowedPath — SSRF guard", () => {
     expect(isAllowedPath("/api/v1/export/transactions")).toBe(true);
     expect(isAllowedPath("/api/v1/export/str/abc/pdf")).toBe(true);
     expect(isAllowedPath("/api/v1/simulations/transactions")).toBe(true);
+    expect(isAllowedPath("/api/v1/tuning/btl/samples")).toBe(true);
     expect(isAllowedPath("/api/v1/travel-rule/records")).toBe(true);
     expect(isAllowedPath("/api/v1/travel-rule/records/abc/resolve")).toBe(true);
   });

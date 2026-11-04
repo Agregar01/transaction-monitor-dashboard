@@ -672,6 +672,41 @@ export interface PendingApproval {
   created_at: string;
 }
 
+// ─── Below-the-line (BTL) threshold tuning (PR #209) ───────────────────────
+
+export type BtlSampleStatus = "PENDING" | "REVIEWED";
+export type BtlDisposition = "NOT_SUSPICIOUS" | "SUSPICIOUS";
+export type BtlSignal =
+  | "threshold_may_be_too_high"
+  | "band_appears_safe"
+  | "monitor"
+  | "insufficient_reviews";
+
+export interface BtlSample {
+  id: string;
+  transaction_id: string;
+  jurisdiction_code: string;
+  combined_risk_score: number;
+  threshold: number;
+  band_floor: number;
+  status: BtlSampleStatus;
+  disposition: BtlDisposition | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  notes: string | null;
+  sampled_at: string;
+}
+
+export interface BtlReport {
+  total_samples: number;
+  pending_review: number;
+  reviewed: number;
+  suspicious: number;
+  not_suspicious: number;
+  suspicious_rate: number;
+  signal: BtlSignal;
+}
+
 // ─── Watchlists & sanctions ─────────────────────────────────────────────────
 
 export interface Watchlist {
