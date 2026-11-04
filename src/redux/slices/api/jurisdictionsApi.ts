@@ -26,6 +26,10 @@ export const jurisdictionsApi = baseApi.injectEndpoints({
         goaml_version?: string;
         is_active?: boolean;
         notes?: string;
+        flag_threshold?: number | null;
+        step_up_threshold?: number | null;
+        hold_threshold?: number | null;
+        block_threshold?: number | null;
       }
     >({
       query: ({ code, ...body }) => ({ url: `/jurisdictions/${code}`, method: "PATCH", body }),

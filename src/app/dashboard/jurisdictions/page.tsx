@@ -8,7 +8,43 @@ import {
 import { SkeletonTable } from "@/components/Skeleton";
 import { showToast } from "@/components/Toast";
 import { errorMessage } from "@/lib/errors";
-import type { Jurisdiction } from "@/types/api";
+import { DEFAULT_DECISION_BANDS, type Jurisdiction } from "@/types/api";
+
+type BandField = "flag_threshold" | "step_up_threshold" | "hold_threshold" | "block_threshold";
+
+const BAND_FIELDS: { key: BandField; label: string }[] = [
+  { key: "flag_threshold", label: "Flag" },
+  { key: "step_up_threshold", label: "Step-up" },
+  { key: "hold_threshold", label: "Hold" },
+  { key: "block_threshold", label: "Block" },
+];
+
+/** Blank input = "use the static default" (null). Parses to a validated int, or null. */
+function parseBand(raw: string): number | null {
+  const trimmed = raw.trim();
+  if (trimmed === "") return null;
+  const n = Number(trimmed);
+  return Number.isFinite(n) ? Math.trunc(n) : null;
+}
+
+/** Validates flag <= step_up <= hold <= block within 0-300, substituting the static
+ * default for any band left blank so the ordering check reflects the value that
+ * will actually be in effect. Returns an error message, or null if valid. */
+function validateBands(raw: Record<BandField, string>): string | null {
+  const resolved = BAND_FIELDS.map(({ key }) => {
+    const parsed = parseBand(raw[key]);
+    return parsed ?? DEFAULT_DECISION_BANDS[key];
+  });
+  for (const v of resolved) {
+    if (v < 0 || v > 300) return "Decision bands must be between 0 and 300.";
+  }
+  for (let i = 1; i < resolved.length; i++) {
+    if (resolved[i] < resolved[i - 1]) {
+      return "Decision bands must be non-decreasing: Flag ≤ Step-up ≤ Hold ≤ Block.";
+    }
+  }
+  return null;
+}
 
 export default function JurisdictionsPage() {
   const { data, isLoading, error } = useListJurisdictionsQuery();
@@ -17,6 +53,13 @@ export default function JurisdictionsPage() {
   const [ctrNonCash, setCtrNonCash] = useState("");
   const [strDeadline, setStrDeadline] = useState("");
   const [isActive, setIsActive] = useState(true);
+  const [bands, setBands] = useState<Record<BandField, string>>({
+    flag_threshold: "",
+    step_up_threshold: "",
+    hold_threshold: "",
+    block_threshold: "",
+  });
+  const [bandError, setBandError] = useState<string | null>(null);
   const [updateJurisdiction, { isLoading: saving }] = useUpdateJurisdictionMutation();
 
   const startEdit = (j: Jurisdiction) => {
@@ -25,10 +68,22 @@ export default function JurisdictionsPage() {
     setCtrNonCash(j.ctr_threshold_non_cash.toString());
     setStrDeadline(j.str_deadline_hours.toString());
     setIsActive(j.is_active);
+    setBands({
+      flag_threshold: j.flag_threshold != null ? String(j.flag_threshold) : "",
+      step_up_threshold: j.step_up_threshold != null ? String(j.step_up_threshold) : "",
+      hold_threshold: j.hold_threshold != null ? String(j.hold_threshold) : "",
+      block_threshold: j.block_threshold != null ? String(j.block_threshold) : "",
+    });
+    setBandError(null);
   };
 
   const submitEdit = async () => {
     if (!editing) return;
+    const validationError = validateBands(bands);
+    if (validationError) {
+      setBandError(validationError);
+      return;
+    }
     try {
       const res = await updateJurisdiction({
         code: editing.code,
@@ -36,6 +91,10 @@ export default function JurisdictionsPage() {
         ctr_threshold_non_cash: Number(ctrNonCash),
         str_deadline_hours: Number(strDeadline),
         is_active: isActive,
+        flag_threshold: parseBand(bands.flag_threshold),
+        step_up_threshold: parseBand(bands.step_up_threshold),
+        hold_threshold: parseBand(bands.hold_threshold),
+        block_threshold: parseBand(bands.block_threshold),
       }).unwrap();
       showToast({
         type: "info",
@@ -177,6 +236,44 @@ export default function JurisdictionsPage() {
               />
               Active
             </label>
+
+            <div>
+              <label className="block text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">
+                Decision bands
+              </label>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                Leave a field blank to use the engine default shown in its placeholder.
+              </p>
+              <div className="grid grid-cols-4 gap-2">
+                {BAND_FIELDS.map(({ key, label }) => (
+                  <div key={key}>
+                    <label
+                      htmlFor={`band-${key}`}
+                      className="block text-[11px] text-gray-500 dark:text-gray-400 mb-0.5"
+                    >
+                      {label}
+                    </label>
+                    <input
+                      id={`band-${key}`}
+                      type="number"
+                      min={0}
+                      max={300}
+                      placeholder={`default (${DEFAULT_DECISION_BANDS[key]})`}
+                      value={bands[key]}
+                      onChange={(e) => {
+                        setBands((prev) => ({ ...prev, [key]: e.target.value }));
+                        setBandError(null);
+                      }}
+                      className="w-full px-2 py-1.5 text-xs font-mono border border-gray-200 dark:border-navy-500 rounded-lg bg-white dark:bg-navy-800 text-gray-900 dark:text-white"
+                    />
+                  </div>
+                ))}
+              </div>
+              {bandError && (
+                <p className="mt-2 text-xs text-red-600 dark:text-red-400">{bandError}</p>
+              )}
+            </div>
+
             <p className="text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 rounded-lg p-3">
               Saving creates a four-eyes approval; the change only takes effect after a different
               user approves it.
